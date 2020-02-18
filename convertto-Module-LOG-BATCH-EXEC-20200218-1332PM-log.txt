@@ -1,0 +1,253 @@
+﻿2020-02-18 13:32:23 INFO: #*======v START PASS:convertto-Module.ps1 v======
+2020-02-18 13:32:23 INFO: 13:32:23:$ModuleName interpolated from verb-logging.ps1: verb-logging
+2020-02-18 13:32:23 INFO: 13:32:23:$ModuleDesc specified: Logging-related generic functions
+2020-02-18 13:32:35 INFO: Invoke-Plaster w
+Name                           Value                                                                                                       
+----                           -----                                                                                                       
+TemplatePath                   C:\sc\powershell\FullModuleTemplate\                                                                        
+DestinationPath                C:\sc\verb-logging                                                                                          
+ModuleName                     verb-logging                                                                                                
+ModuleDesc                     Logging-related generic functions
+2020-02-18 13:32:35 INFO: 
+**IN THE PROMPTS BELOW, USE THE FOLLOWING!**:
+Github Repo Name For This Module:	verb-logging
+Github Repo Url For This Module:	https://github.com/tostka/verb-logging
+
+2020-02-18 13:32:42 INFO: (lyncRepo has an *existing* published version:1.0.0)
+
+2020-02-18 13:34:31 INFO: Opening a copy of $oModSrcFile:
+C:\sc\powershell\ExScripts\verb-logging.ps1
+for reference
+2020-02-18 13:34:32 INFO: Opening a copy of $psmFile:
+(C:\sc\verb-logging\verb-logging\verb-logging.psm1.fullname)
+for EDITING
+2020-02-18 13:34:48 INFO: new-item w
+Name                           Value                                                                                                       
+----                           -----                                                                                                       
+path                           C:\sc\verb-logging\Public\Test-TranscriptionSupported.ps1                                                   
+whatif                         False
+2020-02-18 13:34:48 INFO: Pre-populating the Test-TranscriptionSupported.ps1 with the function body
+(may *not* include associated aliases!)
+2020-02-18 13:34:49 INFO: new-item w
+Name                           Value                                                                                                       
+----                           -----                                                                                                       
+path                           C:\sc\verb-logging\Public\Test-Transcribing.ps1                                                             
+whatif                         False
+2020-02-18 13:34:49 INFO: Pre-populating the Test-Transcribing.ps1 with the function body
+(may *not* include associated aliases!)
+2020-02-18 13:34:49 INFO: new-item w
+Name                           Value                                                                                                       
+----                           -----                                                                                                       
+path                           C:\sc\verb-logging\Public\Stop-TranscriptLog.ps1                                                            
+whatif                         False
+2020-02-18 13:34:49 INFO: Pre-populating the Stop-TranscriptLog.ps1 with the function body
+(may *not* include associated aliases!)
+2020-02-18 13:34:49 INFO: new-item w
+Name                           Value                                                                                                       
+----                           -----                                                                                                       
+path                           C:\sc\verb-logging\Public\Start-IseTranscript.ps1                                                           
+whatif                         False
+2020-02-18 13:34:49 INFO: Pre-populating the Start-IseTranscript.ps1 with the function body
+(may *not* include associated aliases!)
+2020-02-18 13:34:49 INFO: new-item w
+Name                           Value                                                                                                       
+----                           -----                                                                                                       
+path                           C:\sc\verb-logging\Public\start-TranscriptLog.ps1                                                           
+whatif                         False
+2020-02-18 13:34:50 INFO: Pre-populating the start-TranscriptLog.ps1 with the function body
+(may *not* include associated aliases!)
+2020-02-18 13:34:50 INFO: new-item w
+Name                           Value                                                                                                       
+----                           -----                                                                                                       
+path                           C:\sc\verb-logging\Public\get-ArchivePath.ps1                                                               
+whatif                         False
+2020-02-18 13:34:50 INFO: Pre-populating the get-ArchivePath.ps1 with the function body
+(may *not* include associated aliases!)
+2020-02-18 13:34:50 INFO: new-item w
+Name                           Value                                                                                                       
+----                           -----                                                                                                       
+path                           C:\sc\verb-logging\Public\Archive-Log.ps1                                                                   
+whatif                         False
+2020-02-18 13:34:50 INFO: Pre-populating the Archive-Log.ps1 with the function body
+(may *not* include associated aliases!)
+2020-02-18 13:34:50 INFO: new-item w
+Name                           Value                                                                                                       
+----                           -----                                                                                                       
+path                           C:\sc\verb-logging\Public\Write-Log.ps1                                                                     
+whatif                         False
+2020-02-18 13:34:50 INFO: Pre-populating the Write-Log.ps1 with the function body
+(may *not* include associated aliases!)
+2020-02-18 13:34:50 INFO: new-item w
+Name                           Value                                                                                                       
+----                           -----                                                                                                       
+path                           C:\sc\verb-logging\Public\Start-Log.ps1                                                                     
+whatif                         False
+2020-02-18 13:34:50 INFO: Pre-populating the Start-Log.ps1 with the function body
+(may *not* include associated aliases!)
+2020-02-18 13:34:50 INFO: new-item w
+Name                           Value                                                                                                       
+----                           -----                                                                                                       
+path                           C:\sc\verb-logging\Public\ColorMatch.ps1                                                                    
+whatif                         False
+2020-02-18 13:34:51 INFO: Pre-populating the ColorMatch.ps1 with the function body
+(may *not* include associated aliases!)
+2020-02-18 13:34:51 INFO: new-item w
+Name                           Value                                                                                                       
+----                           -----                                                                                                       
+path                           C:\sc\verb-logging\Public\Cleanup.ps1                                                                       
+whatif                         False
+2020-02-18 13:34:51 INFO: Pre-populating the Cleanup.ps1 with the function body
+(may *not* include associated aliases!)
+2020-02-18 13:34:51 INFO: Parsing function list out of C:\sc\powershell\ExScripts\verb-logging.ps1
+use these with FunctionsToExport 'func1', 'func2' at bottom of the .psm1 file
+2020-02-18 13:34:51 INFO: Updating manifest .psd1 FunctionsToExport to reflect all functions above:
+(C:\sc\verb-logging\verb-logging\verb-logging.psd1)
+2020-02-18 13:34:51 INFO: Opening a copy of the Manifest (.psd1) file:
+C:\sc\verb-logging\verb-logging\verb-logging.psd1
+for EDITING
+2020-02-18 13:34:51 INFO: 
+#*------v FOLLOW-ON PROCEDURE v------
+
+1) **Edit the following portion of the verb-logging.psd1 file:**
+
+     - Populate FunctionsToExport,
+    Functions parsed from the C:\sc\powershell\ExScripts\verb-logging.ps1 include:
+    'Test-TranscriptionSupported','Test-Transcribing','Stop-TranscriptLog','Start-IseTranscript','start-TranscriptLog','get-ArchivePath','Archive-Log','start-TranscriptLog','Write-Log','Start-Log','ColorMatch','Cleanup'
+
+    - Set ModuleVersion in '1.0.0' format, or you'll see ...
+    Publish-PSArtifactUtility : Failed to publish module 'verb-transcript': 'File does not exist
+    ... .nupkg file errors
+
+2) **Copy the public/exported functions from the source .ps1/psm1 into the the matching new function-named files in the Public folder
+  & Internal folders (for non-exported functions)
+
+3) Edit the readme.md file.
+    notepad2.exe C:\sc\verb-logging\README.md
+
+4) Edit the .psm1 file
+    notepad2.exe C:\sc\verb-logging\verb-logging\verb-logging.psm1
+
+5) Optional all-in-one that encapsulates remaining steps below: (RUN AS SID, REQ'S PERMS TO REPO & ADMIN PROFILE)
+
+# To do a monolithic merged .psm1, sign, and publish to specified Repo,
+.\process-NewModule.ps1 -ModuleName "verb-logging" -ModDirPath "C:\sc\verb-logging" -Repository "lyncRepo" -Merge -showdebug -whatif ;
+
+==Following are the component pieces of the encapsulating process-NewModule.ps1 processing above:
+
+6) Optionally Merge the default Dyanamic-Include version of the .psm1, to a Monolithic .psm1 (faster loading):
+    .\merge-Module.ps1 -ModuleName verb-logging -ModuleSourcePath "C:\sc\verb-logging\Public","C:\sc\verb-logging\Internal" -ModuleDestinationPath C:\sc\verb-logging\verb-logging -showdebug -whatif ;
+
+7) Sign relevenent files:
+$rgxfiles='\.(CAT|MSI|JAR,OCX|PS1|PSM1|PSD1|PS1XML|PSC1|MSP|CMD|BAT|VBS)$' ;
+$rgxIncludeDirs='\\(Public|Internal|Classes)\\' ;
+$files = gci C:\sc\verb-logging\* -recur |?{$_.extension -match $rgxfiles} | ?{$_.fullname -notmatch $rgxIncludeDirs} ;
+sign-file -file $files.fullname ;
+
+8) Clear any existing copy in $PSProfilePath: (use SID at work w lyncRepo!)
+    remove-item -Recurse -Path C:\Users\kadrits\Documents\WindowsPowerShell\Modules\verb-logging\*.* -whatif ;
+
+9) Then copy the module to the $PSProfilePath: (excluding .git & .vscode subfolders ; use SID at work w lyncRepo!
+
+$from='C:\sc\verb-logging' ; $to = 'C:\Users\kadrits\Documents\WindowsPowerShell\Modules\verb-logging' ;
+ $exclude = @('main.js') ; $excludeMatch = @('.git','.vscode') ;
+[regex] $excludeMatchRegEx = '(?i)' + (($excludeMatch |foreach {[regex]::escape($_)}) -join "|") + '' ;
+Get-ChildItem -Path $from -Recurse -Exclude $exclude |
+where { $excludeMatch -eq $null -or $_.FullName.Replace($from, '') -notmatch $excludeMatchRegEx} |
+Copy-Item -Destination {  if ($_.PSIsContainer) { Join-Path $to $_.Parent.FullName.Substring($from.length) }
+else { Join-Path $to $_.FullName.Substring($from.length) }    } -Force -Exclude $exclude -whatif ;
+
+
+
+10) Validate module function (should be visible in the results)
+    Get-Module -ListAvailable -Name verb-logging
+
+11) Exit and restart PS to fully register module (though listed by Get-Module, can see
+    'Publish-Module : ...no module with that name was found in any module directory.'
+    ... errors, until post-restart.epository lyncRepo -Verbose -whatif
+
+
+12)	Publish to the Repo: Verify the repo is present & publish:
+    Get-PSRepository ;
+
+    Publish-Module -Name verb-logging -Repository lyncRepo -Verbose -whatif
+    # or from source dir
+    Publish-Module -Name C:\sc\verb-logging -R
+
+13) Confirm publication: list all the modules in your repo, (or search)
+    Find-Module -Name verb-logging ;
+
+14) Installing mods from the repo:
+
+    Pre-clear all files in local non-installed version in $PSProfilePath: (isn't manageable, use SID at work w lyncRepo!)
+    gci -Recurse -Path "C:\Users\kadrits\Documents\WindowsPowerShell\Modules\verb-logging\*.*" |?{ ! $_.PSIsContainer } | remove-item -whatif ;
+
+    Install the Repo version:
+    Install-Module -Name verb-logging -Repository lyncRepo -scope CurrentUser -AllowClobber -force -whatif ;
+
+===========
+TO FIND & UPDATE DEPENDANT FILES THAT CURRENTLY LEVERAGE verb-logging.ps1, RUN:
+
+gci C:\sc\powershell\*.ps1 -recur | sort name| ss '\$tModFile\s=\s"verb-logging\.ps1"'
+
+
+For each matching .ps1:
+a) Rem/remove any load block like the above
+b) Above params, at script start, add a suitable #Requires for this updated installed module:
+		#Requires -Modules verb-logging
+    (can be on separate lines, or comma-delimited list of like items).
+    Other Requres directives that may be suitable with this change: (## => Rem'd conflicting variant)
+        ##Requires –Version 2.0
+        #Requires –Version 3
+        #requires -PSEdition Desktop
+        ##requires -PSEdition Core
+        #Requires –PSSnapin Microsoft.Exchange.Management.PowerShell.E2010
+        #Requires -Modules ActiveDirectory,  Azure,  AzureAD,  AzureRM,  GroupPolicy,  Lync,  Microsoft.Online.SharePoint.PowerShell,  MSOnline,  ScheduledTasks,  SkypeOnlineConnector
+        #Requires -RunasAdministrator
+
+===========
+TO BRING UPDATED REPO/MODULE ONTO ANOTHER MACHINE
+
+    a) Clone in the repo from GitHub:
+
+    cd C:\sc\ ;
+    # & Git clone [gh repo https clone url]
+    Git clone https://github.com/tostka/verb-logging.git --porcelain ;
+
+
+    b) Add Repo to GitHubDesktop
+
+    c) Run steps 7-13 above, to install into local repo, and install Module locally onto machine(s) from published Repo
+
+===========
+TO DO FUTURE REVISION UPDATES:
+
+    a) Uninstall the existing version (avoids update-module's habit of
+        leaving out of date content in place.)
+
+    Uninstall-Module -Name verb-logging -force -whatif ;
+
+    b) Edit & increment the psdm1 file ModuleVersion value (required or it won't publish properly).
+
+    c) Copy the updated module to the PSProfilePath:
+
+$from='C:\sc\verb-logging' ; $to = 'C:\Users\kadrits\Documents\WindowsPowerShell\Modules\verb-logging' ;
+$exclude = @('main.js') ; $excludeMatch = @('.git','.vscode') ;
+[regex] $excludeMatchRegEx = '(?i)' + (($excludeMatch |foreach {[regex]::escape($_)}) -join "|") + '' ;
+Get-ChildItem -Path $from -Recurse -Exclude $exclude |
+where { $excludeMatch -eq $null -or $_.FullName.Replace($from, '') -notmatch $excludeMatchRegEx} |
+Copy-Item -Destination {  if ($_.PSIsContainer) { Join-Path $to $_.Parent.FullName.Substring($from.length) }
+else { Join-Path $to $_.FullName.Substring($from.length) }    } -Force -Exclude $exclude -whatif ;
+
+
+    d) Republish the updated module:
+
+    Publish-Module -Name verb-logging -Repository lyncRepo -Verbose -whatif
+
+    e) Reinstall from the Repo
+
+    Install-Module -Name verb-logging -Repository lyncRepo -whatif ;
+
+
+#*------^ END FOLLOW-ON PROCEDURE  ^------
+
+

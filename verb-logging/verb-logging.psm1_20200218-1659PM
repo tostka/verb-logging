@@ -1,0 +1,61 @@
+# verb-logging.psm1
+
+
+  <#
+  .SYNOPSIS
+  verb-logging - Logging-related generic functions
+  .NOTES
+  Version     : 1.0.0.0
+  Author      : Todd Kadrie
+  Website     :	https://www.toddomation.com
+  Twitter     :	@tostka
+  CreatedDate : 2/18/2020
+  FileName    : verb-logging.psm1
+  License     : MIT
+  Copyright   : (c) 2/18/2020 Todd Kadrie
+  Github      : https://github.com/tostka
+  AddedCredit : REFERENCE
+  AddedWebsite:	REFERENCEURL
+  AddedTwitter:	@HANDLE / http://twitter.com/HANDLE
+  REVISIONS
+  * 3:56 PM 2/18/2020 Start-Log: added $Tag param, to support descriptive string for building $transcript name
+  * 2/18/2020 - 1.0.0.0
+  # 8:33 AM 2/18/2020 get-ArchivePath: shifted paths into global varis in profile, duped/renamed for module as VERB-LOGGING -> verb-logging
+  # 11:38 AM 12/30/2019 ran vsc alias-expan ; updated Usage block to cover below
+  * 12:03 PM 12/29/2019 added Start-Log, added else wh on pswls entries
+  * 11:35 AM 8/26/2019 Write-Log: fixed missing noecho parameter desig in comment help
+  * 12:51 PM 6/5/2019 added latkin's ColorMatch highlit write-host variant
+  * 11:32 AM 2/28/2019 added write-log support to demo below, also moved the start-trans* up above module loads, to capture fails there
+  * 9:31 AM 2/15/2019:Write-Log: added Level:Debug support, and broader init
+              block example with $whatif & $ticket support, added -NoEcho to suppress console
+              echos and just use it for writing logged output
+  * 8:57 PM 11/25/2018 Write-Log:shifted copy to verb-transcript, added defer to scope $script versions
+  * 8:13 AM 10/2/2018 Cleanup():make it defer to existing script-copy, ren'd $bdebug -> $showdebug
+  * 2:37 PM 9/19/2018 fixed a filename invocation bug in Start-IseTranscript ; added CleanUp() example (with archivevelog disabled), formalized notes block, w demo load
+  * 11:29 AM 11/1/2017 initial version
+  .DESCRIPTION
+  verb-logging - Logging-related generic functions
+  .LINK
+  https://github.com/tostka/verb-logging
+  #>
+
+
+$script:ModuleRoot = $PSScriptRoot ; 
+$script:ModuleVersion = (Import-PowerShellDataFile -Path (get-childitem $script:moduleroot\*.psd1).fullname).moduleversion ; 
+
+#Get public and private function definition files.
+$functionFolders = @('Public', 'Internal', 'Classes') ;
+ForEach ($folder in $functionFolders) {
+    $folderPath = Join-Path -Path $PSScriptRoot -ChildPath $folder ;
+    If (Test-Path -Path $folderPath) {
+        Write-Verbose -Message "Importing from $folder" ;
+        $functions = Get-ChildItem -Path $folderPath -Filter '*.ps1'  ;
+        ForEach ($function in $functions) {
+            Write-Verbose -Message "  Importing $($function.BaseName)" ;
+            . $($function.FullName) ;
+        } ;
+    } ;
+} ;
+$publicFunctions = (Get-ChildItem -Path "$PSScriptRoot\Public" -Filter '*.ps1').BaseName ;
+Export-ModuleMember -Function $publicFunctions ;
+
