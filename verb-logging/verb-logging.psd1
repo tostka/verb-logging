@@ -12,7 +12,7 @@
 RootModule = 'verb-logging.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.0.0.1'
+ModuleVersion = '1.0.7'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -69,7 +69,7 @@ Description = 'Logging-related generic functions'
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = 'Test-TranscriptionSupported','Test-Transcribing','Stop-TranscriptLog','Start-IseTranscript','start-TranscriptLog','get-ArchivePath','Archive-Log','start-TranscriptLog','Write-Log','Start-Log','ColorMatch','Cleanup'
+FunctionsToExport = @()
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = '*'
@@ -126,8 +126,8 @@ PrivateData = @{
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUFvvvWRG1MCzip+fPbxkMrHIm
-# 41igggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUW5P6jYDCNLwFzjE0q0CUATWU
+# LFqgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -142,9 +142,9 @@ PrivateData = @{
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSdbKKO
-# Q+3vfzCD5OumSEHfzZxGkzANBgkqhkiG9w0BAQEFAASBgJvVNVMIAJImZHyrSRQr
-# aWIMbPANTCAlUwnC9q/IO00wI8MrqHb75hngvEsm+NowH7UZwm6CnT0nsy+Ar1xn
-# aHAp5XJpWfEhiVhGWu4fajMtQmXg5WhSfOI0F6Bm+kzstm8pg8Ey010WTOThO4/V
-# yK6kn1IWsqP71FC2comPb3NL
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSyxqiX
+# rsjDMMmdMpijhn0ykFqDODANBgkqhkiG9w0BAQEFAASBgCTpdtenPnd0PWMxFBlR
+# 06bpNlfsJavciJWlR4KXXS+0lS5RWQiAIl2Nx8h16V46n6R0L6dr8lCpnzv87XPW
+# //j0RuENoaY+mH/T+yzVtxuCiS87Ye1UwwNp/5SBIn39iW3BZez5Q5j+FQDx71bu
+# uGm+UJt09F3gSjrcIgy/5PN2
 # SIG # End signature block

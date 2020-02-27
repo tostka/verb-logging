@@ -27,7 +27,7 @@ Describe 'Module Information' -Tags 'Command'{
             $Script:Manifest.RootModule | Should -Be "$ModuleName.psm1"
         }
         It 'Valid Manifest GUID' {
-            $Script:Manifest.Guid | Should -Be "Please Paste here your module Guid - Test-ModuleManifest '<ModulePath>' | Select-Object -ExpandProperty Guid"
+            $Script:Manifest.Guid | Should -Be "c3cd74fb-9df8-4d00-9c5e-ef0968372045"
         }
     }
 
@@ -81,8 +81,8 @@ Describe 'General - Testing all scripts and modules against the Script Analyzer 
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUWK7pEpjzZhsu/GzaePPyrCPX
-# aBCgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUOKkBT77E2KKhfqgbZrNQ/4gd
+# UU6gggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -97,9 +97,9 @@ Describe 'General - Testing all scripts and modules against the Script Analyzer 
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBR4iWta
-# 7h8Zv6ZvAv3NBS3NufmDVjANBgkqhkiG9w0BAQEFAASBgDyY/DpXhSx0uJsfLGtH
-# tAbiGFdwQgoeC8pwvbBrRDojoupfFB+e55jpQGvVeT6ymGL5olWL4Gn/iOyBsqjY
-# xrrrVIaRFXzTIAoPFaN2TgraFE0xmjOr5pqnIC3Nox449XY8EEpdmEoEVu/c0Qjo
-# xkkLqoikS109jIR1fWXQ5zQI
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSFHiCn
+# gDg90JuoVCjJwaSJq5j9GDANBgkqhkiG9w0BAQEFAASBgLGuOKE+mhja0haMsHJn
+# qwVLURH6jH1NBbZBV0GlSPo73wuk7v+EgyB4c/3co62v9q3L9gQuFT0Nt4y5GR36
+# in3Yj0h86Ng58P/Z+aChfCopxIZmhe+3WcVjclo1ctZCiZPBaP/ZJHebbO5vBkWm
+# ARq5WKz48CaNDXJouBjBtauT
 # SIG # End signature block
