@@ -8,6 +8,7 @@ Function Start-IseTranscript {
     EDITED BY: Todd Kadrie
     AUTHOR: ed wilson, msft
     REVISIONS:
+    * 12:05 PM 3/1/2020 rewrote header to loosely emulate most of psv5.1 stock transcirpt header
     * 8:40 AM 3/11/2015 revised to support PSv3's break of the $psise.CurrentPowerShellTab.consolePane.text object
         and replacement with the new...
             $psise.CurrentPowerShellTab.consolePane.text
@@ -61,6 +62,7 @@ Function Start-IseTranscript {
         $Logname= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + $timeStampNow + "-ISEtrans-log.txt")) ;
         write-host "ISE Trans `$Logname: $Logname";
     };
+    <# original header: Pre-PSv5
     $TranscriptHeader = @"
 **************************************
 Windows PowerShell ISE Transcript Start
@@ -69,6 +71,32 @@ UserName: $env:username
 UserDomain: $env:USERDNSDOMAIN
 ComputerName: $env:COMPUTERNAME
 Windows version: $((Get-WmiObject win32_operatingsystem).version)
+**************************************
+Transcript started. Output file is $Logname
+"@
+#>
+    # header (updated to emulate most of Psv5.1 header)
+    $OS = Get-WmiObject win32_operatingsystem ; 
+    $TranscriptHeader = @"
+**************************************
+Windows PowerShell ISE Transcript Start
+Start Time: $(get-date -format 'yyyyMMddHHmmss')
+UserName: $env:userdomain\$env:username
+RunAs User: $env:userdomain\$env:username
+Configuration Name: 
+Machine: $env:COMPUTERNAME ($($os.caption.tostring()) $($os.version.tostring())) 
+Windows version: $((Get-WmiObject win32_operatingsystem).version)
+Host Application: $((resolve-path $env:windir\system32\WindowsPowerShell\v1.0\PowerShell_ISE.exe).path)
+PSVersion: $($host.version.tostring())
+PSEdition: Desktop
+PSCompatibleVersions: 
+Platform: $($os.CreationClassName.split('_')[0])NT
+BuildVersion: 
+CLRVersion: 
+WSManStackVersion: 
+OS: $($os.caption.tostring()) $($os.version.tostring())
+PSRemotingProtocolVersion: 
+SerializationVersion: 
 **************************************
 Transcript started. Output file is $Logname
 "@
