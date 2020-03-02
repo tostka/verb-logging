@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.8.0
+  Version     : 1.0.0.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -39,10 +39,8 @@
   #>
 
 
-$script:ModuleRoot = $PSScriptRoot ;
-$script:ModuleVersion = (Import-PowerShellDataFile -Path (get-childitem $script:moduleroot\*.psd1).fullname).moduleversion ;
-
-#*======v FUNCTIONS v======
+$script:ModuleRoot = $PSScriptRoot ; 
+$script:ModuleVersion = (Import-PowerShellDataFile -Path (get-childitem $script:moduleroot\*.psd1).fullname).moduleversion ; 
 
 
 
@@ -237,6 +235,69 @@ if(test-path function:Cleanup){
 
 #*------^ Cleanup.ps1 ^------
 
+#*------v ColorMatch.ps1 v------
+function ColorMatch {
+    <#
+    .SYNOPSIS
+    ColorMatch.ps1 - Write-Host variant: Accepts piped input, with a regex as a parameter, and highlights any text matching the regex
+    .NOTES
+    Author: latkin
+    Website:	https://stackoverflow.com/users/1366219/latkin
+    Updated By: Todd Kadrie
+    Website:	http://www.toddomation.com
+    Twitter:	@tostka, http://twitter.com/tostka
+    Additional Credits: REFERENCE
+    Website:	URL
+    Twitter:	URL
+    REVISIONS   :
+    * 9/26/2012 - Posted version
+    .DESCRIPTION
+    Write-Host variant: Accepts piped input, with a regex as a parameter, and highlights any text matching the regex
+    .PARAMETER  InputObject
+    Object to be highlit & write-host'd
+    .PARAMETER  Pattern
+    Regex for the text to be highlit
+    .PARAMETER  Color
+    Write-host -foregroundcolor to be used for the highlight
+    .INPUTS
+    Accepts piped input.
+    .OUTPUTS
+    Write-hosts highlit content to console
+    .EXAMPLE
+    "$mailbox" | ColorMatch "Item count: [0-9]*" ;
+    Highlight the $mailbox object with portion matching the regex (Position 0 is pattern)
+    .LINK
+    https://stackoverflow.com/questions/12609760
+    #>
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [string] $InputObject,
+
+        [Parameter(Mandatory = $true, Position = 0)]
+        [string] $Pattern,
+
+        [Parameter(Mandatory = $false, Position = 1)]
+        [string] $Color='Red'
+    )
+    begin{ $r = [regex]$Pattern }
+    process {
+        $ms = $r.matches($inputObject) ;
+        $startIndex = 0 ;
+        foreach($m in $ms) {
+            $nonMatchLength = $m.Index - $startIndex ;
+            Write-Host $inputObject.Substring($startIndex, $nonMatchLength) -NoNew ;
+            Write-Host $m.Value -Fore $Color -NoNew ;
+            $startIndex = $m.Index + $m.Length ;
+        } ;
+        if($startIndex -lt $inputObject.Length) {
+            Write-Host $inputObject.Substring($startIndex) -NoNew ;
+        } ;
+        Write-Host ;
+    }
+}
+
+#*------^ ColorMatch.ps1 ^------
+
 #*------v get-ArchivePath.ps1 v------
 function get-ArchivePath {
     <#.SYNOPSIS
@@ -364,122 +425,6 @@ function get-ArchivePath {
 
 #*------^ get-ArchivePath.ps1 ^------
 
-#*------v get-lastsleep.ps1 v------
-function get-lastsleep {
-    # return the last 7 sleep events on the local pc
-    # usage: get-lastsleep | ft -auto ;
-    # 11:16 AM 1/5/2017 fixed # in report ; expanded returns: returning 14, but use only last 7 ; back port updates from get-lastwake, strip out custom MyAccount log (was pulling wakes not sleeps).
-    # 1:49 PM 10/3/2016 add custom log/events support
-    # vers: 7:17 AM 8/26/2014 corrected date fmt string
-    # ver: 2:48 PM 8/25/2014 - fixed output to display day of week as well
-    # 10:25 AM 1/5/2017 backport the get-lastwake updates to get-lastsleep
-
-    <# Information	1/4/2017 2:44:10 PM	Kernel-Power	42	(64)	Info
-    The system is entering sleep.
-    Sleep Reason: Application API
-    # cmdline works: Get-Eventlog -LogName System -Source Microsoft-Windows-Kernel-Power -entrytype Information -instanceid 42 -newest 7 -message "*sleep*"
-    #>
-    $nEvt = 14;
-    $nFinalEvts = 7 ;
-    $tevLog = "System";
-    $tevSrc = "Microsoft-Windows-Kernel-Power";
-    $tevType = "Information" ;
-    $tevID = 42 ;
-    $tevMsg = "*sleep*" ;
-    $AMPMFilter = $null ;
-    #"AM" ; # new ampm post filtering on TimeGenerated
-
-    write-host -fore yellow ("=" * 10);
-    write-host -fore yellow "`n===$_ LAST $($nFinalEvts) Hibe/Sleep===" ;
-    $spltEvt = @{
-        computername = "localhost" ;
-        logname      = $($tevLog) ;
-        Source       = $($tevSrc) ;
-        InstanceID   = $($tevID) ;
-        newest       = $($nEvt)
-    } ;
-    if ($tevType) { $spltEvt.Add("EntryType", $($tevType)) } ;
-    if ($tevMsg) { $spltEvt.Add("message", $($tevMsg)) } ;
-    #write-verbose -verbose:$true "$($spltEvt|out-string )" ;  # echo for debugging
-    $evts = get-eventlog @spltEvt ;
-    if ($AMPMFilter -eq "AM") {
-        "note: filtering AM events" ;
-        $evts = $evts | ? { (get-date -date $_.TimeGenerated -Uformat %p) -eq "AM" } ;
-    }
-    elseif ($AMPMFilter -eq "PM") {
-        "note: filtering PM events" ;
-        $evts = $evts | ? { (get-date -date $_.TimeGenerated -Uformat %p) -eq "PM" } ;
-    } ;
-    $evts = $evts | sort TimeGenerated -desc | select @{Name = 'Time'; Expression = { get-date $_.TimeGenerated -format 'ddd MM/dd/yyyy h:mm tt' } }, Message ;
-    # return an object v2/v3: return $evts; write-output $evts ;
-    # or just dump to cons
-    #$evts| ft -auto;
-    returning 14, but use only last 7
-    $evts[0..$($nFinalEvts)] | ft -auto;
-}
-
-#*------^ get-lastsleep.ps1 ^------
-
-#*------v get-lastwake.ps1 v------
-function get-lastwake {
-    # return the last 7 sleep events on the local pc
-    # usage: get-lastwake | ft -auto ;
-    # 11:16 AM 1/5/2017 fixed # in report ; expanded returns: returning 14, but use only last 7 ; reworked on new event, and added AM/PM filtering to the events ; corrected echo to reflect wake, not sleep, added reference to the NETLOGON 5719 that might be a better target for below
-    # 1:44 PM 10/3/2016 ported from get-lastsleep
-    # vers: 7:17 AM 8/26/2014 corrected date fmt string
-    # ver: 2:48 PM 8/25/2014 - fixed output to display day of week as well
-    <# 8:05 AM 1/5/2017 sleep as a splt: logname System -computername localhost -Source Microsoft-Windows-Kernel-Power -EntryType Information -newest $nEvt -message "*sleep*"
-    $nEvt=7;$tevID=5719 ;$tevLog="System";$tevSrc="Microsoft-Windows-Kernel-Power";$tevID=1 ;$tevType="Information" ; ; $tevMsg="*sleep*" ;  #>
-    <# 7:54 AM 1/5/2017 # below is missing de-hibs, since 12/30, shift to the alt: Error	1/3/2017 6:54:13 AM	NETLOGON	5719
-    $nEvt=7;$tevLog="MyAccountScripts";$tevSrc="MyAccountWakeSleep";$tevID=1 ;$tevMsg=$null ;  #>
-    <# 7:54 AM 1/5/2017: Error	1/3/2017 6:54:13 AM	NETLOGON	5719 #>
-    #Not perfect, hits 2x per day on boot/dehyb, and again 1-230p. post-filter out the PM's
-    $nEvt = 14;
-    $nFinalEvts = 7 ;
-    $tevLog = "System";
-    $tevSrc = "NETLOGON";
-    $tevID = 5719 ;
-    $tevType = "Error" ; # 7:56 AM 1/5/2017 add entrytype
-    $tevMsg = $null ;
-    $AMPMFilter = "AM" ; # new ampm post filtering on TimeGenerated
-    write-host -fore yellow ("=" * 10);
-    # you can stack the 'logs' here comma-delimmed and loop them (no longer used, using explicit -logname now)
-    #"System" | %{
-    write-host -fore yellow "`n===$_ LAST $($nFinalEvts) Wake/Sleep===" ;
-    #$sleeps=(get-eventlog -logname System -computername localhost -Source Microsoft-Windows-Kernel-Power -EntryType Information -newest $nEvt -message "*sleep*" | select TimeGenerated,Message);
-    #wakes: -logname $tevLog -computername localhost -Source $tevSrc -InstanceID $tevID -EntryType $tevType -newest $nEvt=7
-    $spltEvt = @{
-        computername = "localhost" ;
-        logname      = $($tevLog) ;
-        Source       = $($tevSrc) ;
-        InstanceID   = $($tevID) ;
-        newest       = $($nEvt)
-    } ;
-    if ($tevType) { $spltEvt.Add("EntryType", $($tevType)) } ;
-    if ($tevMsg) { $spltEvt.Add("message", $($tevMsg)) } ;
-    #write-verbose -verbose:$true "$($spltEvt|out-string )" ;  # echo for debugging
-    #$evts=(get-eventlog -logname $tevLog -computername localhost -Source $tevSrc -EntryType Information -InstanceID $tevID -EntryType $tevType -newest $nEvt=7 | select @{Name='Time';Expression={get-date $_.TimeGenerated -format 'ddd MM/dd/yyyy h:mm tt'}},Message) ;
-    $evts = get-eventlog @spltEvt ;
-    if ($AMPMFilter -eq "AM") {
-        "note: filtering AM events" ;
-        $evts = $evts | ? { (get-date -date $_.TimeGenerated -Uformat %p) -eq "AM" } ;
-    }
-    elseif ($AMPMFilter -eq "PM") {
-        "note: filtering PM events" ;
-        $evts = $evts | ? { (get-date -date $_.TimeGenerated -Uformat %p) -eq "PM" } ;
-    } ;
-    $evts = $evts | sort TimeGenerated -desc | select @{Name = 'Time'; Expression = { get-date $_.TimeGenerated -format 'ddd MM/dd/yyyy h:mm tt' } }, Message ;
-    #} ; # the logname loop (disabled, we're explicit on it now)
-
-    # return an object v2/v3: return $evts; write-output $evts ;
-    # or just dump to cons
-    #$evts| ft -auto;
-    # 11:10 AM 1/5/2017 returning 14, but use only last 7
-    $evts[0..$($nFinalEvts)] | ft -auto;
-}
-
-#*------^ get-lastwake.ps1 ^------
-
 #*------v Start-IseTranscript.ps1 v------
 Function Start-IseTranscript {
     <#
@@ -490,7 +435,6 @@ Function Start-IseTranscript {
     EDITED BY: Todd Kadrie
     AUTHOR: ed wilson, msft
     REVISIONS:
-    * 12:05 PM 3/1/2020 rewrote header to loosely emulate most of psv5.1 stock transcirpt header
     * 8:40 AM 3/11/2015 revised to support PSv3's break of the $psise.CurrentPowerShellTab.consolePane.text object
         and replacement with the new...
             $psise.CurrentPowerShellTab.consolePane.text
@@ -544,7 +488,6 @@ Function Start-IseTranscript {
         $Logname= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + $timeStampNow + "-ISEtrans-log.txt")) ;
         write-host "ISE Trans `$Logname: $Logname";
     };
-    <# original header: Pre-PSv5
     $TranscriptHeader = @"
 **************************************
 Windows PowerShell ISE Transcript Start
@@ -553,32 +496,6 @@ UserName: $env:username
 UserDomain: $env:USERDNSDOMAIN
 ComputerName: $env:COMPUTERNAME
 Windows version: $((Get-WmiObject win32_operatingsystem).version)
-**************************************
-Transcript started. Output file is $Logname
-"@
-#>
-    # header (updated to emulate most of Psv5.1 header)
-    $OS = Get-WmiObject win32_operatingsystem ; 
-    $TranscriptHeader = @"
-**************************************
-Windows PowerShell ISE Transcript Start
-Start Time: $(get-date -format 'yyyyMMddHHmmss')
-UserName: $env:userdomain\$env:username
-RunAs User: $env:userdomain\$env:username
-Configuration Name: 
-Machine: $env:COMPUTERNAME ($($os.caption.tostring()) $($os.version.tostring())) 
-Windows version: $((Get-WmiObject win32_operatingsystem).version)
-Host Application: $((resolve-path $env:windir\system32\WindowsPowerShell\v1.0\PowerShell_ISE.exe).path)
-PSVersion: $($host.version.tostring())
-PSEdition: Desktop
-PSCompatibleVersions: 
-Platform: $($os.CreationClassName.split('_')[0])NT
-BuildVersion: 
-CLRVersion: 
-WSManStackVersion: 
-OS: $($os.caption.tostring()) $($os.version.tostring())
-PSRemotingProtocolVersion: 
-SerializationVersion: 
 **************************************
 Transcript started. Output file is $Logname
 "@
@@ -607,7 +524,7 @@ function Start-Log {
     .SYNOPSIS
     Start-Log.ps1 - Configure base settings for use of write-Log() logging
     .NOTES
-    Version     : 1.0.8
+    Version     : 1.0.0
     Author      : Todd Kadrie
     Website     :	http://www.toddomation.com
     Twitter     :	@tostka / http://twitter.com/tostka
@@ -617,16 +534,10 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
-    * 3:56 PM 2/18/2020 Start-Log: added $Tag param, to support descriptive string for building $transcript name
     * 11:16 AM 12/29/2019 init version
     .DESCRIPTION
     Start-Log.ps1 - Configure base settings for use of write-Log() logging
     Usage:
-    #-=-=-=-=-=-=-=-=
-    $backInclDir = "c:\usr\work\exch\scripts\" ;
-    #*======v FUNCTIONS v======
-    $tModFile = "verb-logging.ps1" ; $sLoad = (join-path -path $LocalInclDir -childpath $tModFile) ; if (Test-Path $sLoad) {     Write-Verbose -verbose ((Get-Date).ToString("HH:mm:ss") + "LOADING:" + $sLoad) ; . $sLoad ; if ($showdebug) { Write-Verbose -verbose "Post $sLoad" }; } else {     $sLoad = (join-path -path $backInclDir -childpath $tModFile) ; if (Test-Path $sLoad) {         Write-Verbose -verbose ((Get-Date).ToString("HH:mm:ss") + "LOADING:" + $sLoad) ; . $sLoad ; if ($showdebug) { Write-Verbose -verbose "Post $sLoad" };     }     else { Write-Warning ((Get-Date).ToString("HH:mm:ss") + ":MISSING:" + $sLoad + " EXITING...") ; exit; } ; } ;
-    #*======^ END FUNCTIONS ^======
     #*======v SUB MAIN v======
     [array]$reqMods = $null ; # force array, otherwise single first makes it a [string]
     $reqMods += "Test-TranscriptionSupported;Test-Transcribing;Stop-TranscriptLog;Start-IseTranscript;Start-TranscriptLog;get-ArchivePath;Archive-Log;Start-TranscriptLog;Write-Log;Start-Log".split(";") ;
@@ -645,8 +556,6 @@ function Start-Log {
     #-=-=-=-=-=-=-=-=
     .PARAMETER  Path
     Path to target script (defaults to $PSCommandPath)
-    .PARAMETER Tag
-    Tag string to be used with -Path filename spec, to construct log file name [-tag 'ticket-123456]
     .PARAMETER ShowDebug
     Parameter to display Debugging messages [-ShowDebug switch]
     .EXAMPLE
@@ -663,8 +572,6 @@ function Start-Log {
     PARAM(
         [Parameter(Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,HelpMessage="Path to target script (defaults to `$PSCommandPath) [-Path -Path .\path-to\script.ps1]")]
         [ValidateScript({Test-Path $_})]$Path,
-        [Parameter(HelpMessage="Tag string to be used with -Path filename spec, to construct log file name [-tag 'ticket-123456]")]
-        [string]$Tag,
         [Parameter(HelpMessage="Debugging Flag [-showDebug]")]
         [switch] $showDebug,
         [Parameter(HelpMessage="Whatif Flag  [-whatIf]")]
@@ -674,9 +581,6 @@ function Start-Log {
     $transcript = join-path -path (Split-Path -parent $Path) -ChildPath "logs" ;
     if (!(test-path -path $transcript)) { "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
     $transcript = join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($Path))"  ;
-    if($Tag){
-        $transcript += "-$($Tag)" ; 
-    } ; 
     $transcript += "-Transcript-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-trans-log.txt"  ;
     # add log file variant as target of Write-Log:
     $logfile = $transcript.replace("-Transcript", "-LOG").replace("-trans-log", "-log")
@@ -887,201 +791,199 @@ function Test-TranscriptionSupported {
 #*------^ Test-TranscriptionSupported.ps1 ^------
 
 #*------v Write-Log.ps1 v------
-function Write-Log {
-    <#
-    .SYNOPSIS
-    Write-Log.ps1 - Write-Log writes a message to a specified log file with the current time stamp, and write-verbose|warn|error's the matching msg.
-    .NOTES
-    Author: Jason Wasser @wasserja
-    Website:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
-    Twitter:	@wasserja
-    Updated By: Todd Kadrie
-    Website:	http://www.toddomation.com
-    Twitter:	@tostka, http://twitter.com/tostka
-    Additional Credits: REFERENCE
-    Website:	URL
-    Twitter:	URL
-    REVISIONS   :
-    * 11:34 AM 8/26/2019 fixed missing noecho parameter desig in comment help
-    * 9:31 AM 2/15/2019:Write-Log: added Level:Debug support, and broader init
-        block example with $whatif & $ticket support, added -NoEcho to suppress console
-        echos and just use it for writing logged output
-    * 8:57 PM 11/25/2018 Write-Log:shifted copy to verb-transcript, added defer to scope $script versions
-    * 2:30 PM 10/18/2018 added -useHost to have it issue color-keyed write-host commands vs write-(warn|error|verbose)
-        switched timestamp into the function (as $echotime), rather than redundant code in the $Message contstruction.
-    * 10:18 AM 10/18/2018 cleanedup, added to pshelp, put into OTB fmt, added trailing semis, parame HelpMessages, and -showdebug param
-    * Code simplification and clarification - thanks to @juneb_get_help  ;
-    * Added documentation.
-    * Renamed LogPath parameter to Path to keep it standard - thanks to @JeffHicks  ;
-    * Revised the Force switch to work as it should - thanks to @JeffHicks  ;
-
-    To Do:  ;
-    * Add error handling if trying to create a log file in a inaccessible location.
-    * Add ability to write $Message to $Verbose or $Error pipelines to eliminate  ;
-        duplicates.
-    .DESCRIPTION
-    The Write-Log function is designed to add logging capability to other scripts.
-    In addition to writing output and/or verbose you can write to a log file for  ;
-    later debugging.
-    .PARAMETER Message  ;
-    Message is the content that you wish to add to the log file.
-    .PARAMETER Path  ;
-    The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.
-    .PARAMETER Level  ;
-    Specify the criticality of the log information being written to the log defaults Info: (Error|Warn|Info)  ;
-    .PARAMETER useHost  ;
-    Switch to use write-host rather than write-[verbose|warn|error] [-useHost]
-    .PARAMETER NoEcho
-    Switch to suppress console echos (e.g log to file only [-NoEcho]
-    .PARAMETER NoClobber  ;
-    Use NoClobber if you do not wish to overwrite an existing file.
-    .PARAMETER ShowDebug
-    Parameter to display Debugging messages [-ShowDebug switch]
-    .INPUTS
-    None. Does not accepted piped input.
-    .OUTPUTS
-    Writes output to the specified Path.
-    .EXAMPLE
-    Write-Log -Message 'Log message'   ;
-    Writes the message to c:\Logs\PowerShellLog.log.
-    .EXAMPLE
-    Write-Log -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log
-    Writes the content to the specified log file and creates the path and file specified.
-    .EXAMPLE
-    Write-Log -Message 'Folder does not exist.' -Path c:\Logs\Script.log -Level Error  ;
-    Writes the message to the specified log file as an error message, and writes the message to the error pipeline.
-    .EXAMPLE
-    # init content in script context ($MyInvocation is blank in function scope)
-    $logfile = join-path -path $ofile -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-LOG.txt"  ;
-    $logging = $True ;
-    # ...
-    $sBnr="#*======v `$tmbx:($($Procd)/$($ttl)):$($tmbx) v======" ;
-    $smsg="$($sBnr)" ;
-    if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } ; #Error|Warn
-    Example that uses a variable and the -useHost switch, to trigger write-host use
-    .EXAMPLE
-    $transcript = join-path -path (Split-Path -parent $MyInvocation.MyCommand.Definition) -ChildPath "logs" ;
-    if(!(test-path -path $transcript)){ "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
-    $transcript=join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))"  ;
-    $transcript+= "-Transcript-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-trans-log.txt"  ;
-    # add log file variant as target of Write-Log:
-    $logfile=$transcript.replace("-Transcript","-LOG").replace("-trans-log","-log")
-    if($whatif){
-        $logfile=$logfile.replace("-BATCH","-BATCH-WHATIF") ;
-        $transcript=$transcript.replace("-BATCH","-BATCH-WHATIF") ;
-    } else {
-        $logfile=$logfile.replace("-BATCH","-BATCH-EXEC") ;
-        $transcript=$transcript.replace("-BATCH","-BATCH-EXEC") ;
-    } ;
-    if($Ticket){
-        $logfile=$logfile.replace("-BATCH","-$($Ticket)") ;
-        $transcript=$transcript.replace("-BATCH","-$($Ticket)") ;
-    } else {
-        $logfile=$logfile.replace("-BATCH","-nnnnnn") ;
-        $transcript=$transcript.replace("-BATCH","-nnnnnn") ;
-    } ;
-    $logging = $True ;
-
-    $sBnr="#*======v START PASS:$($ScriptBaseName) v======" ;
-    $smsg= "$($sBnr)" ;
-    if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } ; #Error|Warn
-    More complete boilerplate including $whatif & $ticket
-    .LINK
-    https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0  ;
-    #>
-    [CmdletBinding()]
-    Param (
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, HelpMessage = "Message is the content that you wish to add to the log file")]
-        [ValidateNotNullOrEmpty()][Alias("LogContent")]
-        [string]$Message,
-        [Parameter(Mandatory = $false, HelpMessage = "The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.")][Alias('LogPath')]
-        [string]$Path = 'C:\Logs\PowerShellLog.log',
-        [Parameter(Mandatory = $false, HelpMessage = "Specify the criticality of the log information being written to the log defaults Info: (Error|Warn|Info)")][ValidateSet("Error", "Warn", "Info", "Debug")]
-        [string]$Level = "Info",
-        [Parameter(HelpMessage = "Switch to use write-host rather than write-[verbose|warn|error] [-useHost]")]
-        [switch] $useHost,
-        [Parameter(HelpMessage = "Switch to suppress console echos (e.g log to file only [-NoEcho]")]
-        [switch] $NoEcho,
-        [Parameter(Mandatory = $false, HelpMessage = "Use NoClobber if you do not wish to overwrite an existing file.")]
-        [switch]$NoClobber,
-        [Parameter(HelpMessage = "Debugging Flag [-showDebug]")]
-        [switch] $showDebug
-    )  ;
-
-    Begin {
-        $VerbosePreference = 'Continue'  ; # Set VerbosePreference to Continue so that verbose messages are displayed.
-    }  ;
-    Process {
-        # If the file already exists and NoClobber was specified, do not write to the log.
-        if ((Test-Path $Path) -AND $NoClobber) {
-            Write-Error "Log file $Path already exists, and you specified NoClobber. Either delete the file or specify a different name."  ;
-            Return  ;
-        }
-        elseif (!(Test-Path $Path)) {
-            # create the file including the path when missing.
-            Write-Verbose "Creating $Path."  ;
-            $NewLogFile = New-Item $Path -Force -ItemType File  ;
-        }
-        else {
-            # Nothing to see here yet.
-        }  ;
-
-        $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"  ;
-        $EchoTime = "$((get-date).ToString('HH:mm:ss')):" ;
-
-        # Write message to error, warning, or verbose pipeline and specify $LevelText
-        switch ($Level) {
-            'Error' {
-                if ($useHost) {
-                    write-host -foregroundcolor red ($EchoTime + $Message)   ;
-                }
-                else {
-                    if (!$NoEcho) { Write-Error ($EchoTime + $Message) } ;
-                } ;
-                $LevelText = 'ERROR:'  ;
-            }
-            'Warn' {
-                if ($useHost) {
-                    write-host -foregroundcolor yellow ($EchoTime + $Message)    ;
-                }
-                else {
-                    if (!$NoEcho) { Write-Warning ($EchoTime + $Message) } ;
-                } ;
-                $LevelText = 'WARNING:'  ;
-            }
-            'Info' {
-                if ($useHost) {
-                    write-host -foregroundcolor green ($EchoTime + $Message)   ;
-                }
-                else {
-                    if (!$NoEcho) { Write-Verbose ($EchoTime + $Message) } ;
-                } ;
-                $LevelText = 'INFO:'  ;
-            }
-            'Debug' {
-                if (!$NoEcho) { Write-Debug -Verbose:$true ($EchoTime + $Message) }  ;
-                $LevelText = 'DEBUG:'  ;
-            }
+if(test-path function:Write-Log){
+    "(deferring to `$script:Write-Log())" ;
+} else {
+    "(using default verb-logging:Write-Log())" ;
+    function Write-Log {
+        <#
+        .SYNOPSIS
+        Write-Log.ps1 - Write-Log writes a message to a specified log file with the current time stamp, and write-verbose|warn|error's the matching msg.
+        .NOTES
+        Author: Jason Wasser @wasserja
+        Website:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
+        Twitter:	@wasserja
+        Updated By: Todd Kadrie
+        Website:	http://www.toddomation.com
+        Twitter:	@tostka, http://twitter.com/tostka
+        REVISIONS   :
+        * 11:34 AM 8/26/2019 fixed missing noecho parameter desig in comment help
+        * 9:31 AM 2/15/2019:Write-Log: added Level:Debug support, and broader init
+            block example with $whatif & $ticket support, added -NoEcho to suppress console
+            echos and just use it for writing logged output
+        * 8:57 PM 11/25/2018 Write-Log:shifted copy to verb-transcript, added defer to scope $script versions
+        * 2:30 PM 10/18/2018 added -useHost to have it issue color-keyed write-host commands vs write-(warn|error|verbose)
+            switched timestamp into the function (as $echotime), rather than redundant code in the $Message contstruction.
+        * 10:18 AM 10/18/2018 cleanedup, added to pshelp, put into OTB fmt, added trailing semis, parame HelpMessages, and -showdebug param
+        Original changes cited:
+          * Code simplification and clarification - thanks to @juneb_get_help  ;
+          * Added documentation.
+          * Renamed LogPath parameter to Path to keep it standard - thanks to @JeffHicks  ;
+          * Revised the Force switch to work as it should - thanks to @JeffHicks  ;
+          To Do:  ;
+          * Add error handling if trying to create a log file in a inaccessible location.
+          * Add ability to write $Message to $Verbose or $Error pipelines to eliminate  ;
+              duplicates.
+        .DESCRIPTION
+        The Write-Log function is designed to add logging capability to other scripts.
+        In addition to writing output and/or verbose you can write to a log file for  ;
+        later debugging.
+        .PARAMETER Message  ;
+        Message is the content that you wish to add to the log file.
+        .PARAMETER Path  ;
+        The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.
+        .PARAMETER Level  ;
+        Specify the criticality of the log information being written to the log defaults Info: (Error|Warn|Info)  ;
+        .PARAMETER useHost  ;
+        Switch to use write-host rather than write-[verbose|warn|error] [-useHost]
+        .PARAMETER NoEcho
+        Switch to suppress console echos (e.g log to file only [-NoEcho]
+        .PARAMETER NoClobber  ;
+        Use NoClobber if you do not wish to overwrite an existing file.
+        .PARAMETER ShowDebug
+        Parameter to display Debugging messages [-ShowDebug switch]
+        .INPUTS
+        None. Does not accepted piped input.
+        .OUTPUTS
+        Writes output to the specified Path.
+        .EXAMPLE
+        Write-Log -Message 'Log message'   ;
+        Writes the message to c:\Logs\PowerShellLog.log.
+        .EXAMPLE
+        Write-Log -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log
+        Writes the content to the specified log file and creates the path and file specified.
+        .EXAMPLE
+        Write-Log -Message 'Folder does not exist.' -Path c:\Logs\Script.log -Level Error  ;
+        Writes the message to the specified log file as an error message, and writes the message to the error pipeline.
+        .EXAMPLE
+        # init content in script context ($MyInvocation is blank in function scope)
+        $logfile = join-path -path $ofile -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-LOG.txt"  ;
+        $logging = $True ;
+        # ...
+        $sBnr="#*======v `$tmbx:($($Procd)/$($ttl)):$($tmbx) v======" ;
+        $smsg="$($sBnr)" ;
+        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } ; #Error|Warn
+        Example that uses a variable and the -useHost switch, to trigger write-host use
+        .EXAMPLE
+        $transcript = join-path -path (Split-Path -parent $MyInvocation.MyCommand.Definition) -ChildPath "logs" ;
+        if(!(test-path -path $transcript)){ "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
+        $transcript=join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))"  ;
+        $transcript+= "-Transcript-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-trans-log.txt"  ;
+        # add log file variant as target of Write-Log:
+        $logfile=$transcript.replace("-Transcript","-LOG").replace("-trans-log","-log")
+        if($whatif){
+            $logfile=$logfile.replace("-BATCH","-BATCH-WHATIF") ;
+            $transcript=$transcript.replace("-BATCH","-BATCH-WHATIF") ;
+        } else {
+            $logfile=$logfile.replace("-BATCH","-BATCH-EXEC") ;
+            $transcript=$transcript.replace("-BATCH","-BATCH-EXEC") ;
         } ;
+        if($Ticket){
+            $logfile=$logfile.replace("-BATCH","-$($Ticket)") ;
+            $transcript=$transcript.replace("-BATCH","-$($Ticket)") ;
+        } else {
+            $logfile=$logfile.replace("-BATCH","-nnnnnn") ;
+            $transcript=$transcript.replace("-BATCH","-nnnnnn") ;
+        } ;
+        $logging = $True ;
 
-        # Write log entry to $Path
-        "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append  ;
-    }  ; # PROC-E
-    End {}  ;
+        $sBnr="#*======v START PASS:$($ScriptBaseName) v======" ;
+        $smsg= "$($sBnr)" ;
+        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } ; #Error|Warn
+        More complete boilerplate including $whatif & $ticket
+        .LINK
+        https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0  ;
+        #>
+        [CmdletBinding()]
+        Param (
+            [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, HelpMessage = "Message is the content that you wish to add to the log file")]
+            [ValidateNotNullOrEmpty()][Alias("LogContent")]
+            [string]$Message,
+            [Parameter(Mandatory = $false, HelpMessage = "The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.")][Alias('LogPath')]
+            [string]$Path = 'C:\Logs\PowerShellLog.log',
+            [Parameter(Mandatory = $false, HelpMessage = "Specify the criticality of the log information being written to the log defaults Info: (Error|Warn|Info)")][ValidateSet("Error", "Warn", "Info", "Debug")]
+            [string]$Level = "Info",
+            [Parameter(HelpMessage = "Switch to use write-host rather than write-[verbose|warn|error] [-useHost]")]
+            [switch] $useHost,
+            [Parameter(HelpMessage = "Switch to suppress console echos (e.g log to file only [-NoEcho]")]
+            [switch] $NoEcho,
+            [Parameter(Mandatory = $false, HelpMessage = "Use NoClobber if you do not wish to overwrite an existing file.")]
+            [switch]$NoClobber,
+            [Parameter(HelpMessage = "Debugging Flag [-showDebug]")]
+            [switch] $showDebug
+        )  ;
+
+        Begin {
+            $VerbosePreference = 'Continue'  ; # Set VerbosePreference to Continue so that verbose messages are displayed.
+        }  ;
+        Process {
+            # If the file already exists and NoClobber was specified, do not write to the log.
+            if ((Test-Path $Path) -AND $NoClobber) {
+                Write-Error "Log file $Path already exists, and you specified NoClobber. Either delete the file or specify a different name."  ;
+                Return  ;
+            }
+            elseif (!(Test-Path $Path)) {
+                # create the file including the path when missing.
+                Write-Verbose "Creating $Path."  ;
+                $NewLogFile = New-Item $Path -Force -ItemType File  ;
+            }
+            else {
+                # Nothing to see here yet.
+            }  ;
+
+            $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"  ;
+            $EchoTime = "$((get-date).ToString('HH:mm:ss')):" ;
+
+            # Write message to error, warning, or verbose pipeline and specify $LevelText
+            switch ($Level) {
+                'Error' {
+                    if ($useHost) {
+                        write-host -foregroundcolor red ($EchoTime + $Message)   ;
+                    }
+                    else {
+                        if (!$NoEcho) { Write-Error ($EchoTime + $Message) } ;
+                    } ;
+                    $LevelText = 'ERROR:'  ;
+                }
+                'Warn' {
+                    if ($useHost) {
+                        write-host -foregroundcolor yellow ($EchoTime + $Message)    ;
+                    }
+                    else {
+                        if (!$NoEcho) { Write-Warning ($EchoTime + $Message) } ;
+                    } ;
+                    $LevelText = 'WARNING:'  ;
+                }
+                'Info' {
+                    if ($useHost) {
+                        write-host -foregroundcolor green ($EchoTime + $Message)   ;
+                    }
+                    else {
+                        if (!$NoEcho) { Write-Verbose ($EchoTime + $Message) } ;
+                    } ;
+                    $LevelText = 'INFO:'  ;
+                }
+                'Debug' {
+                    if (!$NoEcho) { Write-Debug -Verbose:$true ($EchoTime + $Message) }  ;
+                    $LevelText = 'DEBUG:'  ;
+                }
+            } ;
+
+            # Write log entry to $Path
+            "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append  ;
+        }  ; # PROC-E
+        End {
+        }  ;
+    } ;
 }
 
 #*------^ Write-Log.ps1 ^------
 
-#*======^ END FUNCTIONS ^======
-
-Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-lastsleep,get-lastwake,Start-IseTranscript,Start-Log,start-TranscriptLog,Stop-TranscriptLog,Test-Transcribing,Test-TranscriptionSupported,Write-Log -Alias *
-
-
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU45zhXGotQqnDiAqmYLJFHkK0
-# wNugggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUzq1Ze2tnjVtxIMV2OiEkiwVa
+# VnqgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1096,9 +998,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-lastsleep,
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQUSiGP
-# kG0t1QagjVyM+2GDwzXHYDANBgkqhkiG9w0BAQEFAASBgCZHYl7KVNskzwhiSMGu
-# UMmjK6BL/e4XEQmbLlm2MvdhH6hLO4WcWjcl9bJ4WgcDZJ6aaMvO41iD0ncBF3fR
-# ndQiBu1N9wn4X4QHt+4czh+coFM6ft2h983CvpWPFXHUuX5/rRF1cX3WlWiHvwRr
-# bO+EGhv3vsP2U3zHYpp+qW4J
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTSLkjw
+# uuNP8taC1KSb70DhkItptTANBgkqhkiG9w0BAQEFAASBgEYjhHr7rpy/ScgQlUvK
+# wAdAjNN1qR6dldhtXwh8ylXH8INIMXaMhodmOr9m43ouSW3SHtaqTgi/fGp4SEhX
+# EU1mr9bvj+rn/I6eA5ZADf/72ok6R84Qnr1iieHYuIMDGwLympMYw6UEoPGIRwem
+# bhXzTLItXi5D5ErnLPcSXUjb
 # SIG # End signature block
