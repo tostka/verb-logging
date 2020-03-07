@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.29.0
+  Version     : 1.0.8.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -18,6 +18,7 @@
   AddedWebsite:	REFERENCEURL
   AddedTwitter:	@HANDLE / http://twitter.com/HANDLE
   REVISIONS
+  * 1:53 PM 3/6/2020 comboed & ported the legacy get-lastXXX functions into get-lastEvent, with aliasing 'functions' to fill the old niches: get-lastsleep, get-lastwake, get-lastboot, get-lastlogon, get-lastshutdown, get-lastevent, there's a -sleep/wake/logon/logoff/bootup/shutdown param driving the choices. Also, 3 of the four above were pulled from incl Core, rather than freestanding functions. 
   * 2/18/2020 - 1.0.0.0
   # 8:33 AM 2/18/2020 get-ArchivePath: shifted paths into global varis in profile, duped/renamed for module as VERB-LOGGING -> verb-logging
   # 11:38 AM 12/30/2019 ran vsc alias-expan ; updated Usage block to cover below
@@ -364,201 +365,13 @@ function get-ArchivePath {
 
 #*------^ get-ArchivePath.ps1 ^------
 
-#*------v get-EventsFiltered.ps1 v------
-function get-EventsFiltered {
-    <#
-    .SYNOPSIS
-    get-EventsFiltered() - DESC
-    .NOTES
-    Version     : 0.0.
-    Author      : Todd Kadrie
-    Website     :	http://www.toddomation.com
-    Twitter     :	@tostka / http://twitter.com/tostka
-    CreatedDate : 2019-
-    FileName    :
-    License     : MIT License
-    Copyright   : (c) 2019 Todd Kadrie
-    Github      : https://github.com/tostka
-    AddedCredit : REFERENCE
-    AddedWebsite:	URL
-    AddedTwitter:	URL
-    REVISIONS
-    * 4:00 PM 3/7/2020 ran vsc expalias
-    * 1:54 PM 3/6/2020 roughed-in, untested. Intent was to use it in place of what wound up being get-winEventsLoopedIDs - which has a much simpler subset of params & features, but got the job done.
-    .DESCRIPTION
-    XXX - XXX
-    .PARAMETER  ComputerName
-    Name or IP address of the target computer
-    .PARAMETER Credential
-    Credential object for use in accessing the computers.
-    .PARAMETER Whatif
-    Parameter to run a Test no-change pass, and log results [-Whatif switch]
-    .PARAMETER ShowProgress
-    Parameter to display progress meter [-ShowProgress switch]
-    .PARAMETER ShowDebug
-    Parameter to display Debugging messages [-ShowDebug switch]
-    .PARAMETER Whatif
-    Parameter to run a Test no-change pass, and log results [-Whatif switch]
-    .INPUTS
-    Accepts piped input.
-    .OUTPUTS
-    Returns an object with uptime data to the pipeline.
-
-    .LINK
-    #>
-
-    ##Requires -Version 2.0
-    ##Requires -Version 3
-    ##requires -PSEdition Desktop
-    ##requires -PSEdition Core
-    ##Requires -PSSnapin Microsoft.Exchange.Management.PowerShell.E2010
-    ##Requires -Modules ActiveDirectory,  Azure,  AzureAD,  AzureRM,  GroupPolicy,  Lync,  Microsoft.Online.SharePoint.PowerShell,  MSOnline,  ScheduledTasks,  SkypeOnlineConnector
-    ##Requires -RunasAdministrator
-    # VALIDATORS: [ValidateNotNull()][ValidateNotNullOrEmpty()][ValidateLength(24,25)][ValidateLength(5)][ValidatePattern("(lyn|bcc|spb|adl)ms6(4|5)(0|1).(china|global)\.ad\.toro\.com")][ValidateSet("USEA","GBMK","AUSYD")][ValidateScript({Test-Path $_ -PathType 'Container'})][ValidateScript({Test-Path $_})][ValidateRange(21,65)][ValidateCount(1,3)]
-    [CmdletBinding()]
-    # retain minimum Param() to have $verbosepref updated by -verbose call
-    PARAM (
-        [parameter(ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,Position=0,
-        Mandatory=$True,HelpMessage="LogName[-LogName System]")]
-        [ValidateNotNull()]
-        [string[]]$LogName,
-        [parameter(Mandatory=$True,HelpMessage="ID[-ID 4740]")]
-        [ValidateNotNull()]
-        [int]$ID,
-        [parameter(HelpMessage="ProviderName[-ProviderName EventLog]")]
-        [ValidateNotNull()]
-        [string[]]$ProviderName,
-        [parameter(HelpMessage="Message text to be matched [-Message '*sleep*']")]
-        [string[]]$Message,
-        [parameter(HelpMessage="TypeName (Legacy text alt to Level)[-Type Error]")]
-        [ValidateSet("LogAlways","Critical","Error","Warning","Informational","Verbose")]
-        [string[]]$Type,
-        [parameter(Mandatory=$True,HelpMessage="Level (numeric 'Type')[-Level 2]")]
-        [ValidateRange(0,5)]
-        [int]$Level,
-        [parameter(Mandatory=$True,HelpMessage="Level[-ID 4740]")]
-        [int]$MaxEvents,
-        [parameter(Mandatory=$True,HelpMessage="StartTime[-StartTime xxx]")]
-        [ValidateNotNull()]
-        $StartTime,
-        [parameter(Mandatory=$True,HelpMessage="StartTime[-StartTime xxx]")]
-        [ValidateNotNull()]
-        $EndTime,
-        [parameter(HelpMessage="TypeName (Legacy text alt to Level)[-Type Error]")]
-        [ValidateSet("AM","PM")]
-        [string[]]$AMPMFilter,
-        [Parameter(HelpMessage="Failure Audit[-FailureAudit]")]
-        [switch] $FailureAudit ,
-        [Parameter(HelpMessage="Success audit[-SuccessAudit]")]
-        [switch] $SuccessAudit,
-        [Parameter(HelpMessage="Debugging Flag [-showDebug]")]
-        [switch] $showDebug
-    ) ;
-
-    BEGIN {
-        $Verbose = ($VerbosePreference -eq 'Continue') ; # if using explicit write-verbose -verbose, this converts the vPref into a usable vari in those lines
-        $sBnr="#*---===v Function: $($MyInvocation.MyCommand) v===---" ;
-        $smsg= "$($sBnr)" ;
-        if($verbose){ if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
-        else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ; } ;
-
-    }  # BEG-E ;
-
-    PROCESS {
-            if($StartTime){$StartTime = get-date $StartTime} ;
-            if($EndTime){$EndTime = get-date $StartTime} ;
-
-            if($host.version.major -ge 3){$FilterHashtable=[ordered]@{Dummy = $null } ;
-            } else {$FilterHashtable = New-Object Collections.Specialized.OrderedDictionary } ;
-            If($FilterHashtable.Contains("Dummy")){$FilterHashtable.remove("Dummy")} ;
-            $FilterHashtable.Add("LogName",$LogName) ;
-
-            if($host.version.major -ge 3){$pltWinEvt=[ordered]@{Dummy = $null } ;
-            } else {$pltWinEvt = New-Object Collections.Specialized.OrderedDictionary } ;
-            If($pltWinEvt.Contains("Dummy")){$pltWinEvt.remove("Dummy")} ;
-            $pltWinEvt.Add("ErrorAction",0) ;
-
-            if($ID){$FilterHashtable.add('ID',$ID) } ;
-            if($ProviderName){$FilterHashtable.add('ProviderName',$ProviderName)} ;
-            if($Message){$FilterHashtable.add('Message',$Message) } ;
-            if($Type){
-                switch ($Type) {
-                    "Verbose" { $FilterHashtable.add("Level", 5) }
-                    "Informational" { $spltEvt.add("Level", 4) }
-                    "Warning" { $spltEvt.add("Level", 3) }
-                    "Error" { $spltEvt.add("Level", 2) }
-                    "Critical" { $spltEvt.add("Level", 1) }
-                    "LogAlways" { $spltEvt.add("Level", 0) }
-                } ;
-            } ;
-            if($Level){$FilterHashtable.add('Level',$Level) } ;
-            if($FailureAudit){$FilterHashtable.add('Level',$Level) } ;
-            if($Level){$FilterHashtable.add('Level',$Level) } ;
-            if($StartTime){$FilterHashtable.add('StartTime',$StartTime) } ;
-            if($EndTime){$FilterHashtable.add('EndTime',$EndTime) } ;
-
-            if($MaxEvents){$pltWinEvt.add('MaxEvents',$MaxEvents) } ;
-
-            if($FailureAudit){$pltWinEvt.add('Keywords','4503599627370496') } ;
-            if($SuccessAudit){$pltWinEvt.add('Keywords','9007199254740992') } ;
-
-            if($MaxEvents){$pltWinEvt.add('MaxEvents',$MaxEvents) ;
-
-            # add the completed FilterHashtable to the splat
-            $pltWinEvt.add('FilterHashtable',$FilterHashtable) ;
-
-            $error.clear() ;
-            $continue = $true ;
-            $PriorEAPref = $ErrorActionPreference ;
-            TRY {
-                $ErrorActionPreference = "Stop" ;
-                write-verbose -verbose:$verbose "$((get-date).ToString('HH:mm:ss')):get-winevent w`n$(($pltWinEvt|out-string).trim())`nw FilterHashtable:`n$(($FilterHashtable|out-string).trim())`n" ;
-
-                $evts = get-winevent @pltWinEvt | Sort-Object TimeCreated -desc ;
-
-                if ($AMPMFilter -eq "AM") {
-                    write-verbose -verbose:$verbose  "$((get-date).ToString('HH:mm:ss')):Note: filtering AM events" ;
-                    $evts = $evts | Where-Object { (get-date -date $_.TimeCreated -Uformat %p) -eq "AM" } ;
-                } ;
-
-                $evts | write-output ;
-
-
-
-            } CATCH {
-                $ErrTrpd = $_ ;
-                $smsg = "Failed processing $($ErrTrpd.Exception.ItemName). `nError Message: $($ErrTrpd.Exception.Message)`nError Details: $($ErrTrpd)" ;
-                if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Error } #Error|Warn|Debug
-                else{ write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-                Exit #STOP(debug)|EXIT(close)|Continue(move on in loop cycle) ;
-            } ;
-            $ErrorActionPreference = $PriorEAPref ;
-
-
-        } # loop-E ;
-    } # PROC-E ;
-
-    END {
-        $smsg= "$($sBnr.replace('=v','=^').replace('v=','^='))" ;
-        if($verbose){ if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
-        else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ; } ;
-    } ; # END-E
-}
-
-#*------^ get-EventsFiltered.ps1 ^------
-
-#*------v get-lastboot.ps1 v------
-function get-lastboot {get-lastevent -Bootup }
-
-#*------^ get-lastboot.ps1 ^------
-
-#*------v get-LastEvent.ps1 v------
+#*------v get-lastevent.ps1 v------
 function get-lastevent {
     <#
     .SYNOPSIS
     get-lastevent - return the last 7 wake events on the local pc
     .NOTES
-    Version     : 1.0.29.0
+    Version     : 1.0.8.0
     Author      : Todd Kadrie
     Website     :	https://www.toddomation.com
     Twitter     :	@tostka
@@ -571,7 +384,6 @@ function get-lastevent {
     AddedWebsite:	REFERENCEURL
     AddedTwitter:	@HANDLE / http://twitter.com/HANDLE
     REVISIONS
-    * 4:00 PM 3/7/2020 ran vsc expalias
     * 7:19 AM 3/6/2020 rewriting to consolidate several get-lastxxx, with params to tag the variants, and an alias/function to deliver the matching names
     # 11:16 AM 1/5/2017 fixed # in report ; expanded returns: returning 14, but use only last 7 ; reworked on new event, and added AM/PM filtering to the events ; corrected echo to reflect wake, not sleep, added reference to the NETLOGON 5719 that might be a better target for below
     # 1:44 PM 10/3/2016 ported from get-lastsleep
@@ -607,8 +419,8 @@ function get-lastevent {
     |WdiContext|562949953421312|
     |ResponseTime|281474976710656|
     |None|0|
-
-    ## Type names to get-winevent-compatible Levels
+    
+    ## Type names to get-winevent-compatible Levels 
     switch ($tevType) {
         "Verbose" { $spltEvt.add("Level", 5) }
         "Informational" { $spltEvt.add("Level", 4) }
@@ -670,14 +482,14 @@ function get-lastevent {
         [Parameter(HelpMessage="Return most recent Logoff events [-Logon]")]
         [switch] $Logoff
     ) ;
-    $Verbose = ($VerbosePreference -eq 'Continue') ;
+    $Verbose = ($VerbosePreference -eq 'Continue') ; 
     [array]$evts = @() ;
 
     $hlastBootUp=@{
         logname      = "System" ;
         ProviderName = "EventLog" ;
         ID           = 6009 ;
-        Level        = 4 ;
+        Level        = 4 ; 
     } ;
 
     if($Bootup){
@@ -686,8 +498,8 @@ function get-lastevent {
         $message = $null ;
         $AMPMFilter = $null ;
         $evts += get-winEventsLoopedIDs $filter ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
-        If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
+        $evts = $evts | sort TimeCreated -desc ;
+        If ($message) {$evts = $evts | ? { ($_.Message -like $($message)) } } ;
     } elseif ($Shutdown) {
         # lose computername = localhost - it causes filterhashtable to fail qry - cuz it's not a supporte field of the param!
         $hlastShutdown=@{
@@ -701,13 +513,13 @@ function get-lastevent {
         $message = $null ;
         $AMPMFilter = $null ;
         $evts += get-winEventsLoopedIDs $filter ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
+        $evts = $evts | sort TimeCreated -desc ;
         if ((New-TimeSpan -start $(get-date $evts[0].timecreated) -end $(get-date)).days -gt 3) {
             write-verbose -verbose:$verbose "(adding logoffs)" ;
             $hlastShutdown.ID = '7002' ;
             $evts += get-winEventsLoopedIDs $filter ;
         } ;
-        If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
+        If ($message) {$evts = $evts | ? { ($_.Message -like $($message)) } } ;
     } elseif ($Sleep) {
         $hlastSleep=@{
             logname      = "System" ;
@@ -720,8 +532,8 @@ function get-lastevent {
         $message = "*sleep*"  ;
         $AMPMFilter = $null ;
         $evts += get-winEventsLoopedIDs $filter ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
-        If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
+        $evts = $evts | sort TimeCreated -desc ;
+        If ($message) {$evts = $evts | ? { ($_.Message -like $($message)) } } ;
     } elseif ($Wake) {
         $hlastWake=@{
             logname      = "System" ;
@@ -734,8 +546,8 @@ function get-lastevent {
         $message = $null ;
         $AMPMFilter = $null ;
         $evts += get-winEventsLoopedIDs $filter ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
-        If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
+        $evts = $evts | sort TimeCreated -desc ;
+        If ($message) {$evts = $evts | ? { ($_.Message -like $($message)) } } ;
     } elseif ($Logon) {
         $hlastLogon=@{
             logname      = "security";
@@ -749,9 +561,9 @@ function get-lastevent {
         $AMPMFilter = $null ;
         $evts += get-winEventsLoopedIDs $filter ;
         # additional property filter specific to logon events:
-        $evts = $evts | Where-Object { $_.properties[8].value -eq 2 } ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
-        If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
+        $evts = $evts | where { $_.properties[8].value -eq 2 } ;
+        $evts = $evts | sort TimeCreated -desc ;
+        If ($message) {$evts = $evts | ? { ($_.Message -like $($message)) } } ;
     } elseif ($Logoff) {
         $hlastLogon=@{
             logname      = "Security";
@@ -766,126 +578,137 @@ function get-lastevent {
         $evts += get-winEventsLoopedIDs $filter ;
         # additional property filter specific to logon events:
         #$evts = $evts | where { $_.properties[8].value -eq 2 } ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
-        If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
+        $evts = $evts | sort TimeCreated -desc ;
+        If ($message) {$evts = $evts | ? { ($_.Message -like $($message)) } } ;
     } else {
         $filter =  $hlastBootUp ;
         $Tag = "Bootup (default)" ;
         $message = $null ;
         $AMPMFilter = $null ;
         $evts += get-winEventsLoopedIDs $filter ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
-        If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
-    } ;
+        $evts = $evts | sort TimeCreated -desc ;
+        If ($message) {$evts = $evts | ? { ($_.Message -like $($message)) } } ;
+    } ; 
 
     #region output
     if ($AMPMFilter){
-        $evts = $evts | Where-Object { (get-date -date $_.TimeCreated -Uformat %p) -eq $AMPMFilter }
-    } ;
-    $evts = $evts | Sort-Object TimeCreated -desc ;
+        $evts = $evts | ? { (get-date -date $_.TimeCreated -Uformat %p) -eq $AMPMFilter } 
+    } ; 
+    $evts = $evts | sort TimeCreated -desc ;
     write-verbose -verbose:$verbose "events: `n$(($evts|out-string).trim())" ;
 
-    $evts = $evts | Sort-Object TimeCreated -desc | Select-Object -first $MaxEvents | Select-Object @{Name = 'Time'; Expression = { get-date $_.TimeCreated -format 'ddd MM/dd/yyyy h:mm tt' } }, Message ;
+    $evts = $evts | sort TimeCreated -desc | select -first $MaxEvents | select @{Name = 'Time'; Expression = { get-date $_.TimeCreated -format 'ddd MM/dd/yyyy h:mm tt' } }, Message ;
 
     #$evts[0..$($FinalEvents)] | write-output
     #$evts[0..$($FinalEvents)] | ft -auto;
-    $sBnr="`n#*======v LAST $($FinalEvents) $($Tag) Events: v======" ;
-    $smsg = "$((get-date).ToString('HH:mm:ss')):$($sBnr)" ;
-    $smsg += "`n$(($evts[0..$($FinalEvents)] | Format-Table -auto |out-string).trim())" ;
+    $sBnr="`n#*======v LAST $($FinalEvents) $($Tag) Events: v======" ; 
+    $smsg = "$((get-date).ToString('HH:mm:ss')):$($sBnr)" ; 
+    $smsg += "`n$(($evts[0..$($FinalEvents)] | ft -auto |out-string).trim())" ; 
     $smsg += "`n$((get-date).ToString('HH:mm:ss')):$($sBnr.replace('=v','=^').replace('v=','^='))`n" ;
-    write-host -foregroundcolor green $smsg ;
+    write-host -foregroundcolor green $smsg ; 
 
     #endregion
 }
-
-#*------^ get-LastEvent.ps1 ^------
-
-#*------v get-lastlogon.ps1 v------
-function get-lastlogon {get-lastevent -Logon }
-
-#*------^ get-lastlogon.ps1 ^------
-
-#*------v get-lastshutdown.ps1 v------
+#*------^ get-lastevent.ps1 ^------
+# 'aliased' functions for legacy dedicated-named scripts
+#*------v Function get-lastsleep  v------
+function get-lastsleep {get-lastevent -Sleep } ; 
+#*------^ END Function get-lastsleep  ^------
+#*------v Function get-lastwake  v------
+function get-lastwake {get-lastevent -Wake } ; 
+#*------^ END Function get-lastwake  ^------
+#*------v Function get-lastboot  v------
+function get-lastboot {get-lastevent -Bootup } ; 
+#*------^ END Function get-lastboot  ^------
+#*------v Function get-lastlogon  v------
+function get-lastlogon {get-lastevent -Logon } ; 
+#*------^ END Function get-lastlogon  ^------
+#*------v Function get-lastshutdown  v------
 function get-lastshutdown {get-lastevent -shutdown } ; 
-if (!(get-alias -name "gls" -ea 0 )) { Set-Alias -Name 'gls' -Value 'get-lastshutdown' ; }
+if (!(get-alias -name "gls" -ea 0 )) { Set-Alias -Name 'gls' -Value 'get-lastshutdown' ; } ;
+#*------^ END Function Function get-lastshutdown  ^------
 
-#*------^ get-lastshutdown.ps1 ^------
-
-#*------v get-lastsleep.ps1 v------
-function get-lastsleep {get-lastevent -Sleep }
-
-#*------^ get-lastsleep.ps1 ^------
-
-#*------v get-lastwake.ps1 v------
-function get-lastwake {get-lastevent -Wake }
-
-#*------^ get-lastwake.ps1 ^------
-
-#*------v get-winEventsLoopedIDs.ps1 v------
-function get-winEventsLoopedIDs {
+#*------v Function get-LastBootUpTime v------
+function get-LastBootUpTime {
     <#
     .SYNOPSIS
-    get-lastevent - return the last 7 wake events on the local pc
+    get-LastBootUpTime() - retrieves LastBootUpTime on the specified/local machine(s)
     .NOTES
-    Version     : 1.0.11.0
-    Author      : Todd Kadrie
-    Website     :	https://www.toddomation.com
-    Twitter     :	@tostka
-    CreatedDate : 2/18/2020
-    FileName    : get-lastevent.ps1
-    License     : MIT
-    Copyright   : (c) 2/18/2020 Todd Kadrie
-    Github      : https://github.com/tostka
-    AddedCredit : REFERENCE
-    AddedWebsite:	REFERENCEURL
-    AddedTwitter:	@HANDLE / http://twitter.com/HANDLE
-    REVISIONS
-    * 4:00 PM 3/7/2020 ran vsc expalias
-    * 1:11 PM 3/6/2020 init
+    Author: Todd Kadrie
+    Website:	http://tinstoys.blogspot.com
+    Twitter:	http://twitter.com/tostka
+    REVISIONS   :
+    vers: 8:23 AM 12/20/2017 functional
     .DESCRIPTION
-    get-winevents -filterhashtable supports an array in the ID field, but I want MaxEvents _per event_ filtered,
-    not overall (total most recent 7 drawn from most recent 14 of each type, sorted by date)
-    This function pulls the ID array off and loops & aggregate the events,
-    sorts on time, and returns the most recent x
-    .PARAMETER MaxEvents
-    Maximum # of events to poll for each event specified -MaxEvents 14]
-    .PARAMETER FinalEvents
-    Final # of sorted events of all types to return [-FinalEvents 7]
-    .PARAMETER Filter
-    get-WinEvents -FilterHashtable hash obj to be queried to return matching events[-filter `$hashobj]
-    A typical hash of this type, could look like: @{logname='System';id=6009 ;ProviderName='EventLog';Level=4;}
-    Corresponding to a search of the System log, EventLog source, for ID 6009, of Informational type (Level 4).
+    get-LastBootUpTime() - retrieves LastBootUpTime on the specified/local machine(s)
+    Works for single system, and a list on cmdline, but try to pipline Exchservers into it, and it throws up
+    .PARAMETER  ComputerName
+    Name or IP address of the target computer
+    .PARAMETER Credential
+    Credential object for use in accessing the computers.
+    .INPUTS
+    Accepts piped input.
+    .OUTPUTS
+    Returns an object with uptime data to the pipeline.
     .EXAMPLE
-    [array]$evts = @() ;
-    $hlastShutdown=@{logname = 'System'; ProviderName = $null ;  ID = '13','6008','13','6008','6006' ; Level = 4 ; } ;
-    $evts += get-winEventsLoopedIDs -filter $hlastShutdown -MaxEvents ;
-    The above runs a collection pass for each of the ID's specified above (which are associated with shutdowns),
-    returns the 14 most recent of each type, sorts the aggregate matched events on timestamp, and returns the most
-    recent 7 events of any of the matched types.
+    get-LastBootUpTime USEA-MAILEXP | select Computername,Uptime
+    .EXAMPLE
+    (get-LastBootUpTime "LYN-3V6KSY1","localhost").uptimestr
+    .EXAMPLE
+    get-exchangeserver usea-nahubcas1 | get-LastBootUpTime
+    .EXAMPLE
+    get-exchangeserver  | get-LastBootUpTime
+    .EXAMPLE
+    "usea-nahubcas1","usea-fdhubcas1" | foreach {get-LastBootUpTime $_}
+    .EXAMPLE
+    get-exchangeserver | sort Site,AdminDisplayVersion.major,Role,Name | foreach {get-LastBootUpTime $_}
+    .EXAMPLE
+    Get-ADComputer -filter * | Select @{label='computername';expression={$_.name}} | get-LastBootUpTime
     .LINK
-    https://github.com/tostka/verb-logging
-    #>
-    PARAM(
-        [Parameter(HelpMessage = "Maximum # of events to poll for each event specified[-MaxEvents 14]")]
-        [int] $MaxEvents = 14,
-        [Parameter(HelpMessage = "Final # of sorted events of all types to return [-FinalEvents 7]")]
-        [int] $FinalEvents = 7,
-        [Parameter(Position=0,Mandatory=$True,HelpMessage="get-WinEvents -FilterHashtable hash obj to be queried to return matching events[-filter `$hashobj]")]
-        $Filter
-    ) ;
-    $EventProperties ="timecreated","id","leveldisplayname","message" ;
-    $tIDs = $filter.ID ;
-    foreach($ID in $tIDs){
-        $filter.ID = $id ;
-        # purge empty values (throws up on ProviderName:$null)
-        $filter | ForEach-Object {$p = $_ ;@($p.GetEnumerator()) | Where-Object{ ($_.Value | Out-String).length -eq 0 } | Foreach-Object {$p.Remove($_.Key)} ;} ;
-        $evts += get-winevent -FilterHashtable $filter -MaxEvents $MaxEvents -ea 0 | Select-Object $EventProperties ;
-    } ;
-    $evts = $evts | Sort-Object TimeCreated -desc |
-        write-output ;
-}
+     #>
 
-#*------^ get-winEventsLoopedIDs.ps1 ^------
+    # 9:03 AM 2/3/2015 added aliases, permits piping the output of WMI query etc, using Get-WMIObject into a function and it would grab the __Server property of the object and use it in the pipeline of the function.
+
+    [CmdletBinding()]
+    param (
+        [parameter(
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0)]
+        [Alias('__ServerName', 'Server', 'Computer', 'Name', 'IPAddress', 'CN')]
+        [string[]]$ComputerName = $env:COMPUTERNAME
+        ,
+        [parameter(Position = 1)]
+        [System.Management.Automation.PSCredential]$Credential
+    ) ;
+    BEGIN {
+        if ($Credential -ne $Null) {
+            $WmiParameters.Credential = $Credential ;
+        }  ; # if-E
+        $Info = @()
+        $iProcd = 0;
+    }  # BEG-E
+    PROCESS {
+        foreach ($Computer in $Computername) {
+            $iProcd++
+            $continue = $true
+            try {
+                $ErrorActionPreference = "Stop" ;
+                $OS = Get-WmiObject -Class Win32_OperatingSystem -ComputerName $Computer #-ErrorAction stop
+                $oRet = (Get-Date) - $OS.ConvertToDateTime($OS.LastBootUpTime) #-ErrorAction stop
+                $obj = "$($os.converttodatetime($os.lastbootuptime))" ;
+            }
+            catch {
+                Write "$((get-date).ToString('HH:mm:ss')): Error Details: $($_)"
+                Continue
+            } # try/cat-E
+            if ($continue) {
+                Write-Output $obj ;
+            } # if-E
+        } # loop-E ;
+    }  # PROC-E ;
+} #*------^ END Function get-LastBootUpTime ^------
+
 
 #*------v Start-IseTranscript.ps1 v------
 Function Start-IseTranscript {
@@ -1014,7 +837,7 @@ function Start-Log {
     .SYNOPSIS
     Start-Log.ps1 - Configure base settings for use of write-Log() logging
     .NOTES
-    Version     : 1.0.0
+    Version     : 1.0.8
     Author      : Todd Kadrie
     Website     :	http://www.toddomation.com
     Twitter     :	@tostka / http://twitter.com/tostka
@@ -1481,14 +1304,14 @@ function Write-Log {
 
 #*======^ END FUNCTIONS ^======
 
-Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFiltered,get-lastboot,get-lastevent,get-lastlogon,get-lastshutdown,get-lastsleep,get-lastwake,get-winEventsLoopedIDs,Start-IseTranscript,Start-Log,start-TranscriptLog,Stop-TranscriptLog,Test-Transcribing,Test-TranscriptionSupported,Write-Log -Alias *
+Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-lastsleep,get-lastwake,Start-IseTranscript,Start-Log,start-TranscriptLog,Stop-TranscriptLog,Test-Transcribing,Test-TranscriptionSupported,Write-Log -Alias *
 
 
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUyXVGnQcgj2qr3/AEBVfbMFnl
-# PtqgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU45zhXGotQqnDiAqmYLJFHkK0
+# wNugggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1503,9 +1326,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTvf9OS
-# 5FdFwmi5FIJ2r8QPz86PDjANBgkqhkiG9w0BAQEFAASBgDLnqa12+9higPK3o0Tt
-# SYoj9/YLE0ouE8zTAjtkA+xlMfZ7vSgQkGPGiATaPdWPYqEepaKiLYGClR9Bdp81
-# fP3ahjvhiCfC8/CqP86ljr58VjxDdFZSwa5d29eCqyXKHkxNUJnctUqtpTPEh+rW
-# ++uMNp/LpI9uYMb6cFX41PWo
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQUSiGP
+# kG0t1QagjVyM+2GDwzXHYDANBgkqhkiG9w0BAQEFAASBgCZHYl7KVNskzwhiSMGu
+# UMmjK6BL/e4XEQmbLlm2MvdhH6hLO4WcWjcl9bJ4WgcDZJ6aaMvO41iD0ncBF3fR
+# ndQiBu1N9wn4X4QHt+4czh+coFM6ft2h983CvpWPFXHUuX5/rRF1cX3WlWiHvwRr
+# bO+EGhv3vsP2U3zHYpp+qW4J
 # SIG # End signature block

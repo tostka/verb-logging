@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.29.0
+  Version     : 1.0.11.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -18,6 +18,7 @@
   AddedWebsite:	REFERENCEURL
   AddedTwitter:	@HANDLE / http://twitter.com/HANDLE
   REVISIONS
+  * 1:53 PM 3/6/2020 comboed & ported the legacy get-lastXXX functions into get-lastEvent, with aliasing 'functions' to fill the old niches: get-lastsleep, get-lastwake, get-lastboot, get-lastlogon, get-lastshutdown, get-lastevent, there's a -sleep/wake/logon/logoff/bootup/shutdown param driving the choices. Also, 3 of the four above were pulled from incl Core, rather than freestanding functions.
   * 2/18/2020 - 1.0.0.0
   # 8:33 AM 2/18/2020 get-ArchivePath: shifted paths into global varis in profile, duped/renamed for module as VERB-LOGGING -> verb-logging
   # 11:38 AM 12/30/2019 ran vsc alias-expan ; updated Usage block to cover below
@@ -383,7 +384,6 @@ function get-EventsFiltered {
     AddedWebsite:	URL
     AddedTwitter:	URL
     REVISIONS
-    * 4:00 PM 3/7/2020 ran vsc expalias
     * 1:54 PM 3/6/2020 roughed-in, untested. Intent was to use it in place of what wound up being get-winEventsLoopedIDs - which has a much simpler subset of params & features, but got the job done.
     .DESCRIPTION
     XXX - XXX
@@ -514,11 +514,11 @@ function get-EventsFiltered {
                 $ErrorActionPreference = "Stop" ;
                 write-verbose -verbose:$verbose "$((get-date).ToString('HH:mm:ss')):get-winevent w`n$(($pltWinEvt|out-string).trim())`nw FilterHashtable:`n$(($FilterHashtable|out-string).trim())`n" ;
 
-                $evts = get-winevent @pltWinEvt | Sort-Object TimeCreated -desc ;
+                $evts = get-winevent @pltWinEvt | sort TimeCreated -desc ;
 
                 if ($AMPMFilter -eq "AM") {
                     write-verbose -verbose:$verbose  "$((get-date).ToString('HH:mm:ss')):Note: filtering AM events" ;
-                    $evts = $evts | Where-Object { (get-date -date $_.TimeCreated -Uformat %p) -eq "AM" } ;
+                    $evts = $evts | ? { (get-date -date $_.TimeCreated -Uformat %p) -eq "AM" } ;
                 } ;
 
                 $evts | write-output ;
@@ -552,13 +552,13 @@ function get-lastboot {get-lastevent -Bootup }
 
 #*------^ get-lastboot.ps1 ^------
 
-#*------v get-LastEvent.ps1 v------
+#*------v get-lastevent.ps1 v------
 function get-lastevent {
     <#
     .SYNOPSIS
     get-lastevent - return the last 7 wake events on the local pc
     .NOTES
-    Version     : 1.0.29.0
+    Version     : 1.0.11.0
     Author      : Todd Kadrie
     Website     :	https://www.toddomation.com
     Twitter     :	@tostka
@@ -571,7 +571,6 @@ function get-lastevent {
     AddedWebsite:	REFERENCEURL
     AddedTwitter:	@HANDLE / http://twitter.com/HANDLE
     REVISIONS
-    * 4:00 PM 3/7/2020 ran vsc expalias
     * 7:19 AM 3/6/2020 rewriting to consolidate several get-lastxxx, with params to tag the variants, and an alias/function to deliver the matching names
     # 11:16 AM 1/5/2017 fixed # in report ; expanded returns: returning 14, but use only last 7 ; reworked on new event, and added AM/PM filtering to the events ; corrected echo to reflect wake, not sleep, added reference to the NETLOGON 5719 that might be a better target for below
     # 1:44 PM 10/3/2016 ported from get-lastsleep
@@ -686,8 +685,8 @@ function get-lastevent {
         $message = $null ;
         $AMPMFilter = $null ;
         $evts += get-winEventsLoopedIDs $filter ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
-        If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
+        $evts = $evts | sort TimeCreated -desc ;
+        If ($message) {$evts = $evts | ? { ($_.Message -like $($message)) } } ;
     } elseif ($Shutdown) {
         # lose computername = localhost - it causes filterhashtable to fail qry - cuz it's not a supporte field of the param!
         $hlastShutdown=@{
@@ -701,13 +700,13 @@ function get-lastevent {
         $message = $null ;
         $AMPMFilter = $null ;
         $evts += get-winEventsLoopedIDs $filter ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
+        $evts = $evts | sort TimeCreated -desc ;
         if ((New-TimeSpan -start $(get-date $evts[0].timecreated) -end $(get-date)).days -gt 3) {
             write-verbose -verbose:$verbose "(adding logoffs)" ;
             $hlastShutdown.ID = '7002' ;
             $evts += get-winEventsLoopedIDs $filter ;
         } ;
-        If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
+        If ($message) {$evts = $evts | ? { ($_.Message -like $($message)) } } ;
     } elseif ($Sleep) {
         $hlastSleep=@{
             logname      = "System" ;
@@ -720,8 +719,8 @@ function get-lastevent {
         $message = "*sleep*"  ;
         $AMPMFilter = $null ;
         $evts += get-winEventsLoopedIDs $filter ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
-        If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
+        $evts = $evts | sort TimeCreated -desc ;
+        If ($message) {$evts = $evts | ? { ($_.Message -like $($message)) } } ;
     } elseif ($Wake) {
         $hlastWake=@{
             logname      = "System" ;
@@ -734,8 +733,8 @@ function get-lastevent {
         $message = $null ;
         $AMPMFilter = $null ;
         $evts += get-winEventsLoopedIDs $filter ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
-        If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
+        $evts = $evts | sort TimeCreated -desc ;
+        If ($message) {$evts = $evts | ? { ($_.Message -like $($message)) } } ;
     } elseif ($Logon) {
         $hlastLogon=@{
             logname      = "security";
@@ -749,9 +748,9 @@ function get-lastevent {
         $AMPMFilter = $null ;
         $evts += get-winEventsLoopedIDs $filter ;
         # additional property filter specific to logon events:
-        $evts = $evts | Where-Object { $_.properties[8].value -eq 2 } ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
-        If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
+        $evts = $evts | where { $_.properties[8].value -eq 2 } ;
+        $evts = $evts | sort TimeCreated -desc ;
+        If ($message) {$evts = $evts | ? { ($_.Message -like $($message)) } } ;
     } elseif ($Logoff) {
         $hlastLogon=@{
             logname      = "Security";
@@ -766,62 +765,57 @@ function get-lastevent {
         $evts += get-winEventsLoopedIDs $filter ;
         # additional property filter specific to logon events:
         #$evts = $evts | where { $_.properties[8].value -eq 2 } ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
-        If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
+        $evts = $evts | sort TimeCreated -desc ;
+        If ($message) {$evts = $evts | ? { ($_.Message -like $($message)) } } ;
     } else {
         $filter =  $hlastBootUp ;
         $Tag = "Bootup (default)" ;
         $message = $null ;
         $AMPMFilter = $null ;
         $evts += get-winEventsLoopedIDs $filter ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
-        If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
+        $evts = $evts | sort TimeCreated -desc ;
+        If ($message) {$evts = $evts | ? { ($_.Message -like $($message)) } } ;
     } ;
 
     #region output
     if ($AMPMFilter){
-        $evts = $evts | Where-Object { (get-date -date $_.TimeCreated -Uformat %p) -eq $AMPMFilter }
+        $evts = $evts | ? { (get-date -date $_.TimeCreated -Uformat %p) -eq $AMPMFilter }
     } ;
-    $evts = $evts | Sort-Object TimeCreated -desc ;
+    $evts = $evts | sort TimeCreated -desc ;
     write-verbose -verbose:$verbose "events: `n$(($evts|out-string).trim())" ;
 
-    $evts = $evts | Sort-Object TimeCreated -desc | Select-Object -first $MaxEvents | Select-Object @{Name = 'Time'; Expression = { get-date $_.TimeCreated -format 'ddd MM/dd/yyyy h:mm tt' } }, Message ;
+    $evts = $evts | sort TimeCreated -desc | select -first $MaxEvents | select @{Name = 'Time'; Expression = { get-date $_.TimeCreated -format 'ddd MM/dd/yyyy h:mm tt' } }, Message ;
 
     #$evts[0..$($FinalEvents)] | write-output
     #$evts[0..$($FinalEvents)] | ft -auto;
     $sBnr="`n#*======v LAST $($FinalEvents) $($Tag) Events: v======" ;
     $smsg = "$((get-date).ToString('HH:mm:ss')):$($sBnr)" ;
-    $smsg += "`n$(($evts[0..$($FinalEvents)] | Format-Table -auto |out-string).trim())" ;
+    $smsg += "`n$(($evts[0..$($FinalEvents)] | ft -auto |out-string).trim())" ;
     $smsg += "`n$((get-date).ToString('HH:mm:ss')):$($sBnr.replace('=v','=^').replace('v=','^='))`n" ;
     write-host -foregroundcolor green $smsg ;
 
     #endregion
 }
+#*------^ get-lastevent.ps1 ^------
+# 'aliased' functions for legacy dedicated-named scripts
+#*------v Function get-lastsleep  v------
+function get-lastsleep {get-lastevent -Sleep } ;
+#*------^ END Function get-lastsleep  ^------
+#*------v Function get-lastwake  v------
+function get-lastwake {get-lastevent -Wake } ;
+#*------^ END Function get-lastwake  ^------
+#*------v Function get-lastboot  v------
+function get-lastboot {get-lastevent -Bootup } ;
+#*------^ END Function get-lastboot  ^------
+#*------v Function get-lastlogon  v------
+function get-lastlogon {get-lastevent -Logon } ;
+#*------^ END Function get-lastlogon  ^------
+#*------v function get-lastshutdown  v------
+function get-lastshutdown {get-lastevent -shutdown } ;
+if (!(get-alias -name "gls" -ea 0 )) { Set-Alias -Name 'gls' -Value 'get-lastshutdown' ; } ;
+#*------^ END function get-lastshutdown  ^------
 
-#*------^ get-LastEvent.ps1 ^------
-
-#*------v get-lastlogon.ps1 v------
-function get-lastlogon {get-lastevent -Logon }
-
-#*------^ get-lastlogon.ps1 ^------
-
-#*------v get-lastshutdown.ps1 v------
-function get-lastshutdown {get-lastevent -shutdown } ; 
-if (!(get-alias -name "gls" -ea 0 )) { Set-Alias -Name 'gls' -Value 'get-lastshutdown' ; }
-
-#*------^ get-lastshutdown.ps1 ^------
-
-#*------v get-lastsleep.ps1 v------
-function get-lastsleep {get-lastevent -Sleep }
-
-#*------^ get-lastsleep.ps1 ^------
-
-#*------v get-lastwake.ps1 v------
-function get-lastwake {get-lastevent -Wake }
-
-#*------^ get-lastwake.ps1 ^------
-
-#*------v get-winEventsLoopedIDs.ps1 v------
+#*------v Function get-winEventsLoopedIDs v------
 function get-winEventsLoopedIDs {
     <#
     .SYNOPSIS
@@ -840,7 +834,6 @@ function get-winEventsLoopedIDs {
     AddedWebsite:	REFERENCEURL
     AddedTwitter:	@HANDLE / http://twitter.com/HANDLE
     REVISIONS
-    * 4:00 PM 3/7/2020 ran vsc expalias
     * 1:11 PM 3/6/2020 init
     .DESCRIPTION
     get-winevents -filterhashtable supports an array in the ID field, but I want MaxEvents _per event_ filtered,
@@ -878,14 +871,14 @@ function get-winEventsLoopedIDs {
     foreach($ID in $tIDs){
         $filter.ID = $id ;
         # purge empty values (throws up on ProviderName:$null)
-        $filter | ForEach-Object {$p = $_ ;@($p.GetEnumerator()) | Where-Object{ ($_.Value | Out-String).length -eq 0 } | Foreach-Object {$p.Remove($_.Key)} ;} ;
-        $evts += get-winevent -FilterHashtable $filter -MaxEvents $MaxEvents -ea 0 | Select-Object $EventProperties ;
+        $filter | Foreach {$p = $_ ;@($p.GetEnumerator()) | ?{ ($_.Value | Out-String).length -eq 0 } | Foreach-Object {$p.Remove($_.Key)} ;} ;
+        $evts += get-winevent -FilterHashtable $filter -MaxEvents $MaxEvents -ea 0 | select $EventProperties ;
     } ;
-    $evts = $evts | Sort-Object TimeCreated -desc |
+    $evts = $evts | sort TimeCreated -desc |
         write-output ;
-}
+} ;
+#*------^ END Function get-winEventsLoopedIDs ^------
 
-#*------^ get-winEventsLoopedIDs.ps1 ^------
 
 #*------v Start-IseTranscript.ps1 v------
 Function Start-IseTranscript {
@@ -965,27 +958,27 @@ Transcript started. Output file is $Logname
 "@
 #>
     # header (updated to emulate most of Psv5.1 header)
-    $OS = Get-WmiObject win32_operatingsystem ; 
+    $OS = Get-WmiObject win32_operatingsystem ;
     $TranscriptHeader = @"
 **************************************
 Windows PowerShell ISE Transcript Start
 Start Time: $(get-date -format 'yyyyMMddHHmmss')
 UserName: $env:userdomain\$env:username
 RunAs User: $env:userdomain\$env:username
-Configuration Name: 
-Machine: $env:COMPUTERNAME ($($os.caption.tostring()) $($os.version.tostring())) 
+Configuration Name:
+Machine: $env:COMPUTERNAME ($($os.caption.tostring()) $($os.version.tostring()))
 Windows version: $((Get-WmiObject win32_operatingsystem).version)
 Host Application: $((resolve-path $env:windir\system32\WindowsPowerShell\v1.0\PowerShell_ISE.exe).path)
 PSVersion: $($host.version.tostring())
 PSEdition: Desktop
-PSCompatibleVersions: 
+PSCompatibleVersions:
 Platform: $($os.CreationClassName.split('_')[0])NT
-BuildVersion: 
-CLRVersion: 
-WSManStackVersion: 
+BuildVersion:
+CLRVersion:
+WSManStackVersion:
 OS: $($os.caption.tostring()) $($os.version.tostring())
-PSRemotingProtocolVersion: 
-SerializationVersion: 
+PSRemotingProtocolVersion:
+SerializationVersion:
 **************************************
 Transcript started. Output file is $Logname
 "@
@@ -1082,8 +1075,8 @@ function Start-Log {
     if (!(test-path -path $transcript)) { "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
     $transcript = join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($Path))"  ;
     if($Tag){
-        $transcript += "-$($Tag)" ; 
-    } ; 
+        $transcript += "-$($Tag)" ;
+    } ;
     $transcript += "-Transcript-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-trans-log.txt"  ;
     # add log file variant as target of Write-Log:
     $logfile = $transcript.replace("-Transcript", "-LOG").replace("-trans-log", "-log")
@@ -1481,14 +1474,14 @@ function Write-Log {
 
 #*======^ END FUNCTIONS ^======
 
-Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFiltered,get-lastboot,get-lastevent,get-lastlogon,get-lastshutdown,get-lastsleep,get-lastwake,get-winEventsLoopedIDs,Start-IseTranscript,Start-Log,start-TranscriptLog,Stop-TranscriptLog,Test-Transcribing,Test-TranscriptionSupported,Write-Log -Alias *
+Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFiltered,get-lastboot,get-lastevent,get-lastsleep,get-lastwake,get-lastboot,get-lastlogon,get-winEventsLoopedIDs,get-EventsFiltered,get-lastlogon,get-lastshutdown,get-lastsleep,get-lastwake,get-winEventsLoopedIDs,Start-IseTranscript,Start-Log,start-TranscriptLog,Stop-TranscriptLog,Test-Transcribing,Test-TranscriptionSupported,Write-Log -Alias *
 
 
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUyXVGnQcgj2qr3/AEBVfbMFnl
-# PtqgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU7l3OW6etDdNJHDCzjPjUm1hR
+# 61OgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1503,9 +1496,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTvf9OS
-# 5FdFwmi5FIJ2r8QPz86PDjANBgkqhkiG9w0BAQEFAASBgDLnqa12+9higPK3o0Tt
-# SYoj9/YLE0ouE8zTAjtkA+xlMfZ7vSgQkGPGiATaPdWPYqEepaKiLYGClR9Bdp81
-# fP3ahjvhiCfC8/CqP86ljr58VjxDdFZSwa5d29eCqyXKHkxNUJnctUqtpTPEh+rW
-# ++uMNp/LpI9uYMb6cFX41PWo
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTqvQTX
+# Cj+UDoFo887rmYN33IXWyDANBgkqhkiG9w0BAQEFAASBgIcGjtGK/ZH1wPNNbj/z
+# NHpK/H3DaZy5AYUtM0H5JLXf1CjfT0l6KSSLx6UffAsniVA1cwUkfStkF4f5x5VC
+# wg2+zcx9wq3wRn6HaQvPuYFygEJoZM4L1CJKozXJ5o4T2N+CjLZHOBREI5eba/wE
+# cl3meAMBxxVqh5k220VLIzs4
 # SIG # End signature block
