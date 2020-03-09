@@ -1,10 +1,10 @@
-﻿#*------v get-lastevent.ps1 v------
+﻿#*------v get-LastEvent.ps1 v------
 function get-lastevent {
     <#
     .SYNOPSIS
     get-lastevent - return the last 7 wake events on the local pc
     .NOTES
-    Version     : 1.0.8.0
+    Version     : 1.0.29.0
     Author      : Todd Kadrie
     Website     :	https://www.toddomation.com
     Twitter     :	@tostka
@@ -17,6 +17,7 @@ function get-lastevent {
     AddedWebsite:	REFERENCEURL
     AddedTwitter:	@HANDLE / http://twitter.com/HANDLE
     REVISIONS
+    * 7:47 AM 3/9/2020 reworked get-winEventsLoopedIDs; added Verbose support across all get-last*()
     * 4:00 PM 3/7/2020 ran vsc expalias
     * 7:19 AM 3/6/2020 rewriting to consolidate several get-lastxxx, with params to tag the variants, and an alias/function to deliver the matching names
     # 11:16 AM 1/5/2017 fixed # in report ; expanded returns: returning 14, but use only last 7 ; reworked on new event, and added AM/PM filtering to the events ; corrected echo to reflect wake, not sleep, added reference to the NETLOGON 5719 that might be a better target for below
@@ -54,15 +55,15 @@ function get-lastevent {
     |ResponseTime|281474976710656|
     |None|0|
 
-    ## Type names to get-winevent-compatible Levels
-    switch ($tevType) {
-        "Verbose" { $spltEvt.add("Level", 5) }
-        "Informational" { $spltEvt.add("Level", 4) }
-        "Warning" { $spltEvt.add("Level", 3) }
-        "Error" { $spltEvt.add("Level", 2) }
-        "Critical" { $spltEvt.add("Level", 1) }
-        "LogAlways" { $spltEvt.add("Level", 0) }
-    } ;
+    ## Type names converted to get-winevent-compatible Levels
+    |Name|Value|
+    |---|---|
+    |Verbose|5|
+    |Informational|4|
+    |Warning|3|
+    |Error|2|
+    |Critical|1|
+    |LogAlways|0|
     .PARAMETER MaxEvents
     Maximum # of events to poll for each event specified[-MaxEvents 14]
     .PARAMETER FinalEvents
@@ -83,15 +84,16 @@ function get-lastevent {
     get-lastevent -Shutdown -verbose
     Get last Shutdown events w verbose output
     .EXAMPLE
-    get-lastevent -Bootup -verbose
+    get-lastevent -Bootup 
     Get last Bootup events w verbose output
     .EXAMPLE
-    get-lastevent -Sleep -verbose
+    get-lastevent -Sleep 
     Get last Sleep events w verbose output
     .EXAMPLE
-    get-lastevent -Wake -verbose
+    get-lastevent -Wake 
     Get last Wake events w verbose output
-    Logoff
+    .EXAMPLE
+    get-lastevent -Logoff
     Return most recent Logoff events [-Logon]
     .LINK
     https://github.com/tostka/verb-logging
@@ -124,6 +126,7 @@ function get-lastevent {
         ProviderName = "EventLog" ;
         ID           = 6009 ;
         Level        = 4 ;
+        Verbose      = $($VerbosePreference -eq 'Continue') ;
     } ;
 
     if($Bootup){
@@ -131,8 +134,8 @@ function get-lastevent {
         $Tag = "Bootup" ;
         $message = $null ;
         $AMPMFilter = $null ;
+        write-verbose -verbose:$verbose  "$((get-date).ToString('HH:mm:ss')):get-winEventsLoopedIDs w`n$(($filter|out-string).trim())" ; 
         $evts += get-winEventsLoopedIDs $filter ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
         If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
     } elseif ($Shutdown) {
         # lose computername = localhost - it causes filterhashtable to fail qry - cuz it's not a supporte field of the param!
@@ -141,16 +144,19 @@ function get-lastevent {
             ProviderName = $null ;
             ID           = '13','6008','13','6008','6006' ;
             Level        = 4 ;
+            Verbose      = $($VerbosePreference -eq 'Continue') ;
         } ;
         $filter = $hlastShutdown ;
         $Tag = "Shutdown" ;
         $message = $null ;
         $AMPMFilter = $null ;
-        $evts += get-winEventsLoopedIDs $filter ;
+        write-verbose -verbose:$verbose  "$((get-date).ToString('HH:mm:ss')):get-winEventsLoopedIDs w`n$(($filter|out-string).trim())" ; 
+        $evts += get-winEventsLoopedIDs $filter   ;
         $evts = $evts | Sort-Object TimeCreated -desc ;
         if ((New-TimeSpan -start $(get-date $evts[0].timecreated) -end $(get-date)).days -gt 3) {
             write-verbose -verbose:$verbose "(adding logoffs)" ;
-            $hlastShutdown.ID = '7002' ;
+            $filter.ID = '7002' ;
+            write-verbose -verbose:$verbose  "$((get-date).ToString('HH:mm:ss')):get-winEventsLoopedIDs w`n$(($filter|out-string).trim())" ; 
             $evts += get-winEventsLoopedIDs $filter ;
         } ;
         If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
@@ -160,13 +166,14 @@ function get-lastevent {
             ProviderName = "Microsoft-Windows-Kernel-Power" ;
             ID           = 42 ;
             Level        = 4  ;
+            Verbose      = $($VerbosePreference -eq 'Continue') ;
         } ;
         $filter =  $hlastSleep ;
         $Tag = "Sleep" ;
         $message = "*sleep*"  ;
         $AMPMFilter = $null ;
+        write-verbose -verbose:$verbose  "$((get-date).ToString('HH:mm:ss')):get-winEventsLoopedIDs w`n$(($filter|out-string).trim())" ; 
         $evts += get-winEventsLoopedIDs $filter ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
         If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
     } elseif ($Wake) {
         $hlastWake=@{
@@ -174,13 +181,14 @@ function get-lastevent {
             ProviderName = "NETLOGON" ;
             ID           = 5719 ;
             Level    = 2 ;
+            Verbose      = $($VerbosePreference -eq 'Continue') ;
         } ;
         $filter =  $hlastWake ;
         $Tag = "Wake" ;
         $message = $null ;
         $AMPMFilter = $null ;
+        write-verbose -verbose:$verbose  "$((get-date).ToString('HH:mm:ss')):get-winEventsLoopedIDs w`n$(($filter|out-string).trim())" ; 
         $evts += get-winEventsLoopedIDs $filter ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
         If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
     } elseif ($Logon) {
         $hlastLogon=@{
@@ -188,15 +196,16 @@ function get-lastevent {
             ProviderName = $null ;
             ID           = 4624 ;
             Level        = 4  ;
+            Verbose      = $($VerbosePreference -eq 'Continue') ;
         } ;
         $filter =  $hlastLogon ;
         $Tag = "Logon" ;
         $message = $null ;
         $AMPMFilter = $null ;
+        write-verbose -verbose:$verbose  "$((get-date).ToString('HH:mm:ss')):get-winEventsLoopedIDs w`n$(($filter|out-string).trim())" ; 
         $evts += get-winEventsLoopedIDs $filter ;
         # additional property filter specific to logon events:
         $evts = $evts | Where-Object { $_.properties[8].value -eq 2 } ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
         If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
     } elseif ($Logoff) {
         $hlastLogon=@{
@@ -204,23 +213,24 @@ function get-lastevent {
             ProviderName = $null ;
             ID           = 4634 ;
             Level        = 4  ;
+            Verbose      = $($VerbosePreference -eq 'Continue') ;
         } ;
         $filter =  $hlastLogon ;
         $Tag = "Logon" ;
         $message = $null ;
         $AMPMFilter = $null ;
+        write-verbose -verbose:$verbose  "$((get-date).ToString('HH:mm:ss')):get-winEventsLoopedIDs w`n$(($filter|out-string).trim())" ; 
         $evts += get-winEventsLoopedIDs $filter ;
         # additional property filter specific to logon events:
         #$evts = $evts | where { $_.properties[8].value -eq 2 } ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
         If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
     } else {
         $filter =  $hlastBootUp ;
         $Tag = "Bootup (default)" ;
         $message = $null ;
         $AMPMFilter = $null ;
+        write-verbose -verbose:$verbose  "$((get-date).ToString('HH:mm:ss')):get-winEventsLoopedIDs w`n$(($filter|out-string).trim())" ; 
         $evts += get-winEventsLoopedIDs $filter ;
-        $evts = $evts | Sort-Object TimeCreated -desc ;
         If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
     } ;
 
@@ -243,4 +253,5 @@ function get-lastevent {
 
     #endregion
 }
-#*------^ get-lastevent.ps1 ^------
+
+#*------^ get-LastEvent.ps1 ^------

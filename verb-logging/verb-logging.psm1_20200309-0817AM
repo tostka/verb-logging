@@ -1,11 +1,10 @@
 ﻿# verb-logging.psm1
 
-
   <#
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.42.0
+  Version     : 1.0.29.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -39,13 +38,10 @@
   https://github.com/tostka/verb-logging
   #>
 
-
 $script:ModuleRoot = $PSScriptRoot ;
 $script:ModuleVersion = (Import-PowerShellDataFile -Path (get-childitem $script:moduleroot\*.psd1).fullname).moduleversion ;
 
 #*======v FUNCTIONS v======
-
-
 
 #*------v Archive-Log.ps1 v------
 function Archive-Log {
@@ -549,8 +545,7 @@ function get-EventsFiltered {
 #*------^ get-EventsFiltered.ps1 ^------
 
 #*------v get-lastboot.ps1 v------
-function get-lastlogon {[CmdletBinding()]PARAM() ; get-lastevent -Logon -Verbose:$($VerbosePreference -eq 'Continue') }
-
+function get-lastboot {[CmdletBinding()]PARAM() ; get-lastevent -Bootup -Verbose:$($VerbosePreference -eq 'Continue') }
 #*------^ get-lastboot.ps1 ^------
 
 #*------v get-LastEvent.ps1 v------
@@ -812,7 +807,7 @@ function get-lastevent {
 #*------^ get-LastEvent.ps1 ^------
 
 #*------v get-lastlogon.ps1 v------
-function get-lastlogon {get-lastevent -Logon }
+function get-lastlogon {[CmdletBinding()]PARAM() ; get-lastevent -Logon -Verbose:$($VerbosePreference -eq 'Continue') }
 
 #*------^ get-lastlogon.ps1 ^------
 
@@ -905,7 +900,6 @@ function get-winEventsLoopedIDs {
     $evts = $evts | Sort-Object TimeCreated -desc ; 
     $evts | write-output ;
 }
-
 #*------^ get-winEventsLoopedIDs.ps1 ^------
 
 #*------v Start-IseTranscript.ps1 v------
@@ -1502,14 +1496,14 @@ function Write-Log {
 
 #*======^ END FUNCTIONS ^======
 
-Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFiltered,get-lastlogon,get-lastevent,get-lastlogon,get-lastshutdown,get-lastsleep,get-lastwake,get-winEventsLoopedIDs,Start-IseTranscript,Start-Log,start-TranscriptLog,Stop-TranscriptLog,Test-Transcribing,Test-TranscriptionSupported,Write-Log -Alias *
+Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFiltered,get-lastboot,get-lastevent,get-lastlogon,get-lastshutdown,get-lastsleep,get-lastwake,get-winEventsLoopedIDs,Start-IseTranscript,Start-Log,start-TranscriptLog,Stop-TranscriptLog,Test-Transcribing,Test-TranscriptionSupported,Write-Log -Alias *
 
 
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUjjrSVzPLra6iIYUAyMR05s0f
-# NV2gggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUyXVGnQcgj2qr3/AEBVfbMFnl
+# PtqgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1524,9 +1518,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSEdwgJ
-# 3LVe+iwX2kpI/hF476UMIjANBgkqhkiG9w0BAQEFAASBgEtF9NiuNqX9uEJLoRXr
-# pPFqF1GtTraAHFcenP+BFkPDdvNVlHfKuBrMj/mUIqv/qa/CkVt9JTDbvhhjM8p9
-# 4QFM5Qjv0KgjozNWPwwoQ7wfm6mh8xcCQKOfzO1HK4YpSvZJP6DBqaJOOgzH8+tz
-# i3wXXxItNBJ+t6WVNI23w67k
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTvf9OS
+# 5FdFwmi5FIJ2r8QPz86PDjANBgkqhkiG9w0BAQEFAASBgDLnqa12+9higPK3o0Tt
+# SYoj9/YLE0ouE8zTAjtkA+xlMfZ7vSgQkGPGiATaPdWPYqEepaKiLYGClR9Bdp81
+# fP3ahjvhiCfC8/CqP86ljr58VjxDdFZSwa5d29eCqyXKHkxNUJnctUqtpTPEh+rW
+# ++uMNp/LpI9uYMb6cFX41PWo
 # SIG # End signature block

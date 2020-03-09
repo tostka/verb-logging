@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.42.0
+  Version     : 1.0.34.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1508,8 +1508,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUjjrSVzPLra6iIYUAyMR05s0f
-# NV2gggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUzzrUsgpvILXbidZ67fHww/CN
+# VaagggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1524,9 +1524,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSEdwgJ
-# 3LVe+iwX2kpI/hF476UMIjANBgkqhkiG9w0BAQEFAASBgEtF9NiuNqX9uEJLoRXr
-# pPFqF1GtTraAHFcenP+BFkPDdvNVlHfKuBrMj/mUIqv/qa/CkVt9JTDbvhhjM8p9
-# 4QFM5Qjv0KgjozNWPwwoQ7wfm6mh8xcCQKOfzO1HK4YpSvZJP6DBqaJOOgzH8+tz
-# i3wXXxItNBJ+t6WVNI23w67k
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQJh/pS
+# AW1UHpb6JgyfrtOX2ucK+zANBgkqhkiG9w0BAQEFAASBgEH8SSJr17exvoN2qY8K
+# iT3JdRQA69nS7SEUnaCUMCHuitxl8pRjj/JjEtkaoneXc+5xFL1UmRYGRSIm0pxQ
+# juGMg9xCFfakPCMITZ3hvb4RCmupdAgP/TsjNGuBnv9/B8eCytalK40WlVxCHcaV
+# pzsJ1D9NwatmcXmLiU205rFc
 # SIG # End signature block

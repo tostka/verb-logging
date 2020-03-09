@@ -1,4 +1,4 @@
-#*------v Function get-winEventsLoopedIDs v------
+#*------v get-winEventsLoopedIDs.ps1 v------
 function get-winEventsLoopedIDs {
     <#
     .SYNOPSIS
@@ -17,6 +17,7 @@ function get-winEventsLoopedIDs {
     AddedWebsite:	REFERENCEURL
     AddedTwitter:	@HANDLE / http://twitter.com/HANDLE
     REVISIONS
+    * 8:11 AM 3/9/2020 added verbose support & verbose echo'ing of hash values
     * 4:00 PM 3/7/2020 ran vsc expalias
     * 1:11 PM 3/6/2020 init
     .DESCRIPTION
@@ -52,13 +53,22 @@ function get-winEventsLoopedIDs {
     ) ;
     $EventProperties ="timecreated","id","leveldisplayname","message" ;
     $tIDs = $filter.ID ;
+    $filter.remove('Verbose') ; 
+    $pltWinEvt=@{
+        FilterHashtable=$null;
+        MaxEvents=$MaxEvents ;
+        Verbose=$($VerbosePreference -eq 'Continue') ;
+        erroraction=0 ;
+    } ;
     foreach($ID in $tIDs){
         $filter.ID = $id ;
         # purge empty values (throws up on ProviderName:$null)
         $filter | ForEach-Object {$p = $_ ;@($p.GetEnumerator()) | Where-Object{ ($_.Value | Out-String).length -eq 0 } | Foreach-Object {$p.Remove($_.Key)} ;} ;
-        $evts += get-winevent -FilterHashtable $filter -MaxEvents $MaxEvents -ea 0 | Select-Object $EventProperties ;
+        $pltWinEvt.FilterHashtable = $filter ; 
+        write-verbose -verbose:$verbose  "$((get-date).ToString('HH:mm:ss')):get-winevent w`n$(($pltWinEvt|out-string).trim())`n`n`Expanded -filterhashtable:$(($filter|out-string).trim())" ; 
+        $evts += get-winevent @pltWinEvt | Select-Object $EventProperties ;
     } ;
-    $evts = $evts | Sort-Object TimeCreated -desc |
-        write-output ;
-} ;
-#*------^ END Function get-winEventsLoopedIDs ^------
+    $evts = $evts | Sort-Object TimeCreated -desc ; 
+    $evts | write-output ;
+}
+#*------^ get-winEventsLoopedIDs.ps1 ^------

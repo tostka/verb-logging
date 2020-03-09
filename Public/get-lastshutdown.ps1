@@ -1,4 +1,4 @@
-#*------v Function get-lastshutdown  v------
-function get-lastshutdown {get-lastevent -shutdown } ; 
-if (!(get-alias -name "gls" -ea 0 )) { Set-Alias -Name 'gls' -Value 'get-lastshutdown' ; } ;
-#*------^ END Function Function get-lastshutdown  ^------
+#*------v get-lastshutdown.ps1 v------
+function get-lastshutdown {[CmdletBinding()]PARAM() ; get-lastevent -Shutdown -Verbose:$($VerbosePreference -eq 'Continue') }
+if (!(get-alias -name "gls" -ea 0 )) { Set-Alias -Name 'gls' -Value 'get-lastshutdown' ; }
+#*------^ get-lastshutdown.ps1 ^------

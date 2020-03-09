@@ -1,3 +1,3 @@
-#*------v Function get-lastsleep  v------
-function get-lastsleep {get-lastevent -Sleep } ; 
-#*------^ END Function get-lastsleep  ^------
+#*------v get-lastsleep.ps1 v------
+function get-lastsleep {[CmdletBinding()]PARAM() ; get-lastevent -Sleep -Verbose:$($VerbosePreference -eq 'Continue') }
+#*------^ get-lastsleep.ps1 ^------
