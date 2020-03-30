@@ -14,6 +14,7 @@ function Write-Log {
     Website:	URL
     Twitter:	URL
     REVISIONS   :
+    * 3:50 PM 3/29/2020 minor tightening layout
     * 11:34 AM 8/26/2019 fixed missing noecho parameter desig in comment help
     * 9:31 AM 2/15/2019:Write-Log: added Level:Debug support, and broader init
         block example with $whatif & $ticket support, added -NoEcho to suppress console
@@ -120,22 +121,18 @@ function Write-Log {
         [switch] $showDebug
     )  ;
 
-    Begin {
-        $VerbosePreference = 'Continue'  ; # Set VerbosePreference to Continue so that verbose messages are displayed.
-    }  ;
+    Begin {$VerbosePreference = 'Continue'  ; }  ;
     Process {
         # If the file already exists and NoClobber was specified, do not write to the log.
         if ((Test-Path $Path) -AND $NoClobber) {
             Write-Error "Log file $Path already exists, and you specified NoClobber. Either delete the file or specify a different name."  ;
             Return  ;
-        }
-        elseif (!(Test-Path $Path)) {
+        } elseif (!(Test-Path $Path)) {
             # create the file including the path when missing.
             Write-Verbose "Creating $Path."  ;
             $NewLogFile = New-Item $Path -Force -ItemType File  ;
-        }
-        else {
-            # Nothing to see here yet.
+        } else {
+          # Nothing to see here yet.
         }  ;
 
         $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"  ;
@@ -144,30 +141,18 @@ function Write-Log {
         # Write message to error, warning, or verbose pipeline and specify $LevelText
         switch ($Level) {
             'Error' {
-                if ($useHost) {
-                    write-host -foregroundcolor red ($EchoTime + $Message)   ;
-                }
-                else {
-                    if (!$NoEcho) { Write-Error ($EchoTime + $Message) } ;
-                } ;
+                if ($useHost) {write-host -foregroundcolor red ($EchoTime + $Message) }
+                else {if (!$NoEcho) { Write-Error ($EchoTime + $Message) } } ;
                 $LevelText = 'ERROR:'  ;
             }
             'Warn' {
-                if ($useHost) {
-                    write-host -foregroundcolor yellow ($EchoTime + $Message)    ;
-                }
-                else {
-                    if (!$NoEcho) { Write-Warning ($EchoTime + $Message) } ;
-                } ;
+                if ($useHost) {write-host -foregroundcolor yellow ($EchoTime + $Message) }
+                else {if (!$NoEcho) { Write-Warning ($EchoTime + $Message) } } ;
                 $LevelText = 'WARNING:'  ;
             }
             'Info' {
-                if ($useHost) {
-                    write-host -foregroundcolor green ($EchoTime + $Message)   ;
-                }
-                else {
-                    if (!$NoEcho) { Write-Verbose ($EchoTime + $Message) } ;
-                } ;
+                if ($useHost) {write-host -foregroundcolor green ($EchoTime + $Message) }
+                else {if (!$NoEcho) { Write-Verbose ($EchoTime + $Message) } } ;
                 $LevelText = 'INFO:'  ;
             }
             'Debug' {

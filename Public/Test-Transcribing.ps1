@@ -3,9 +3,15 @@ function Test-Transcribing {
     <#.SYNOPSIS
     Tests for whether transcript (Start-Transcript) is already running
     .NOTES
-    Author: Oisin Grehan
-    URL: http://poshcode.org/1500
-    requires -version 2.0, and Test-TranscriptionSupported()
+    Version     : 1.0.0
+    Author      : Oisin Grehan
+    Website     :	http://poshcode.org/1500
+    CreatedDate : 2020-
+    FileName    : Test-Transcribing.ps1
+    License     : 
+    Copyright   : 
+    Github      : 
+    Tags        : Powershell,Logging
     REVISIONS   :
     10:13 AM 12/10/2014
     .INPUTS

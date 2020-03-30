@@ -3,13 +3,22 @@ function start-TranscriptLog {
     <#.SYNOPSIS
     Configures and launches a transcript
     .NOTES
-    #Author: Todd Kadrie
-    #Website:	http://toddomation.com
-    #Twitter:	http://twitter.com/tostka
-    Requires test-transcribing() & Test-TranscriptionSupported() functions
+    Version     : 1.0.0
+    Author      : Todd Kadrie
+    Website     :	http://www.toddomation.com
+    Twitter     :	@tostka / http://twitter.com/tostka
+    CreatedDate : 2014-12-10
+    FileName    : test-IsElevated.ps1
+    License     : MIT License
+    Copyright   : (c) 2014 Todd Kadrie
+    Github      : https://github.com/tostka
+    Tags        : Powershell,Permissions,Session
     REVISIONS   :
     # 10:19 AM 12/10/2014 cleanup
     12:36 PM 12/9/2014 init
+    .DESCRIPTION
+    Configures and launches a transcript
+    Requires test-transcribing() & Test-TranscriptionSupported() functions
     .INPUTS
     None
     .OUTPUTS
