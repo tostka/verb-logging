@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.43.0
+  Version     : 1.0.42.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1136,22 +1136,13 @@ function start-TranscriptLog {
     <#.SYNOPSIS
     Configures and launches a transcript
     .NOTES
-    Version     : 1.0.0
-    Author      : Todd Kadrie
-    Website     :	http://www.toddomation.com
-    Twitter     :	@tostka / http://twitter.com/tostka
-    CreatedDate : 2014-12-10
-    FileName    : test-IsElevated.ps1
-    License     : MIT License
-    Copyright   : (c) 2014 Todd Kadrie
-    Github      : https://github.com/tostka
-    Tags        : Powershell,Permissions,Session
+    #Author: Todd Kadrie
+    #Website:	http://toddomation.com
+    #Twitter:	http://twitter.com/tostka
+    Requires test-transcribing() & Test-TranscriptionSupported() functions
     REVISIONS   :
     # 10:19 AM 12/10/2014 cleanup
     12:36 PM 12/9/2014 init
-    .DESCRIPTION
-    Configures and launches a transcript
-    Requires test-transcribing() & Test-TranscriptionSupported() functions
     .INPUTS
     None
     .OUTPUTS
@@ -1262,15 +1253,9 @@ function Test-Transcribing {
     <#.SYNOPSIS
     Tests for whether transcript (Start-Transcript) is already running
     .NOTES
-    Version     : 1.0.0
-    Author      : Oisin Grehan
-    Website     :	http://poshcode.org/1500
-    CreatedDate : 2020-
-    FileName    : Test-Transcribing.ps1
-    License     : 
-    Copyright   : 
-    Github      : 
-    Tags        : Powershell,Logging
+    Author: Oisin Grehan
+    URL: http://poshcode.org/1500
+    requires -version 2.0, and Test-TranscriptionSupported()
     REVISIONS   :
     10:13 AM 12/10/2014
     .INPUTS
@@ -1345,7 +1330,6 @@ function Write-Log {
     Website:	URL
     Twitter:	URL
     REVISIONS   :
-    * 3:50 PM 3/29/2020 minor tightening layout
     * 11:34 AM 8/26/2019 fixed missing noecho parameter desig in comment help
     * 9:31 AM 2/15/2019:Write-Log: added Level:Debug support, and broader init
         block example with $whatif & $ticket support, added -NoEcho to suppress console
@@ -1452,18 +1436,22 @@ function Write-Log {
         [switch] $showDebug
     )  ;
 
-    Begin {$VerbosePreference = 'Continue'  ; }  ;
+    Begin {
+        $VerbosePreference = 'Continue'  ; # Set VerbosePreference to Continue so that verbose messages are displayed.
+    }  ;
     Process {
         # If the file already exists and NoClobber was specified, do not write to the log.
         if ((Test-Path $Path) -AND $NoClobber) {
             Write-Error "Log file $Path already exists, and you specified NoClobber. Either delete the file or specify a different name."  ;
             Return  ;
-        } elseif (!(Test-Path $Path)) {
+        }
+        elseif (!(Test-Path $Path)) {
             # create the file including the path when missing.
             Write-Verbose "Creating $Path."  ;
             $NewLogFile = New-Item $Path -Force -ItemType File  ;
-        } else {
-          # Nothing to see here yet.
+        }
+        else {
+            # Nothing to see here yet.
         }  ;
 
         $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"  ;
@@ -1472,18 +1460,30 @@ function Write-Log {
         # Write message to error, warning, or verbose pipeline and specify $LevelText
         switch ($Level) {
             'Error' {
-                if ($useHost) {write-host -foregroundcolor red ($EchoTime + $Message) }
-                else {if (!$NoEcho) { Write-Error ($EchoTime + $Message) } } ;
+                if ($useHost) {
+                    write-host -foregroundcolor red ($EchoTime + $Message)   ;
+                }
+                else {
+                    if (!$NoEcho) { Write-Error ($EchoTime + $Message) } ;
+                } ;
                 $LevelText = 'ERROR:'  ;
             }
             'Warn' {
-                if ($useHost) {write-host -foregroundcolor yellow ($EchoTime + $Message) }
-                else {if (!$NoEcho) { Write-Warning ($EchoTime + $Message) } } ;
+                if ($useHost) {
+                    write-host -foregroundcolor yellow ($EchoTime + $Message)    ;
+                }
+                else {
+                    if (!$NoEcho) { Write-Warning ($EchoTime + $Message) } ;
+                } ;
                 $LevelText = 'WARNING:'  ;
             }
             'Info' {
-                if ($useHost) {write-host -foregroundcolor green ($EchoTime + $Message) }
-                else {if (!$NoEcho) { Write-Verbose ($EchoTime + $Message) } } ;
+                if ($useHost) {
+                    write-host -foregroundcolor green ($EchoTime + $Message)   ;
+                }
+                else {
+                    if (!$NoEcho) { Write-Verbose ($EchoTime + $Message) } ;
+                } ;
                 $LevelText = 'INFO:'  ;
             }
             'Debug' {
@@ -1508,8 +1508,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU+A0nStT33rsJ2rG76JNYukIv
-# tcygggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUjjrSVzPLra6iIYUAyMR05s0f
+# NV2gggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1524,9 +1524,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBRCBCAR
-# mpzl6+44HbMiE5niO0ZD6TANBgkqhkiG9w0BAQEFAASBgEpparBcQ49ZcILnmPXO
-# oQ39/zvn4lOZbKoOk/S91tJ3mJXe81HzFHJJniNe/OmpAkoSFbyYIWIzS9uzk7Zb
-# RCLbp3uRpwgXFtLYQJd0jg+tuo8HL+gnuwrnKzj3h+OjhezMMnh7BDFwD4D/mOCM
-# aQ9UvbaElbMsmeNBNxFEmok9
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSEdwgJ
+# 3LVe+iwX2kpI/hF476UMIjANBgkqhkiG9w0BAQEFAASBgEtF9NiuNqX9uEJLoRXr
+# pPFqF1GtTraAHFcenP+BFkPDdvNVlHfKuBrMj/mUIqv/qa/CkVt9JTDbvhhjM8p9
+# 4QFM5Qjv0KgjozNWPwwoQ7wfm6mh8xcCQKOfzO1HK4YpSvZJP6DBqaJOOgzH8+tz
+# i3wXXxItNBJ+t6WVNI23w67k
 # SIG # End signature block
