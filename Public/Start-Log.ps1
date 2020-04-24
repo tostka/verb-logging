@@ -1,4 +1,4 @@
-﻿#*------v Function Start-Log v------
+﻿#*------v Start-Log.ps1 v------
 function Start-Log {
     <#
     .SYNOPSIS
@@ -14,6 +14,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 12:44 PM 4/23/2020 shift $path validation to parent folder - with AllUsers scoped scripts, we need to find paths, and *fake* a path to ensure logs aren't added to AllUsers %progfiles%\wps\scripts\(logs). So the path may not exist, but the parent dir should
     * 3:56 PM 2/18/2020 Start-Log: added $Tag param, to support descriptive string for building $transcript name
     * 11:16 AM 12/29/2019 init version
     .DESCRIPTION
@@ -59,7 +60,7 @@ function Start-Log {
     #>
     PARAM(
         [Parameter(Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,HelpMessage="Path to target script (defaults to `$PSCommandPath) [-Path -Path .\path-to\script.ps1]")]
-        [ValidateScript({Test-Path $_})]$Path,
+        [ValidateScript({Test-Path (split-path $_)})]$Path,
         [Parameter(HelpMessage="Tag string to be used with -Path filename spec, to construct log file name [-tag 'ticket-123456]")]
         [string]$Tag,
         [Parameter(HelpMessage="Debugging Flag [-showDebug]")]
@@ -96,4 +97,6 @@ function Start-Log {
         write-verbose -verbose:$true "$(($hshRet|out-string).trim())" ;  ;
     } ;
     Write-Output $hshRet ;
-} ; #*------^ END Function Start-Log ^------
+}
+
+#*------^ Start-Log.ps1 ^------
