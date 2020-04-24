@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.43.0
+  Version     : 1.0.44.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1045,6 +1045,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 12:44 PM 4/23/2020 shift $path validation to parent folder - with AllUsers scoped scripts, we need to find paths, and *fake* a path to ensure logs aren't added to AllUsers %progfiles%\wps\scripts\(logs). So the path may not exist, but the parent dir should
     * 3:56 PM 2/18/2020 Start-Log: added $Tag param, to support descriptive string for building $transcript name
     * 11:16 AM 12/29/2019 init version
     .DESCRIPTION
@@ -1090,7 +1091,7 @@ function Start-Log {
     #>
     PARAM(
         [Parameter(Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,HelpMessage="Path to target script (defaults to `$PSCommandPath) [-Path -Path .\path-to\script.ps1]")]
-        [ValidateScript({Test-Path $_})]$Path,
+        [ValidateScript({Test-Path (split-path $_)})]$Path,
         [Parameter(HelpMessage="Tag string to be used with -Path filename spec, to construct log file name [-tag 'ticket-123456]")]
         [string]$Tag,
         [Parameter(HelpMessage="Debugging Flag [-showDebug]")]
@@ -1508,8 +1509,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU+A0nStT33rsJ2rG76JNYukIv
-# tcygggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUdHPTKDwpPe6RXXh6xhOpwpjd
+# uUWgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1524,9 +1525,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBRCBCAR
-# mpzl6+44HbMiE5niO0ZD6TANBgkqhkiG9w0BAQEFAASBgEpparBcQ49ZcILnmPXO
-# oQ39/zvn4lOZbKoOk/S91tJ3mJXe81HzFHJJniNe/OmpAkoSFbyYIWIzS9uzk7Zb
-# RCLbp3uRpwgXFtLYQJd0jg+tuo8HL+gnuwrnKzj3h+OjhezMMnh7BDFwD4D/mOCM
-# aQ9UvbaElbMsmeNBNxFEmok9
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBS3El73
+# ++VLihMQVHXmf+qo1O5ImjANBgkqhkiG9w0BAQEFAASBgDYFvSWxkMcFsWu8PDED
+# LhxSpGAeWz86Tqyewm+v1POz3UYaSFyrkWvj96So/nfez3aiALdq5OIS6hpmdWzs
+# A1BI6ELcOW/jEfcUD7PILzrFOqd3TWS61K/tyPx0N2BJcG57xI+4ppEOwHihW/Ho
+# PF2JE9rHRZZPZaj/QUvc4KpU
 # SIG # End signature block
