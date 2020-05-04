@@ -13,7 +13,10 @@ function Test-Transcribing {
     Github      : 
     Tags        : Powershell,Logging
     REVISIONS   :
-    10:13 AM 12/10/2014
+    * 12:18 PM 5/4/2020 updated CBH
+    * 10:13 AM 12/10/2014
+    This function will test to see if the current system is transcribing.
+    This leverages $host properties, and is compatible with ISE, to the extent that it accomodates ISE use, and forced-returns $true (assumes ISE stop-TranscriptLog is used to stop & generate a native ISE-based). transcript)
     .INPUTS
     .OUTPUTS
     Outputs $TRUE/FALSE reflecting transcribe status

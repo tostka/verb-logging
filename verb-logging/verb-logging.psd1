@@ -12,7 +12,7 @@
 RootModule = 'verb-logging.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.0.44'
+ModuleVersion = '1.0.45'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -69,7 +69,7 @@ Description = 'Logging-related generic functions'
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = @('Archive-Log','Cleanup','get-ArchivePath','get-EventsFiltered','get-lastlogon','get-lastevent','get-lastlogon','get-lastshutdown','get-lastsleep','get-lastwake','get-winEventsLoopedIDs','Start-IseTranscript','Start-Log','start-TranscriptLog','Stop-TranscriptLog','Test-Transcribing','Test-TranscriptionSupported','Write-Log')
+FunctionsToExport = @('Archive-Log','Cleanup','get-ArchivePath','get-EventsFiltered','get-lastlogon','get-lastevent','get-lastlogon','get-lastshutdown','get-lastsleep','get-lastwake','get-winEventsLoopedIDs','Start-IseTranscript','Start-Log','start-TranscriptLog','Stop-TranscriptLog','Test-Transcribing','test-Transcribing2','Test-TranscriptionSupported','Write-Log')
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = '*'
@@ -126,8 +126,8 @@ PrivateData = @{
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUDaR0Vq8R0m5aHmGYWgulLKAi
-# i/CgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUKuJNC1Dy1hmLUObFxoT3NPTg
+# nQmgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -142,9 +142,9 @@ PrivateData = @{
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQ4bPsM
-# cN0w2ap/SlgWjpUNZyTlHDANBgkqhkiG9w0BAQEFAASBgBft4LMnof7JDc6PMxmN
-# UIBVqXsSJ/Ng5vX7k4h/SxLEIIdAHgmRJpgwu25az7vzBiKa48z2dzUueqdUFZx2
-# OXgWtRMpx4MDpvssHv5mwFOX1nC7fe+CL1ADIYQ94v5oYFNWZMoII/lm8pI1/r5o
-# NB5X9k9Gbm+W+jfRZSmqM2HW
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQJA3iW
+# CFwKncxalCr9C4QguOg95TANBgkqhkiG9w0BAQEFAASBgJ4gu4oDQuNpzCNUsUIG
+# jtP8uJIYaapVh66KqJ4XyLgN7gj1LrH9MVkUtxdXCp/c8VWP35dcrq67dZ9YRmZQ
+# yytFAwNczsCcXoz3InUoE1BZUIduP/YMFOAe91IMqRM62ZZn9X9X+yS8kZJP8aCr
+# zIfEyj1rBYCTlCsUjM/YY3NL
 # SIG # End signature block

@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.44.0
+  Version     : 1.0.45.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1273,7 +1273,10 @@ function Test-Transcribing {
     Github      : 
     Tags        : Powershell,Logging
     REVISIONS   :
-    10:13 AM 12/10/2014
+    * 12:18 PM 5/4/2020 updated CBH
+    * 10:13 AM 12/10/2014
+    This function will test to see if the current system is transcribing.
+    This leverages $host properties, and is compatible with ISE, to the extent that it accomodates ISE use, and forced-returns $true (assumes ISE stop-TranscriptLog is used to stop & generate a native ISE-based). transcript)
     .INPUTS
     .OUTPUTS
     Outputs $TRUE/FALSE reflecting transcribe status
@@ -1301,6 +1304,53 @@ function Test-Transcribing {
 }
 
 #*------^ Test-Transcribing.ps1 ^------
+
+#*------v Test-Transcribing2.ps1 v------
+function test-Transcribing2 {
+    <#.SYNOPSIS
+    Tests for whether transcript (Start-Transcript) is already running
+    .NOTES
+    Version     : 1.0.0
+    Author      : Darryl Kegg
+    Website     :	http://poshcode.org/1500
+    CreatedDate : 2020-
+    FileName    : test-Transcribing2.ps1
+    License     : 
+    Copyright   : 
+    Github      : 
+    Tags        : Powershell,Logging
+    REVISIONS   :
+    * 12:02 PM 5/4/2020 minior cleanup, expanded CBH
+    * 1.0 01 October, 2015 posted Initial Version
+    .DESCRIPTION
+    This function will test to see if the current system is transcribing.
+    This try/catch-based version is compatible with ISE (vs test-Transcribing, which is not)
+    Any currently running transcript will be stopped & resumed with information added to the transcript to show that the log was tested, then reutrn a boolean value.
+    .INPUTS
+    .OUTPUTS
+    Outputs $TRUE/FALSE reflecting transcribe status
+    .EXAMPLE
+    if (test-Transcribing2) {Stop-Transcript} ;
+    Test transcription status, and stop transcript if transcribing
+    .LINK
+    #>
+    [CmdletBinding(SupportsShouldProcess=$True)]
+    param()
+    $Verbose = ($VerbosePreference -eq "Continue") ;
+    $IsTranscribing = $false ; 
+    $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
+    if (!$stopResults) {write-Verbose -verbose:$verbose "(not transcribing)"}
+    elseif ($stopResults -and $stopResults -match 'not\sbeen\sstarted"') {write-Verbose -verbose:$verbose "(test-Transcribing2:Not transcribing)"}
+    elseif ($stopResults -and $stopResults -match 'Transcript\sstopped,\soutput\sfile\sis'){
+        write-Verbose -verbose:$verbose "(test-Transcribing2:Running transcript was found ; resuming...)" ; 
+        Start-Transcript -path $stopResults.Split(" ")[-1] -append  | out-null ; 
+        $IsTranscribing = $True ; 
+    } ; 
+    write-Verbose -verbose:$verbose "IsTranscribing:$($IsTranscribing)" ; 
+    $IsTranscribing | write-output ; 
+}
+
+#*------^ Test-Transcribing2.ps1 ^------
 
 #*------v Test-TranscriptionSupported.ps1 v------
 function Test-TranscriptionSupported {
@@ -1503,14 +1553,14 @@ function Write-Log {
 
 #*======^ END FUNCTIONS ^======
 
-Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFiltered,get-lastlogon,get-lastevent,get-lastlogon,get-lastshutdown,get-lastsleep,get-lastwake,get-winEventsLoopedIDs,Start-IseTranscript,Start-Log,start-TranscriptLog,Stop-TranscriptLog,Test-Transcribing,Test-TranscriptionSupported,Write-Log -Alias *
+Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFiltered,get-lastlogon,get-lastevent,get-lastlogon,get-lastshutdown,get-lastsleep,get-lastwake,get-winEventsLoopedIDs,Start-IseTranscript,Start-Log,start-TranscriptLog,Stop-TranscriptLog,Test-Transcribing,test-Transcribing2,Test-TranscriptionSupported,Write-Log -Alias *
 
 
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUdHPTKDwpPe6RXXh6xhOpwpjd
-# uUWgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUPNfnb2gNBPX/uAoY98eQDvZB
+# xzCgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1525,9 +1575,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBS3El73
-# ++VLihMQVHXmf+qo1O5ImjANBgkqhkiG9w0BAQEFAASBgDYFvSWxkMcFsWu8PDED
-# LhxSpGAeWz86Tqyewm+v1POz3UYaSFyrkWvj96So/nfez3aiALdq5OIS6hpmdWzs
-# A1BI6ELcOW/jEfcUD7PILzrFOqd3TWS61K/tyPx0N2BJcG57xI+4ppEOwHihW/Ho
-# PF2JE9rHRZZPZaj/QUvc4KpU
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSLpFc9
+# BlcsUcABWFEcBPo4aR7pkTANBgkqhkiG9w0BAQEFAASBgAV4n0FppYxvuNXmJi90
+# +IsPu0V9FeqQwiIxV8/GIQHR5pyuhiliwLykBSwM/98te3jB2rla43VQ+4PrEEGJ
+# 0SWFPyUiABPSorIw51uuIAhwY2qTT/b2u9BVYX4KsUaokKyT66U5h/0d3MT/4Zn9
+# Ot+gtsjm+ga1KtCtflS7cFxH
 # SIG # End signature block
