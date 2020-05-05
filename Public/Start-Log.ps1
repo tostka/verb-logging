@@ -14,6 +14,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 12:35 PM 5/5/2020 added -NotTimeStamp param, and supporting code to return non-timestamped filenames
     * 12:44 PM 4/23/2020 shift $path validation to parent folder - with AllUsers scoped scripts, we need to find paths, and *fake* a path to ensure logs aren't added to AllUsers %progfiles%\wps\scripts\(logs). So the path may not exist, but the parent dir should
     * 3:56 PM 2/18/2020 Start-Log: added $Tag param, to support descriptive string for building $transcript name
     * 11:16 AM 12/29/2019 init version
@@ -27,12 +28,8 @@ function Start-Log {
     #*======^ END FUNCTIONS ^======
     #*======v SUB MAIN v======
     [array]$reqMods = $null ; # force array, otherwise single first makes it a [string]
-    $reqMods += "Test-TranscriptionSupported;Test-Transcribing;Stop-TranscriptLog;Start-IseTranscript;Start-TranscriptLog;get-ArchivePath;Archive-Log;Start-TranscriptLog;Write-Log;Start-Log".split(";") ;
+    $reqMods += "Write-Log;Start-Log".split(";") ;
     $reqMods = $reqMods | Select-Object -Unique ;
-    if ($reqMods) {
-        #*------v Function check-ReqMods v------
-        function check-ReqMods ($reqMods) { $bValidMods = $true ; $reqMods | foreach-object { if ( !(test-path function:$_ ) ) { write-error "$((get-date).ToString("yyyyMMdd HH:mm:ss")):Missing $($_) function." ; $bValidMods = $false ; } } ; write-output $bValidMods ; } ; #*------^ END Function check-ReqMods ^------
-    } ;
     if ( !(check-ReqMods $reqMods) ) { write-error "$((get-date).ToString("yyyyMMdd HH:mm:ss")):Missing function. EXITING." ; throw "FAILURE" ; }  ;
     $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) -showdebug:$($showdebug) -whatif:$($whatif) ;
     if($logspec){
@@ -55,6 +52,15 @@ function Start-Log {
         $transcript=$logspec.transcript ;
     } else {throw "Unable to configure logging!" } ;
     Configure default logging from parent script name
+    .EXAMPLE
+    $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) -NoTimeStamp ;
+    if($logspec){
+        $logging=$logspec.logging ;
+        $logfile=$logspec.logfile ;
+        $transcript=$logspec.transcript ;
+        start-Transcript -path $transcript ; 
+    } else {throw "Unable to configure logging!" } ;
+    Configure default logging from parent script name, with no Timestamp
     .LINK
     https://github.com/tostka/verb-logging
     #>
@@ -63,19 +69,25 @@ function Start-Log {
         [ValidateScript({Test-Path (split-path $_)})]$Path,
         [Parameter(HelpMessage="Tag string to be used with -Path filename spec, to construct log file name [-tag 'ticket-123456]")]
         [string]$Tag,
+        [Parameter(HelpMessage="Flag that suppresses the trailing timestamp value from the generated filenames[-NoTimestamp]")]
+        [switch] $NoTimeStamp,
         [Parameter(HelpMessage="Debugging Flag [-showDebug]")]
         [switch] $showDebug,
         [Parameter(HelpMessage="Whatif Flag  [-whatIf]")]
         [switch] $whatIf=$true
     ) ;
-
+    ${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name ;
+    $PSParameters = New-Object -TypeName PSObject -Property $PSBoundParameters ;
+    $Verbose = ($VerbosePreference -eq 'Continue') ; 
     $transcript = join-path -path (Split-Path -parent $Path) -ChildPath "logs" ;
     if (!(test-path -path $transcript)) { "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
-    $transcript = join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($Path))"  ;
+    $transcript = join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($Path))" ; 
     if($Tag){
         $transcript += "-$($Tag)" ; 
     } ; 
-    $transcript += "-Transcript-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-trans-log.txt"  ;
+    $transcript += "-Transcript-BATCH"
+    if(!$NoTimeStamp){ $transcript += "-$(get-date -format 'yyyyMMdd-HHmmtt')" } ; 
+    $transcript += "-trans-log.txt"  ;
     # add log file variant as target of Write-Log:
     $logfile = $transcript.replace("-Transcript", "-LOG").replace("-trans-log", "-log")
     if ($whatif) {
