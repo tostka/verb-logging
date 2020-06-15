@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.47.0
+  Version     : 1.0.46.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1089,7 +1089,6 @@ function Start-Log {
         $logging=$logspec.logging ;
         $logfile=$logspec.logfile ;
         $transcript=$logspec.transcript ;
-        $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
         start-Transcript -path $transcript ; 
     } else {throw "Unable to configure logging!" } ;
     Configure default logging from parent script name, with no Timestamp
@@ -1572,8 +1571,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUO8LGVwtzJpV4iSogmcmyAAnZ
-# GDSgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUIUIQlmq2+7NDxupGL/JcD/Nx
+# 4H6gggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1588,9 +1587,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTJfD5E
-# aDstv3NCw/+QD5c/h4Ze2jANBgkqhkiG9w0BAQEFAASBgJ6TrQav1rxaibqgtiHh
-# 3rkuvnWS1pSqga2bMe0QKs8RQ+nsw/YAKIiTIQ9ak6/EicWhAQlR+56pc/dexQ+k
-# f77JfqgV476HCVgzeVyIjYSzUeIGozej1HPoqGI6GXs1PlKkTeS7WZMR0asdKNdL
-# PzLZDJrnwA/SPPowNyGqLKV2
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSymc7J
+# ZGtMFYPgpdDqNcBvPC1pwzANBgkqhkiG9w0BAQEFAASBgCaRCGPom2iZzwkjViF3
+# lPVYV5QcfG2AkBNMkE8Uy8eHpEUBtl00atxu34n6S2jzFokoFSGHR86ACbo+xIO2
+# 8je26o4qxrjnDy8mGiP0dF4G4atieozEg54wX8XaEJNDh/6KLrI7KcK/sIyR1AFK
+# jtbxl/TJbBu2siHsiUHFbC5n
 # SIG # End signature block

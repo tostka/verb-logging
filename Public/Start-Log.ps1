@@ -58,6 +58,7 @@ function Start-Log {
         $logging=$logspec.logging ;
         $logfile=$logspec.logfile ;
         $transcript=$logspec.transcript ;
+        $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
         start-Transcript -path $transcript ; 
     } else {throw "Unable to configure logging!" } ;
     Configure default logging from parent script name, with no Timestamp
