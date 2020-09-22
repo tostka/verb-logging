@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.50.0
+  Version     : 1.0.49.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -64,7 +64,7 @@ function Archive-Log {
     Github      : https://github.com/tostka/verb-logging
     Tags        : Powershell, logging
     REVISIONS
-    # 3:37 PM 9/22/2020 added looping/mult $filepath added code to validate $filepath, and force $archpath if not already set
+    # 3:37 PM 9/22/2020 added code to validate $filepath, and force $archpath if not already set
     # 9:15 AM 4/24/2015 shifted all $archpath detection code out to separate get-ArchivePath()
     # 2:49 PM 4/23/2015 recast $ArchPath as $archPath script scope
     # 9:39 AM 4/13/2015 tightened up formatting, crushed lines ; update-RetiringConfRmWindows-prod-tests-20150413-0917AM.ps1 version
@@ -115,46 +115,50 @@ function Archive-Log {
         [switch] $whatIf=$true
     ) ;
     if ($showdebug) {"Archive-Log"}
-    if( (!$archpath) -OR (-not(Test-Path $archPath -ea 0 )) ){
-            $archPath = get-ArchivePath ;
+    if(!(Test-Path $arcgPath)) {
+        $archPath = get-ArchivePath ;
     } ; 
 
     # valid filepath passed in
     $error.clear
-    foreach($fpath in $FilePath){
-        Try {
-            write-verbose "$((get-date).ToString('HH:mm:ss')):`$archPath:$archPath `n`$FilePath:$FilePath"
-        
-            if ((Test-Path $fpath)) {
-                write-host  ("$((get-date).ToString('HH:mm:ss')):Moving `n$fpath `n to:" + $archPath)
+    Try {
+        if ($showdebug) {
+        write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):`$archPath:$archPath `n" ;
+        write-host -foregroundcolor green "`$FilePath:$FilePath"
+        };
 
-                # 9:59 AM 12/10/2014 pretest for clash
+        if ((Test-Path $FilePath)) {
+        write-host  ("$((get-date).ToString('HH:mm:ss')):Moving `n$FilePath `n to:" + $archPath)
 
-                $ArchTarg = (Join-Path $archPath (Split-Path $fpath -leaf));
-                if ($showdebug) {write-host -foregroundcolor green "`$ArchTarg:$ArchTarg"}
-                if (Test-Path $ArchTarg) {
-                    $FilePathObj = Get-ChildItem $fpath;
-                    $ArchTarg = (Join-Path $archPath ($FilePathObj.BaseName + "-B" + $FilePathObj.Extension))
-                    if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):CLASH DETECTED, RENAMING ON MOVE: `n`$ArchTarg:$ArchTarg"};
-                    Move-Item -path $fpath -dest $ArchTarg
-                } else {
-                    # 8:41 AM 12/10/2014 add error checking
-                    $error.Clear()
-                    Move-Item -path $fpath -dest $archPath
-                } # if-E
-            } else {
-            if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):NO TRANSCRIPT FILE FOUND! SKIPPING MOVE"}
-            }  # if-E
+        # 9:59 AM 12/10/2014 pretest for clash
 
-        } # TRY-E
-        Catch {
-            $ErrTrapd=$Error[0] ;
-            $smsg= "Failed to exec cmd because: $($ErrTrapd)" ;
-            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
-            else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-            CONTINUE ;#Opts: STOP(debug)|EXIT(close)|CONTINUE(move on in loop cycle)|BREAK(exit loop iteration)|THROW $_/'CustomMsg'(end script with Err output)
-        } ;
-    } ;  # loop-E
+        $ArchTarg = (Join-Path $archPath (Split-Path $FilePath -leaf));
+        if ($showdebug) {write-host -foregroundcolor green "`$ArchTarg:$ArchTarg"}
+        if (Test-Path $ArchTarg) {
+            $FilePathObj = Get-ChildItem $FilePath;
+            $ArchTarg = (Join-Path $archPath ($FilePathObj.BaseName + "-B" + $FilePathObj.Extension))
+            if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):CLASH DETECTED, RENAMING ON MOVE: `n`$ArchTarg:$ArchTarg"};
+            Move-Item $FilePath $ArchTarg
+        } else {
+            # 8:41 AM 12/10/2014 add error checking
+            $error.Clear()
+            Move-Item $FilePath $archPath
+        } # if-E
+        } else {
+        if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):NO TRANSCRIPT FILE FOUND! SKIPPING MOVE"}
+        }  # if-E
+
+    } # TRY-E
+    Catch {
+        $ErrTrapd=$Error[0] ;
+        $smsg= "Failed to exec cmd because: $($ErrTrapd)" ;
+        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
+        else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        $smsg= "Try #: $($Exit)" ;
+        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
+        else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        Exit ;#Opts: STOP(debug)|EXIT(close)|CONTINUE(move on in loop cycle)|BREAK(exit loop iteration)|THROW $_/'CustomMsg'(end script with Err output)
+    } ;
     if (!(Test-Transcribing)) {  return $true } else {return $false};
 }
 
@@ -437,12 +441,14 @@ function get-ArchivePath {
 
     } # TRY-E
     Catch {
-        $ErrTrapd=$Error[0] ;
-        Start-Sleep -Seconds $RetrySleep ;
-        $Exit ++ ;
-        $smsg= "Failed to exec cmd because: $($ErrTrapd)" ;
-        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Error} ; #Error|Warn
-        Exit ;#Opts: STOP(debug)|EXIT(close)|CONTINUE(move on in loop cycle)|BREAK(exit loop iteration)|THROW $_/'CustomMsg'(end script with Err output)
+            Write-Error "$((get-date).ToString('HH:mm:ss')): Failed to move `n$FilePath to `n$ArchiveLocation"
+            Write-Error "$((get-date).ToString('HH:mm:ss')): Error in $($_.InvocationInfo.ScriptName)."
+            Write-Error "$((get-date).ToString('HH:mm:ss')): -- Error information"
+            Write-Error "$((get-date).ToString('HH:mm:ss')): Line Number: $($_.InvocationInfo.ScriptLineNumber)"
+            Write-Error "$((get-date).ToString('HH:mm:ss')): Offset: $($_.InvocationInfo.OffsetInLine)"
+            Write-Error "$((get-date).ToString('HH:mm:ss')): Command: $($_.InvocationInfo.MyCommand)"
+            Write-Error "$((get-date).ToString('HH:mm:ss')): Line: $($_.InvocationInfo.Line)"
+            Write-Error "$((get-date).ToString('HH:mm:ss')): Error Details: $($_)"
     } ;
 
 }
@@ -1681,8 +1687,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUhTtzG76evh8o8CYOFwRNHRBZ
-# NiGgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUPpWBiR6D/7TcFMjaW1InA8h1
+# cNWgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1697,9 +1703,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBT6G2SY
-# x2pa4lJ9za7zQd6QVd67xzANBgkqhkiG9w0BAQEFAASBgCozhuWO5kQaegdlq8Ub
-# 1kktqEbT2BfQURas0Sj6e02ESU/m22QFzVc9ODqwEe7whGZsswJdH0a23I7u4ky4
-# BTntTL5YxBT8UDb1Uvoa3a4y7I0EfvUYqjcLcm7GSVgTAD6M2kydqLiUGaRFUPLs
-# nRB52LahAoXRuXDKlkpK2aOF
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTm3T3g
+# O+0DRZS+rX8b20YXkaA3izANBgkqhkiG9w0BAQEFAASBgE8Q87UMb/l3PA8XP92T
+# 0tlc/0Tfe1BrFbN0/mY3AujQIgla6rPok5T18ECrkVP8hjrZUC+x8FpekhS4m5AR
+# pxB4GLpKe5HbDdjkXutjfKGkTVdRbgtguIgBAl6banKlfUZxUEZevtPiGa56a6nB
+# ucOyDOayZwm6XLArGZgFoPyh
 # SIG # End signature block

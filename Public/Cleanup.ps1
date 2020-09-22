@@ -5,6 +5,51 @@ if(test-path function:Cleanup){
 } else {
     "(using default verb-logging:cleanup())" ;
     function Cleanup {
+        <#
+        .SYNOPSIS
+        Cleanup.ps1 - Cleanup, close logging & email reports template funcotin
+        .NOTES
+        Version     : 1.0.0
+        Author      : Todd Kadrie
+        Website     :	http://www.toddomation.com
+        Twitter     :	@tostka / http://twitter.com/tostka
+        CreatedDate : 2020-
+        FileName    : 
+        License     : MIT License
+        Copyright   : (c) 2020 Todd Kadrie
+        Github      : https://github.com/tostka/verb-XXX
+        Tags        : Powershell
+        AddedCredit : REFERENCE
+        AddedWebsite:	URL
+        AddedTwitter:	URL
+        REVISIONS
+        * 2:51 PM 9/22/2020 updated to cover ISE v5 transcription support
+        .DESCRIPTION
+        Cleanup.ps1 - Cleanup, close logging & email reports template funcotin
+        .EXAMPLE
+        .\Cleanup.ps1
+        .EXAMPLE
+        if($host.Name -eq "Windows PowerShell ISE Host" -and $host.version.major -lt 5){
+            # STATIC transcript paths
+            #$Logname= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + (get-date -uformat "%Y%m%d-%H%M" ) + "-ISEtrans.log")) ;
+            #$Logname= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + $timeStampNow + "-ISEtrans.log")) ;
+            # 2:02 PM 9/21/2018 missing $timestampnow, hardcode
+            #$Logname=(join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + (get-date -format 'yyyyMMdd-HHmmtt') + "-ISEtrans.log")) ;
+            # RENAME and use the pre-generated transcript
+            $Logname=$transcript.replace('-trans-log.txt','-ISEtrans-log.txt') ; 
+            write-host "`$Logname: $Logname";
+            Start-iseTranscript -logname $Logname ;
+            #Archive-Log $Logname ; 
+            $transcript = $Logname ; 
+            if($host.version.Major -ge 5){ stop-transcript } ;
+        } else {
+            if($showdebug){ write-debug "$((get-date).ToString('HH:mm:ss')):Stop Transcript" };
+            Stop-TranscriptLog ;
+            #Archive-Log $transcript ;
+        } # if-E
+        .LINK
+        https://github.com/tostka/verb-XXX
+        #>
         # clear all objects and exit
         # Clear-item doesn't seem to work as a variable release
         # 3:18 PM 2/13/2019 Cleanup: add in the smtp mailer and Change/Error report mailing code from maintain-exombxretentionpolicies.ps1
@@ -16,12 +61,9 @@ if(test-path function:Cleanup){
         # 7:43 AM 1/24/2014 always stop the running transcript before exiting
         if ($showdebug) {"CLEANUP"} ;
         #stop-transcript ;
-        if($host.Name -eq "Windows PowerShell ISE Host"){
-            # 8:46 AM 3/11/2015 shift the logfilename gen out here, so that we can arch it
+        if($host.Name -eq "Windows PowerShell ISE Host" -and $host.version.major -lt 5){
             #$Logname= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-BATCH" + (get-date -uformat "%Y%m%d-%H%M" ) + "-ISEtrans.log")) ;
-            # 2:16 PM 4/27/2015 shift to static timestamp $timeStampNow
             #$Logname= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-BATCH" + $timeStampNow + "-ISEtrans.log")) ;
-            # 2:02 PM 9/21/2018 missing $timestampnow, hardcode
             $Logname=(join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-BATCH" + (get-date -format 'yyyyMMdd-HHmmtt') + "-ISEtrans.log")) ;
             $smsg= "`$Logname: $Logname";
             write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg))" ;
@@ -30,7 +72,6 @@ if(test-path function:Cleanup){
 
             Start-iseTranscript -logname $Logname ;
             #Archive-Log $Logname ;
-            # 1:23 PM 4/23/2015 standardize processing file so that we can send a link to open the transcript for review
             $transcript = $Logname ;
         } else {
             if($showdebug){ write-debug "$(get-timestamp):Stop Transcript" };
@@ -38,7 +79,6 @@ if(test-path function:Cleanup){
             #if($showdebug){ write-debug "$(get-timestamp):Archive Transcript" };
             #Archive-Log $transcript ;
         } # if-E
-
         if($whatif){
             $logfile=$logfile.replace("-BATCH","-BATCH-WHATIF") ;
             $transcript=$transcript.replace("-BATCH","-BATCH-WHATIF") ;
@@ -59,7 +99,6 @@ if(test-path function:Cleanup){
         };
 
         #$smtpSubj= "Proc Rpt:$($ScriptBaseName):$(get-date -format 'yyyyMMdd-HHmmtt')"   ;
-
         #Load as an attachment into the body text:
         #$body = (Get-Content "path-to-file\file.html" ) | converto-html ;
         #$SmtpBody += ("Pass Completed "+ [System.DateTime]::Now + "`nResults Attached: " +$transcript) ;

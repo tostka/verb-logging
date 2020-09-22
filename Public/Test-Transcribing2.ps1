@@ -1,4 +1,4 @@
-﻿#*----------------v Function test-Transcribing2 v----------------
+﻿#*------v Test-Transcribing2.ps1 v------
 function test-Transcribing2 {
     <#.SYNOPSIS
     Tests for whether transcript (Start-Transcript) is already running
@@ -41,4 +41,5 @@ function test-Transcribing2 {
     } ; 
     write-Verbose -verbose:$verbose "IsTranscribing:$($IsTranscribing)" ; 
     $IsTranscribing | write-output ; 
-} ; #*----------------^ END Function test-Transcribing2 ^----------------
+}
+#*------^ Test-Transcribing2.ps1 ^------

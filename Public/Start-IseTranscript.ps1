@@ -1,4 +1,4 @@
-﻿#*----------------v Function Start-IseTranscript v----------------
+﻿#*------v Start-IseTranscript.ps1 v------
 Function Start-IseTranscript {
     <#
     .SYNOPSIS
@@ -115,4 +115,6 @@ Transcript started. Output file is $Logname
             $psISE.CurrentPowerShellTab.ConsolePane.text | out-file $Logname -append
         } # if-E
 
-} #*----------------^ END Function start-iseTranscript ^----------------
+}
+
+#*------^ Start-IseTranscript.ps1 ^------

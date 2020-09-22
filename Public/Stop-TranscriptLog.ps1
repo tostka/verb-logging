@@ -1,4 +1,4 @@
-﻿#*----------------v Function Stop-TranscriptLog v----------------
+﻿#*------v Stop-TranscriptLog.ps1 v------
 function Stop-TranscriptLog {
     <#.SYNOPSIS
     Stops & ARCHIVES a transcript file (if no archive needed, just use the stock Stop-Transcript cmdlet)
@@ -8,6 +8,7 @@ function Stop-TranscriptLog {
     #Twitter:	http://twitter.com/tostka
     Requires test-transcribing() function
     REVISIONS   :
+    # 11:03 AM 9/22/2020 updated for psv5 ise transcription support
     # 1:18 PM 1/14/2015 added Lync fs rpt share support; added lab support (lynms650d\d$)
     # 10:11 AM 12/10/2014 tshot stop-transcriptlog archmove, for existing file clashes ; shifted more into the try block
     12:49 PM 12/9/2014 init
@@ -22,11 +23,11 @@ function Stop-TranscriptLog {
     #can't define $transcript as a local param/vari, without toasting the main vari!
     if ($showdebug) {"SUB: stop-transcriptlog"}
 
-    # 10:48 AM 1/14/2015 adde lab support for archpath
-    # 10:56 AM 1/14/2015 adde Lync FS support
-
-
-    if($host.Name -ne "Windows PowerShell ISE Host"){
+    if( ($host.Name -eq "Windows PowerShell ISE Host") -AND ($host.version.major -lt 5) ){
+        write-host "Stop-Transcribing:SKIP PS ISE $($host.version.major) does not support transcription commands";
+        # could stick start-ISETranscript here, but would have to know the transcript file name, the function should be supported in an if/else on $host.name & version
+        return $true ;
+    } else { 
         Try {
             if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):`n`$outtransfile:$outtransfile" ;};
                 if (Test-Transcribing) {
@@ -46,8 +47,6 @@ function Stop-TranscriptLog {
         }  # try-E;
 
         if (!(Test-Transcribing)) {  return $true } else {return $false};
-    } else {
-        write-host "Stop-Transcribing:SKIP PS ISE does not support transcription commands";
-        return $true ;
-    } # if-E ;
-}#*----------------^ END Function Stop-TranscriptLog ^----------------
+    } ;
+}
+#*------^ Stop-TranscriptLog.ps1 ^------

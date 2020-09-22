@@ -1,4 +1,4 @@
-﻿#*----------------v Function Start-TranscriptLog v----------------
+﻿#*------v start-TranscriptLog.ps1 v------
 function start-TranscriptLog {
     <#.SYNOPSIS
     Configures and launches a transcript
@@ -14,6 +14,7 @@ function start-TranscriptLog {
     Github      : https://github.com/tostka
     Tags        : Powershell,Permissions,Session
     REVISIONS   :
+    # 11:02 AM 9/22/2020 updated for psv5 support of transcription
     # 10:19 AM 12/10/2014 cleanup
     12:36 PM 12/9/2014 init
     .DESCRIPTION
@@ -37,7 +38,10 @@ function start-TranscriptLog {
     # Have to set relative $scriptDir etc OUTSIDE THE FUNC, build full path to generic core $Transcript vari, and then
     # start-transcript will auto use it (or can manual spec it with -path)
 
-    if($host.Name -NE "Windows PowerShell ISE Host"){
+    if( ($host.Name -eq "Windows PowerShell ISE Host") -AND ($host.version.major -lt 5) ){
+        write-host "Test-Transcribing:SKIP PS ISE does not support transcription commands [returning $true]";
+        return $true ;
+    } else { 
         Try {
                 if (Test-Transcribing) {Stop-Transcript}
 
@@ -60,8 +64,7 @@ function start-TranscriptLog {
                 Write-Error "$((get-date).ToString('HH:mm:ss')): Error Details: $($_)"
             }  # try-E;
 
-    } else {
-        write-host "Test-Transcribing:SKIP PS ISE does not support transcription commands [returning $true]";
-        return $true ;
     };  # if-E
-}#*----------------^ END Function Start-TranscriptLog ^----------------
+}
+
+#*------^ start-TranscriptLog.ps1 ^------

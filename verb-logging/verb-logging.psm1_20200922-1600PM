@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.50.0
+  Version     : 1.0.48.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -49,22 +49,15 @@ $script:ModuleVersion = (Import-PowerShellDataFile -Path (get-childitem $script:
 
 #*------v Archive-Log.ps1 v------
 function Archive-Log {
-    <#
-    .SYNOPSIS
-    Archive-Log - ARCHIVES a designated file (if no archive needed, just use the stock Stop-Transcript cmdlet). Tests and fails back through restricted subnets to find a working archive locally
+    <#.SYNOPSIS
+    ARCHIVES a designated file (if no archive needed, just use the stock Stop-Transcript cmdlet). Tests and fails back through restricted subnets to find a working archive locally
     .NOTES
-    Version     : 1.0.0
-    Author      : Todd Kadrie
-    Website     : http://www.toddomation.com
-    Twitter     : @tostka / http://twitter.com/tostka
-    CreatedDate : 2020-09-22
-    FileName    : Archive-Log.ps1
-    License     : MIT License
-    Copyright   : (c) 2020 Todd Kadrie
-    Github      : https://github.com/tostka/verb-logging
-    Tags        : Powershell, logging
-    REVISIONS
-    # 3:37 PM 9/22/2020 added looping/mult $filepath added code to validate $filepath, and force $archpath if not already set
+    #Author: Todd Kadrie
+    #Website:	http://toddomation.com
+    #Twitter:	http://twitter.com/tostka
+    Requires test-transcribing() function
+
+    REVISIONS   :
     # 9:15 AM 4/24/2015 shifted all $archpath detection code out to separate get-ArchivePath()
     # 2:49 PM 4/23/2015 recast $ArchPath as $archPath script scope
     # 9:39 AM 4/13/2015 tightened up formatting, crushed lines ; update-RetiringConfRmWindows-prod-tests-20150413-0917AM.ps1 version
@@ -75,87 +68,60 @@ function Archive-Log {
     # 10:48 AM 1/14/2015 adde lab support for archpath ; tshot Archive-Log archmove, for existing file clashes
     # 9:04 AM 12/10/2014 shifted more into the try block
     #12:49 PM 12/9/2014 init
-    .DESCRIPTION
-    Archive-Log - ARCHIVES a designated file (if no archive needed, just use the stock Stop-Transcript cmdlet). Tests and fails back through restricted subnets to find a working archive locally
-    .PARAMETER  FilePath
-    array of paths to log files to be archived[-FilePath 'c:\pathto\file1.txt','c:\pathto\file2.txt']
-    .PARAMETER ShowDebug
-    Parameter to display Debugging messages [-ShowDebug switch]
-    .PARAMETER Whatif
-    Parameter to run a Test no-change pass [-Whatif switch]
     .INPUTS
-    None. Does not accepted piped input.
     .OUTPUTS
-    System.Boolean
+    Outputs $TRUE/FALSE reflecting successful archive attempt status
     .EXAMPLE
-    $archPath = get-ArchivePath ;
-    if($host.Name -eq "Windows PowerShell ISE Host" -and $host.version.major -lt 5){
-        $Logname=$transcript.replace('-trans-log.txt','-ISEtrans-log.txt') ; 
-        write-host "`$Logname: $Logname";
-        Start-iseTranscript -logname $Logname ;
-        Archive-Log $Logname ;
-        $transcript = $Logname ; 
-        if($host.version.Major -ge 5){ stop-transcript } ;
-    } else {
-        Stop-TranscriptLog ;
-        Archive-Log $transcript ;
-    } # if-E
-    Full stack use of get-ArchivePath(), Start-iseTranscript(), Stop-TranscriptLog(), & Archive-Log()
-    .LINK
-    https://github.com/tostka/verb-logging
+    Archive-Log
     #>
-    [CmdletBinding()]
-    PARAM(
-        [parameter(Mandatory=$true,HelpMessage="Array of paths to log files to be archived[-FilePath 'c:\pathto\file1.txt','c:\pathto\file2.txt']")] 
-        [ValidateScript({Test-Path $_})]
-        [array]$FilePath,
-        [Parameter(HelpMessage="Debugging Flag [-showDebug]")]
-        [switch] $showDebug,
-        [Parameter(HelpMessage="Whatif Flag  [-whatIf]")]
-        [switch] $whatIf=$true
-    ) ;
+
+    Param([parameter(Mandatory=$true)] $FilePath) ;
+
     if ($showdebug) {"Archive-Log"}
-    if( (!$archpath) -OR (-not(Test-Path $archPath -ea 0 )) ){
-            $archPath = get-ArchivePath ;
-    } ; 
+    if(!(Test-Path $FilePath)) {
+      write-host -foregroundcolor yellow  "$((get-date).ToString('HH:mm:ss')):Specified file...`n$Filepath`n NOT FOUND! ARCHIVING FAILED!";
+    } else {
+      # valid filepath passed in
+      Try {
+          if ($showdebug) {
+            write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):`$archPath:$archPath `n" ;
+            write-host -foregroundcolor green "`$FilePath:$FilePath"
+          };
 
-    # valid filepath passed in
-    $error.clear
-    foreach($fpath in $FilePath){
-        Try {
-            write-verbose "$((get-date).ToString('HH:mm:ss')):`$archPath:$archPath `n`$FilePath:$FilePath"
-        
-            if ((Test-Path $fpath)) {
-                write-host  ("$((get-date).ToString('HH:mm:ss')):Moving `n$fpath `n to:" + $archPath)
+          if ((Test-Path $FilePath)) {
+            write-host  ("$((get-date).ToString('HH:mm:ss')):Moving `n$FilePath `n to:" + $archPath)
 
-                # 9:59 AM 12/10/2014 pretest for clash
+            # 9:59 AM 12/10/2014 pretest for clash
 
-                $ArchTarg = (Join-Path $archPath (Split-Path $fpath -leaf));
-                if ($showdebug) {write-host -foregroundcolor green "`$ArchTarg:$ArchTarg"}
-                if (Test-Path $ArchTarg) {
-                    $FilePathObj = Get-ChildItem $fpath;
-                    $ArchTarg = (Join-Path $archPath ($FilePathObj.BaseName + "-B" + $FilePathObj.Extension))
-                    if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):CLASH DETECTED, RENAMING ON MOVE: `n`$ArchTarg:$ArchTarg"};
-                    Move-Item -path $fpath -dest $ArchTarg
-                } else {
-                    # 8:41 AM 12/10/2014 add error checking
-                    $error.Clear()
-                    Move-Item -path $fpath -dest $archPath
-                } # if-E
+            $ArchTarg = (Join-Path $archPath (Split-Path $FilePath -leaf));
+            if ($showdebug) {write-host -foregroundcolor green "`$ArchTarg:$ArchTarg"}
+            if (Test-Path $ArchTarg) {
+                $FilePathObj = Get-ChildItem $FilePath;
+                $ArchTarg = (Join-Path $archPath ($FilePathObj.BaseName + "-B" + $FilePathObj.Extension))
+                if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):CLASH DETECTED, RENAMING ON MOVE: `n`$ArchTarg:$ArchTarg"};
+                Move-Item $FilePath $ArchTarg
             } else {
+                # 8:41 AM 12/10/2014 add error checking
+                $error.Clear()
+                Move-Item $FilePath $archPath
+            } # if-E
+          } else {
             if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):NO TRANSCRIPT FILE FOUND! SKIPPING MOVE"}
-            }  # if-E
+          }  # if-E
 
-        } # TRY-E
-        Catch {
-            $ErrTrapd=$Error[0] ;
-            $smsg= "Failed to exec cmd because: $($ErrTrapd)" ;
-            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
-            else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-            CONTINUE ;#Opts: STOP(debug)|EXIT(close)|CONTINUE(move on in loop cycle)|BREAK(exit loop iteration)|THROW $_/'CustomMsg'(end script with Err output)
-        } ;
-    } ;  # loop-E
-    if (!(Test-Transcribing)) {  return $true } else {return $false};
+      } # TRY-E
+      Catch {
+              Write-Error "$((get-date).ToString('HH:mm:ss')): Failed to move `n$FilePath to `n$archPath"
+              Write-Error "$((get-date).ToString('HH:mm:ss')): Error in $($_.InvocationInfo.ScriptName)."
+              Write-Error "$((get-date).ToString('HH:mm:ss')): -- Error information"
+              Write-Error "$((get-date).ToString('HH:mm:ss')): Line Number: $($_.InvocationInfo.ScriptLineNumber)"
+              Write-Error "$((get-date).ToString('HH:mm:ss')): Offset: $($_.InvocationInfo.OffsetInLine)"
+              Write-Error "$((get-date).ToString('HH:mm:ss')): Command: $($_.InvocationInfo.MyCommand)"
+              Write-Error "$((get-date).ToString('HH:mm:ss')): Line: $($_.InvocationInfo.Line)"
+              Write-Error "$((get-date).ToString('HH:mm:ss')): Error Details: $($_)"
+      } ;
+      if (!(Test-Transcribing)) {  return $true } else {return $false};
+    } # if-E Filepath test
 }
 
 #*------^ Archive-Log.ps1 ^------
@@ -321,7 +287,6 @@ function get-ArchivePath {
     #Twitter:	http://twitter.com/tostka
     Requires test-transcribing() function
     REVISIONS   :
-    # 3:48 PM 9/22/2020 cleanedup CBH, examples
     # 8:33 AM 2/18/2020 get-ArchivePath: shifted paths into global varis in profile
     # 8:52 AM 4/24/2015 shifted internal func vari name from $archPath to $ArchiveLocation, to avoid overlap clash/confusion ; shifted archpath detection code out of send-mailmessage and archive-log, into get-ArchivePath()
     # 2:49 PM 4/23/2015 recast $ArchPath as $archPath script scope
@@ -339,111 +304,101 @@ function get-ArchivePath {
     .EXAMPLE
     $archPath = get-ArchivePath ;
     Retrieve the functional Archivepath into a variable.
-    .EXAMPLE
-    $archPath = get-ArchivePath ;
-    if($host.Name -eq "Windows PowerShell ISE Host" -and $host.version.major -lt 5){
-        $Logname=$transcript.replace('-trans-log.txt','-ISEtrans-log.txt') ; 
-        write-host "`$Logname: $Logname";
-        Start-iseTranscript -logname $Logname ;
-        Archive-Log $Logname ;
-        $transcript = $Logname ; 
-        if($host.version.Major -ge 5){ stop-transcript } ;
-    } else {
-        Stop-TranscriptLog ;
-        Archive-Log $transcript ;
-    } # if-E
-    Full stack use of the functions
-    .LINK
-    https://www.toddomation.com
     #>
 
+    # 11:57 AM 4/24/2015update, no params, this returns a value, but needs nothing
+    #   [parameter(Mandatory=$true)]$FilePath
+
     Param() ;
-    # moved to globals in profile
-    $gVaris = "ArchPathProd","ArchPathLync","ArchPathLab","ArchPathLabLync","rgxRestrictedNetwork" ;
-    foreach($gVari in $gVaris){
-        if(-not(get-variable $gVari -scope Global)){
-            $smsg = "Undefined `$global:$($gvari) variable!. ABORTING!" ;
-            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Error } #Error|Warn|Debug
-            else{ write-WARNING "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-            Exit ;
+
+        # moved to globals in profile
+        $gVaris = "ArchPathProd","ArchPathLync","ArchPathLab","ArchPathLabLync","rgxRestrictedNetwork" ;
+        foreach($gVari in $gVaris){
+            if(-not(get-variable $gVari -scope Global)){
+                $smsg = "Undefined `$global:$($gvari) variable!. ABORTING!" ;
+                if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Error } #Error|Warn|Debug
+                else{ write-WARNING "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+                Exit ;
+            } ;
         } ;
-    } ;
 
-    if ($showdebug) { write-verbose "$((get-date).ToString('HH:mm:ss')) Start get-ArchivePath" -Verbose:$verbose}
+        if ($showdebug) { write-verbose "$((get-date).ToString('HH:mm:ss')) Start get-ArchivePath" -Verbose:$verbose}
 
-    # if blocked for SMB use custom arch server for reporting
-    $IPs=get-WmiObject -Class Win32_NetworkAdapterConfiguration -Filter IPEnabled=TRUE -ComputerName . | Select-Object -Property IPAddress ;
-    $IPs | ForEach-Object {
-        if ($_.ipaddress -match $rgxRestrictedNetwork){
-            # server with blocks to SMB to archserver
-            if ($showdebug) {write-host -foregroundcolor yellow  "$((get-date).ToString('HH:mm:ss')):Restricted Subnet Detected. Using Lync ArchPath";};
+        # if blocked for SMB use custom arch server for reporting
+        $IPs=get-WmiObject -Class Win32_NetworkAdapterConfiguration -Filter IPEnabled=TRUE -ComputerName . | Select-Object -Property IPAddress ;
+        $IPs | ForEach-Object {
+            if ($_.ipaddress -match $rgxRestrictedNetwork){
+                # server with blocks to SMB to archserver
+                if ($showdebug) {write-host -foregroundcolor yellow  "$((get-date).ToString('HH:mm:ss')):Restricted Subnet Detected. Using Lync ArchPath";};
 
-            if($env:USERDOMAIN -eq $domLab){
-                if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):LAB Server Detected. Using Lync ArchPathLabLync"};
-                # lync Edge or FE server
-                if(test-path $ArchPathLabLync) {
-                    $ArchiveLocation = $ArchPathLabLync;
+                if($env:USERDOMAIN -eq $domLab){
+                    if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):LAB Server Detected. Using Lync ArchPathLabLync"};
+                    # lync Edge or FE server
+                    if(test-path $ArchPathLabLync) {
+                        $ArchiveLocation = $ArchPathLabLync;
+                    } else {
+                        write-error "$((get-date).ToString('HH:mm:ss')):FAILED TO LOCATE Lab Lync `$ArchiveLocation. Exiting.";
+                        exit
+                    };  # if-E
                 } else {
-                    write-error "$((get-date).ToString('HH:mm:ss')):FAILED TO LOCATE Lab Lync `$ArchiveLocation. Exiting.";
-                    exit
-                };  # if-E
+                    # non-lab prod Lync
+                    if(test-path $ArchPathLync) {
+                        $ArchiveLocation =$ArchPathLync;
+                    } else {
+                        write-error "$((get-date).ToString('HH:mm:ss')):FAILED TO LOCATE Lync `$ArchiveLocation. Exiting.";
+                        exit
+                    }; # if-E non-lab
+                }; # lync lab or prod
             } else {
-                # non-lab prod Lync
-                if(test-path $ArchPathLync) {
-                    $ArchiveLocation =$ArchPathLync;
-                } else {
-                    write-error "$((get-date).ToString('HH:mm:ss')):FAILED TO LOCATE Lync `$ArchiveLocation. Exiting.";
-                    exit
+                # non-Lync/restricted subnet
+                if($env:USERDOMAIN -eq $domLab){
+                    if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):LAB Server Detected. Using Lync ArchPathLab"};
+                    # lync Edge or FE server
+                    if(test-path $ArchPathLab) {
+                        $ArchiveLocation = $ArchPathLab;
+                    } else {
+                        write-error "$((get-date).ToString('HH:mm:ss')):FAILED TO LOCATE Lab `$ArchiveLocation. Exiting.";
+                        #Cleanup; # nope, cleanup normally CALLS STOP-TRANSLOG
+                        exit
+                    };  # if-E
+                    } else {
+                    # non-lab prod
+                    if(test-path $ArchPathProd) {
+                        $ArchiveLocation =$ArchPathProd;
+                    } else {
+                        write-error "$((get-date).ToString('HH:mm:ss')):FAILED TO LOCATE Prod `$ArchiveLocation. Exiting.";
+                        exit
+                    };  # if-E
                 }; # if-E non-lab
-            }; # lync lab or prod
-        } else {
-            # non-Lync/restricted subnet
-            if($env:USERDOMAIN -eq $domLab){
-                if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):LAB Server Detected. Using Lync ArchPathLab"};
-                # lync Edge or FE server
-                if(test-path $ArchPathLab) {
-                    $ArchiveLocation = $ArchPathLab;
-                } else {
-                    write-error "$((get-date).ToString('HH:mm:ss')):FAILED TO LOCATE Lab `$ArchiveLocation. Exiting.";
-                    #Cleanup; # nope, cleanup normally CALLS STOP-TRANSLOG
-                    exit
-                };  # if-E
-                } else {
-                # non-lab prod
-                if(test-path $ArchPathProd) {
-                    $ArchiveLocation =$ArchPathProd;
-                } else {
-                    write-error "$((get-date).ToString('HH:mm:ss')):FAILED TO LOCATE Prod `$ArchiveLocation. Exiting.";
-                    exit
-                };  # if-E
-            }; # if-E non-lab
-        }; # if-E restricted subnet test
-    };  # loop-E $IPs
-    if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):`$ArchiveLocation:$ArchiveLocation"};
+            }; # if-E restricted subnet test
+        };  # loop-E $IPs
+        if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):`$ArchiveLocation:$ArchiveLocation"};
 
-    Try {
-        # validate the archpath
-        if (!(Test-Path $ArchiveLocation)) {
-            # gui prompt
-            $ArchiveLocation = [Microsoft.VisualBasic.Interaction]::InputBox("Input ArchPath[UNCPath]", "Archpath", "") ;
-        }
-        if($showdebug){Write-Verbose "$((get-date).ToString('HH:mm:ss'))End get-ArchivePath" -Verbose:$verbose} ;
-        # 2:21 PM 4/24/2015 try flattening in here.
-        if($ArchiveLocation -is [system.array]){
-            write-verbose "Flattening in get-ArchivePath" -verbose:$verbose ;
-            $ArchiveLocation = $ArchiveLocation[0]
-        } # if-E
-        Return $ArchiveLocation
+        Try {
+            # validate the archpath
+            if (!(Test-Path $ArchiveLocation)) {
+                # gui prompt
+                $ArchiveLocation = [Microsoft.VisualBasic.Interaction]::InputBox("Input ArchPath[UNCPath]", "Archpath", "") ;
+            }
+            if($showdebug){Write-Verbose "$((get-date).ToString('HH:mm:ss'))End get-ArchivePath" -Verbose:$verbose} ;
+            # 2:21 PM 4/24/2015 try flattening in here.
+            if($ArchiveLocation -is [system.array]){
+                write-verbose "Flattening in get-ArchivePath" -verbose:$verbose ;
+                $ArchiveLocation = $ArchiveLocation[0]
+            } # if-E
+            Return $ArchiveLocation
 
-    } # TRY-E
-    Catch {
-        $ErrTrapd=$Error[0] ;
-        Start-Sleep -Seconds $RetrySleep ;
-        $Exit ++ ;
-        $smsg= "Failed to exec cmd because: $($ErrTrapd)" ;
-        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Error} ; #Error|Warn
-        Exit ;#Opts: STOP(debug)|EXIT(close)|CONTINUE(move on in loop cycle)|BREAK(exit loop iteration)|THROW $_/'CustomMsg'(end script with Err output)
-    } ;
+        } # TRY-E
+        Catch {
+                Write-Error "$((get-date).ToString('HH:mm:ss')): Failed to move `n$FilePath to `n$ArchiveLocation"
+                Write-Error "$((get-date).ToString('HH:mm:ss')): Error in $($_.InvocationInfo.ScriptName)."
+                Write-Error "$((get-date).ToString('HH:mm:ss')): -- Error information"
+                Write-Error "$((get-date).ToString('HH:mm:ss')): Line Number: $($_.InvocationInfo.ScriptLineNumber)"
+                Write-Error "$((get-date).ToString('HH:mm:ss')): Offset: $($_.InvocationInfo.OffsetInLine)"
+                Write-Error "$((get-date).ToString('HH:mm:ss')): Command: $($_.InvocationInfo.MyCommand)"
+                Write-Error "$((get-date).ToString('HH:mm:ss')): Line: $($_.InvocationInfo.Line)"
+                Write-Error "$((get-date).ToString('HH:mm:ss')): Error Details: $($_)"
+        } ;
 
 }
 
@@ -1473,7 +1428,8 @@ function Test-TranscriptionSupported {
     AddedWebsite:	URL
     AddedTwitter:	URL
     REVISIONS
-    # 12:08 PM 9/22/2020 updated to exempt ISE v5 testing - force true, as it fails the test but *does* support transcription ; revised CBH, origin lost to the mists of time, been in use since at least 2009 or so
+    # 12:08 PM 9/22/2020 updated to exempt ISE v5 testing - force true, as it fails the test but *does* support transcription
+    * 10:48 AM 9/22/2020 revised CBH, origin lost to the mists of time, been in use since at least 2009 or so
     .DESCRIPTION
     Test-TranscriptionSupported -Tests to see if the current host supports transcription. Returns a $true if the host supports transcription; $false otherwise
     OUTPUT
@@ -1681,8 +1637,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUhTtzG76evh8o8CYOFwRNHRBZ
-# NiGgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUO2iFQz0b+5CkqXMi0De/WLGs
+# SQKgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1697,9 +1653,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBT6G2SY
-# x2pa4lJ9za7zQd6QVd67xzANBgkqhkiG9w0BAQEFAASBgCozhuWO5kQaegdlq8Ub
-# 1kktqEbT2BfQURas0Sj6e02ESU/m22QFzVc9ODqwEe7whGZsswJdH0a23I7u4ky4
-# BTntTL5YxBT8UDb1Uvoa3a4y7I0EfvUYqjcLcm7GSVgTAD6M2kydqLiUGaRFUPLs
-# nRB52LahAoXRuXDKlkpK2aOF
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBRSzaYT
+# UrGtx+k9DnK22OBCTkXFhzANBgkqhkiG9w0BAQEFAASBgHgFTXXfTwEvN0D60IMv
+# EV9Pl2zyxXr3KunOolxCjMsBhSHsbZhDe/zq7zslK/6SbFwlqIC3OviI4DJhuCAl
+# w+xaKeBwSPnVUkOcQkle1rQTsAq1TqmdpL1EKN2pydxgoaRzCdCki+IgrmD4bua5
+# F9GqVDOFD67wmsU7OkJljewP
 # SIG # End signature block
