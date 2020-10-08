@@ -15,6 +15,7 @@ function Archive-Log {
     Github      : https://github.com/tostka/verb-logging
     Tags        : Powershell, logging
     REVISIONS
+    # 3:04 PM 10/8/2020 add force, to overwrite on conflict
     # 3:37 PM 9/22/2020 added looping/mult $filepath added code to validate $filepath, and force $archpath if not already set
     # 9:15 AM 4/24/2015 shifted all $archpath detection code out to separate get-ArchivePath()
     # 2:49 PM 4/23/2015 recast $ArchPath as $archPath script scope
@@ -87,11 +88,12 @@ function Archive-Log {
                     $FilePathObj = Get-ChildItem $fpath;
                     $ArchTarg = (Join-Path $archPath ($FilePathObj.BaseName + "-B" + $FilePathObj.Extension))
                     if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):CLASH DETECTED, RENAMING ON MOVE: `n`$ArchTarg:$ArchTarg"};
-                    Move-Item -path $fpath -dest $ArchTarg
+                    # 3:04 PM 10/8/2020 add force, to overwrite on conflict
+                    Move-Item -path $fpath -dest $ArchTarg -Force
                 } else {
                     # 8:41 AM 12/10/2014 add error checking
                     $error.Clear()
-                    Move-Item -path $fpath -dest $archPath
+                    Move-Item -path $fpath -dest $archPath -Force
                 } # if-E
             } else {
             if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):NO TRANSCRIPT FILE FOUND! SKIPPING MOVE"}

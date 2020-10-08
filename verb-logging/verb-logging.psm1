@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.50.0
+  Version     : 1.0.51.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -64,6 +64,7 @@ function Archive-Log {
     Github      : https://github.com/tostka/verb-logging
     Tags        : Powershell, logging
     REVISIONS
+    # 3:04 PM 10/8/2020 add force, to overwrite on conflict
     # 3:37 PM 9/22/2020 added looping/mult $filepath added code to validate $filepath, and force $archpath if not already set
     # 9:15 AM 4/24/2015 shifted all $archpath detection code out to separate get-ArchivePath()
     # 2:49 PM 4/23/2015 recast $ArchPath as $archPath script scope
@@ -136,11 +137,12 @@ function Archive-Log {
                     $FilePathObj = Get-ChildItem $fpath;
                     $ArchTarg = (Join-Path $archPath ($FilePathObj.BaseName + "-B" + $FilePathObj.Extension))
                     if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):CLASH DETECTED, RENAMING ON MOVE: `n`$ArchTarg:$ArchTarg"};
-                    Move-Item -path $fpath -dest $ArchTarg
+                    # 3:04 PM 10/8/2020 add force, to overwrite on conflict
+                    Move-Item -path $fpath -dest $ArchTarg -Force
                 } else {
                     # 8:41 AM 12/10/2014 add error checking
                     $error.Clear()
-                    Move-Item -path $fpath -dest $archPath
+                    Move-Item -path $fpath -dest $archPath -Force
                 } # if-E
             } else {
             if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):NO TRANSCRIPT FILE FOUND! SKIPPING MOVE"}
@@ -1681,8 +1683,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUhTtzG76evh8o8CYOFwRNHRBZ
-# NiGgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUazE6H+lqBY8sbMQXAm0S0VBn
+# K5qgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1697,9 +1699,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBT6G2SY
-# x2pa4lJ9za7zQd6QVd67xzANBgkqhkiG9w0BAQEFAASBgCozhuWO5kQaegdlq8Ub
-# 1kktqEbT2BfQURas0Sj6e02ESU/m22QFzVc9ODqwEe7whGZsswJdH0a23I7u4ky4
-# BTntTL5YxBT8UDb1Uvoa3a4y7I0EfvUYqjcLcm7GSVgTAD6M2kydqLiUGaRFUPLs
-# nRB52LahAoXRuXDKlkpK2aOF
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQjsT5F
+# aIbjJ62of2o4pgnYqggvXzANBgkqhkiG9w0BAQEFAASBgBC7E+XFQ6qFVfMx0vml
+# Y7TIrQR5UwL5FAisZruKPZj+ihnxBq6VU5H76wmpg2MVg9s0epsCM91GLPsCx0+V
+# HN9sFKEBcWIGjlxgvWQNNKCFDnHTeZRMb2IdLOhQcyvNJ8hEChrU8EVakJxw+fWu
+# gkDOPpMynMW+ZOlot+VYQ1K1
 # SIG # End signature block
