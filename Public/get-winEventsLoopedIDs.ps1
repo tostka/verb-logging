@@ -43,6 +43,7 @@ function get-winEventsLoopedIDs {
     .LINK
     https://github.com/tostka/verb-logging
     #>
+    [CmdletBinding()]
     PARAM(
         [Parameter(HelpMessage = "Maximum # of events to poll for each event specified[-MaxEvents 14]")]
         [int] $MaxEvents = 14,
@@ -51,6 +52,8 @@ function get-winEventsLoopedIDs {
         [Parameter(Position=0,Mandatory=$True,HelpMessage="get-WinEvents -FilterHashtable hash obj to be queried to return matching events[-filter `$hashobj]")]
         $Filter
     ) ;
+    [CmdletBinding()]
+    $verbose = ($VerbosePreference -eq "Continue") ; 
     $EventProperties ="timecreated","id","leveldisplayname","message" ;
     $tIDs = $filter.ID ;
     $filter.remove('Verbose') ; 
@@ -71,4 +74,5 @@ function get-winEventsLoopedIDs {
     $evts = $evts | Sort-Object TimeCreated -desc ; 
     $evts | write-output ;
 }
+
 #*------^ get-winEventsLoopedIDs.ps1 ^------

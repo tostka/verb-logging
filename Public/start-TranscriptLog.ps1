@@ -27,14 +27,14 @@ function start-TranscriptLog {
     .EXAMPLE
     start-TranscriptLog $Transcript
     #>
-
+    [CmdletBinding()]
     param(
       [parameter(Mandatory=$true,Helpmessage="Transcript location")]
       [ValidateNotNullOrEmpty()]
       [alias("tfile")]
       [string]$Transcript
     )
-
+    $verbose = ($VerbosePreference -eq "Continue") ; 
     # Have to set relative $scriptDir etc OUTSIDE THE FUNC, build full path to generic core $Transcript vari, and then
     # start-transcript will auto use it (or can manual spec it with -path)
 
@@ -43,26 +43,31 @@ function start-TranscriptLog {
         return $true ;
     } else { 
         Try {
-                if (Test-Transcribing) {Stop-Transcript}
+                if (Test-Transcribing -Verbose:($VerbosePreference -eq 'Continue')) {Stop-Transcript}
 
-                if($showdebug) {write-Verbose "$((get-date).ToString('HH:mm:ss')): `$Transcript: $($Transcript)" -verbose:$Verbose };
+                if($showdebug -OR $verbose) {write-Verbose "$((get-date).ToString('HH:mm:ss')): `$Transcript: $($Transcript)" -verbose:$Verbose };
                 # prevaidate specified logging dir is present
                 $TransPath=(Split-Path $Transcript).tostring();
-                if($showdebug) {write-Verbose "$((get-date).ToString('HH:mm:ss')): `$TransPath: $($TransPath)" -verbose:$Verbose };
+                if($showdebug -OR $verbose) {write-Verbose "$((get-date).ToString('HH:mm:ss')): `$TransPath: $($TransPath)" -verbose:$Verbose };
                 if (Test-Path $TransPath ) { } else {write-Verbose "$((get-date).ToString('HH:mm:ss')): `$TransPath: $($TransPath)" -verbose:$Verbose ; mkdir $TransPath};
                 #invoke-pause2
-                Start-Transcript -path $Transcript
+                Start-Transcript -path $Transcript -Verbose:($VerbosePreference -eq 'Continue') ;
                 if (Test-Transcribing) {  return $true } else {return $false};
-            } Catch {
-                Write-Error "$((get-date).ToString('HH:mm:ss')): Failed to create $TransPath"
-                Write-Error "$((get-date).ToString('HH:mm:ss')): Error in $($_.InvocationInfo.ScriptName)."
-                Write-Error "$((get-date).ToString('HH:mm:ss')): -- Error information"
-                Write-Error "$((get-date).ToString('HH:mm:ss')): Line Number: $($_.InvocationInfo.ScriptLineNumber)"
-                Write-Error "$((get-date).ToString('HH:mm:ss')): Offset: $($_.InvocationInfo.OffsetInLine)"
-                Write-Error "$((get-date).ToString('HH:mm:ss')): Command: $($_.InvocationInfo.MyCommand)"
-                Write-Error "$((get-date).ToString('HH:mm:ss')): Line: $($_.InvocationInfo.Line)"
-                Write-Error "$((get-date).ToString('HH:mm:ss')): Error Details: $($_)"
-            }  # try-E;
+        } CATCH {
+            $ErrTrapd=$Error[0] ;
+            Start-Sleep -Seconds $RetrySleep ;
+            $Exit ++ ;
+            $smsg= "Failed to move `n$transcript to `n$archPath"
+            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Error} ; #Error|Warn
+            $smsg= "Try #: $($Exit)" ;
+            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Error} ; #Error|Warn
+            If ($Exit -eq $Retries) {
+                $script:PassStatus += ";ERROR";
+                $smsg= "Unable to exec cmd!" ;
+                if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Error} ; #Error|Warn
+            } ;
+            Exit ;#Opts: STOP(debug)|EXIT(close)|CONTINUE(move on in loop cycle)|BREAK(exit loop iteration)|THROW $_/'CustomMsg'(end script with Err output)
+        } ; 
 
     };  # if-E
 }

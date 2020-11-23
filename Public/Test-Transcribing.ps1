@@ -13,6 +13,7 @@ function Test-Transcribing {
     Github      : 
     Tags        : Powershell,Logging
     REVISIONS   :
+    * 8:44 AM 11/23/2020 added verbose supp
     * 10:40 AM 9/22/2020 updated to reflect ISE PSv5's support for transcribing
     * 12:18 PM 5/4/2020 updated CBH
     * 10:13 AM 12/10/2014
@@ -28,23 +29,26 @@ function Test-Transcribing {
     .EXAMPLE
     if (Test-Transcribing) {Stop-Transcript}
     #>
-    #if($host.Name -ne "Windows PowerShell ISE Host"){
-    # actually Psv5 ISE properly supports transcribing: https://www.jonathanmedd.net/2014/09/start-transcript-now-available-in-the-powershell-ise-in-powershell-v5.html
+    [CmdletBinding()]
+    PARAM() # empty param, min verbose req
+    $verbose = ($VerbosePreference -eq "Continue") ; 
+    # Psv5 ISE properly supports transcribing: https://www.jonathanmedd.net/2014/09/start-transcript-now-available-in-the-powershell-ise-in-powershell-v5.html
     if( ($host.Name -eq "Windows PowerShell ISE Host") -AND ($host.version.major -lt 5) ){
         write-host "Test-Transcribing:SKIP PS ISE $($host.version.major) does NOT support transcription commands [returning `$true]";
         return $true ;
     } elseif( ($host.Name -eq "Windows PowerShell ISE Host") -AND ($host.version.major -ge 5) ){
         # ISE v5+ can't pass the ExternalHost tests, use test-Transcribing2()
-        Test-Transcribing2 | write-output ; 
+        Test-Transcribing2 -Verbose:($VerbosePreference -eq 'Continue') | write-output ; 
     } else { 
         $ExternalHost = $host.gettype().getproperty("ExternalHost",
             [reflection.bindingflags]"NonPublic,Instance").getvalue($host, @())
         try {
-            if (Test-TranscriptionSupported) {
+            if (Test-TranscriptionSupported -Verbose:($VerbosePreference -eq 'Continue')) {
                 $ExternalHost.gettype().getproperty("IsTranscribing",
                     [reflection.bindingflags]"NonPublic,Instance").getvalue($ExternalHost, @())
             } else {};  
         } catch {Write-Warning "Tested: This host does not support transcription."} ;
     } ;
-} ;
+}
+
 #*------^ Test-Transcribing.ps1 ^------

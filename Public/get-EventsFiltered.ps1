@@ -1,4 +1,4 @@
-#*----------------v Function get-EventsFiltered v------
+#*------v get-EventsFiltered.ps1 v------
 function get-EventsFiltered {
     <#
     .SYNOPSIS
@@ -41,14 +41,6 @@ function get-EventsFiltered {
     .LINK
     #>
 
-    ##Requires -Version 2.0
-    ##Requires -Version 3
-    ##requires -PSEdition Desktop
-    ##requires -PSEdition Core
-    ##Requires -PSSnapin Microsoft.Exchange.Management.PowerShell.E2010
-    ##Requires -Modules ActiveDirectory,  Azure,  AzureAD,  AzureRM,  GroupPolicy,  Lync,  Microsoft.Online.SharePoint.PowerShell,  MSOnline,  ScheduledTasks,  SkypeOnlineConnector
-    ##Requires -RunasAdministrator
-    # VALIDATORS: [ValidateNotNull()][ValidateNotNullOrEmpty()][ValidateLength(24,25)][ValidateLength(5)][ValidatePattern("(lyn|bcc|spb|adl)ms6(4|5)(0|1).(china|global)\.ad\.toro\.com")][ValidateSet("USEA","GBMK","AUSYD")][ValidateScript({Test-Path $_ -PathType 'Container'})][ValidateScript({Test-Path $_})][ValidateRange(21,65)][ValidateCount(1,3)]
     [CmdletBinding()]
     # retain minimum Param() to have $verbosepref updated by -verbose call
     PARAM (
@@ -177,4 +169,6 @@ function get-EventsFiltered {
         if($verbose){ if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
         else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ; } ;
     } ; # END-E
-} #*----------------^ END Function get-EventsFiltered ^--------
+}
+
+#*------^ get-EventsFiltered.ps1 ^------

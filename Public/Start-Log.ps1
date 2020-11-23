@@ -14,6 +14,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 9:18 AM 11/23/2020 updated 2nd example to use splatting
     * 12:35 PM 5/5/2020 added -NotTimeStamp param, and supporting code to return non-timestamped filenames
     * 12:44 PM 4/23/2020 shift $path validation to parent folder - with AllUsers scoped scripts, we need to find paths, and *fake* a path to ensure logs aren't added to AllUsers %progfiles%\wps\scripts\(logs). So the path may not exist, but the parent dir should
     * 3:56 PM 2/18/2020 Start-Log: added $Tag param, to support descriptive string for building $transcript name
@@ -24,7 +25,7 @@ function Start-Log {
     #-=-=-=-=-=-=-=-=
     $backInclDir = "c:\usr\work\exch\scripts\" ;
     #*======v FUNCTIONS v======
-    $tModFile = "verb-logging.ps1" ; $sLoad = (join-path -path $LocalInclDir -childpath $tModFile) ; if (Test-Path $sLoad) {     Write-Verbose -verbose ((Get-Date).ToString("HH:mm:ss") + "LOADING:" + $sLoad) ; . $sLoad ; if ($showdebug) { Write-Verbose -verbose "Post $sLoad" }; } else {     $sLoad = (join-path -path $backInclDir -childpath $tModFile) ; if (Test-Path $sLoad) {         Write-Verbose -verbose ((Get-Date).ToString("HH:mm:ss") + "LOADING:" + $sLoad) ; . $sLoad ; if ($showdebug) { Write-Verbose -verbose "Post $sLoad" };     }     else { Write-Warning ((Get-Date).ToString("HH:mm:ss") + ":MISSING:" + $sLoad + " EXITING...") ; exit; } ; } ;
+    $tModFile = "verb-logging.ps1" ; $sLoad = (join-path -path $LocalInclDir -childpath $tModFile) ; if (Test-Path $sLoad) {     Write-Verbose -verbose ((Get-Date).ToString("HH:mm:ss") + "LOADING:" + $sLoad) ; . $sLoad ; if ($showdebug -OR $verbose) { Write-Verbose -verbose "Post $sLoad" }; } else {     $sLoad = (join-path -path $backInclDir -childpath $tModFile) ; if (Test-Path $sLoad) {         Write-Verbose -verbose ((Get-Date).ToString("HH:mm:ss") + "LOADING:" + $sLoad) ; . $sLoad ; if ($showdebug -OR $verbose) { Write-Verbose -verbose "Post $sLoad" };     }     else { Write-Warning ((Get-Date).ToString("HH:mm:ss") + ":MISSING:" + $sLoad + " EXITING...") ; exit; } ; } ;
     #*======^ END FUNCTIONS ^======
     #*======v SUB MAIN v======
     [array]$reqMods = $null ; # force array, otherwise single first makes it a [string]
@@ -45,7 +46,9 @@ function Start-Log {
     .PARAMETER ShowDebug
     Parameter to display Debugging messages [-ShowDebug switch]
     .EXAMPLE
-    $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) -showdebug:$($showdebug) -whatif:$($whatif) ;
+    $pltSL=@{ NoTimeStamp=$true ; Tag="($TenOrg)-LASTPASS" ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ; 
+    if($PSCommandPath){   $logspec = start-Log -Path $PSCommandPath @pltSL ; 
+    } else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL ; } ; 
     if($logspec){
         $logging=$logspec.logging ;
         $logfile=$logspec.logfile ;
@@ -65,6 +68,7 @@ function Start-Log {
     .LINK
     https://github.com/tostka/verb-logging
     #>
+    [CmdletBinding()]
     PARAM(
         [Parameter(Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,HelpMessage="Path to target script (defaults to `$PSCommandPath) [-Path -Path .\path-to\script.ps1]")]
         [ValidateScript({Test-Path (split-path $_)})]$Path,
@@ -77,8 +81,8 @@ function Start-Log {
         [Parameter(HelpMessage="Whatif Flag  [-whatIf]")]
         [switch] $whatIf=$true
     ) ;
-    ${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name ;
-    $PSParameters = New-Object -TypeName PSObject -Property $PSBoundParameters ;
+    #${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name ;
+    #$PSParameters = New-Object -TypeName PSObject -Property $PSBoundParameters ;
     $Verbose = ($VerbosePreference -eq 'Continue') ; 
     $transcript = join-path -path (Split-Path -parent $Path) -ChildPath "logs" ;
     if (!(test-path -path $transcript)) { "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
@@ -106,7 +110,7 @@ function Start-Log {
         logfile=$logfile ;
         transcript=$transcript ;
     } ;
-    if($showDebug){
+    if($showdebug -OR $verbose){
         write-verbose -verbose:$true "$(($hshRet|out-string).trim())" ;  ;
     } ;
     Write-Output $hshRet ;

@@ -19,9 +19,16 @@ function Stop-TranscriptLog {
     .EXAMPLE
     Stop-TranscriptLog
     #>
-
+    [CmdletBinding()]
+    param(
+        [parameter(Mandatory=$false,Helpmessage="Transcript location")]
+        #[ValidateNotNullOrEmpty()]
+        [alias('tfile','outtransfile')]
+        [string]$Transcript
+    )
+    $verbose = ($VerbosePreference -eq "Continue") ; 
     #can't define $transcript as a local param/vari, without toasting the main vari!
-    if ($showdebug) {"SUB: stop-transcriptlog"}
+    if ($showdebug -OR $verbose) {"SUB: stop-transcriptlog"}
 
     if( ($host.Name -eq "Windows PowerShell ISE Host") -AND ($host.version.major -lt 5) ){
         write-host "Stop-Transcribing:SKIP PS ISE $($host.version.major) does not support transcription commands";
@@ -29,24 +36,35 @@ function Stop-TranscriptLog {
         return $true ;
     } else { 
         Try {
-            if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):`n`$outtransfile:$outtransfile" ;};
-                if (Test-Transcribing) {
-                    # can't move it if it's locked
-                    Stop-Transcript
-                    if ($showdebug) {write-host -foregroundcolor green "`$transcript:$transcript"} ;
-                }  # if-E
-        } Catch {
-                Write-Error "$((get-date).ToString('HH:mm:ss')): Failed to move `n$transcript to `n$archPath"
-                Write-Error "$((get-date).ToString('HH:mm:ss')): Error in $($_.InvocationInfo.ScriptName)."
-                Write-Error "$((get-date).ToString('HH:mm:ss')): -- Error information"
-                Write-Error "$((get-date).ToString('HH:mm:ss')): Line Number: $($_.InvocationInfo.ScriptLineNumber)"
-                Write-Error "$((get-date).ToString('HH:mm:ss')): Offset: $($_.InvocationInfo.OffsetInLine)"
-                Write-Error "$((get-date).ToString('HH:mm:ss')): Command: $($_.InvocationInfo.MyCommand)"
-                Write-Error "$((get-date).ToString('HH:mm:ss')): Line: $($_.InvocationInfo.Line)"
-                Write-Error "$((get-date).ToString('HH:mm:ss')): Error Details: $($_)"
-        }  # try-E;
+            if(!$Transcript){
+                if($outtransfile){$transcript = $outtransfile} ; 
+            }
+            if ($showdebug -OR $verbose) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):`n`$Transcript:$($Transcript)" ;};
+            if (Test-Transcribing -Verbose:($VerbosePreference -eq 'Continue')) {
+                # can't move it if it's locked
+                Stop-Transcript -Verbose:($VerbosePreference -eq 'Continue')
+                if ($showdebug -OR $verbose) {write-host -foregroundcolor green "`$transcript:$transcript"} ;
+            } else {
+                write-verbose "$((get-date).ToString('HH:mm:ss')):(no running transcript)" ; 
+            } ;  # if-E
+        } CATCH {
+            $ErrTrapd=$Error[0] ;
+            Start-Sleep -Seconds $RetrySleep ;
+            $Exit ++ ;
+            $smsg= "Failed to move `n$transcript to `n$archPath"
+            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Error} ; #Error|Warn
+            $smsg= "Try #: $($Exit)" ;
+            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Error} ; #Error|Warn
+            If ($Exit -eq $Retries) {
+                $script:PassStatus += ";ERROR";
+                $smsg= "Unable to exec cmd!" ;
+                if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Error} ; #Error|Warn
+            } ;
+            Exit ;#Opts: STOP(debug)|EXIT(close)|CONTINUE(move on in loop cycle)|BREAK(exit loop iteration)|THROW $_/'CustomMsg'(end script with Err output)
+        } ; 
 
-        if (!(Test-Transcribing)) {  return $true } else {return $false};
+        if (!(Test-Transcribing -Verbose:($VerbosePreference -eq 'Continue'))) {  return $true } else {return $false};
     } ;
 }
+
 #*------^ Stop-TranscriptLog.ps1 ^------

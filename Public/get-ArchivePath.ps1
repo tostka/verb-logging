@@ -8,6 +8,7 @@ function get-ArchivePath {
     #Twitter:	http://twitter.com/tostka
     Requires test-transcribing() function
     REVISIONS   :
+    # 8:38 AM 11/23/2020 extend verbose supp
     # 3:48 PM 9/22/2020 cleanedup CBH, examples
     # 8:33 AM 2/18/2020 get-ArchivePath: shifted paths into global varis in profile
     # 8:52 AM 4/24/2015 shifted internal func vari name from $archPath to $ArchiveLocation, to avoid overlap clash/confusion ; shifted archpath detection code out of send-mailmessage and archive-log, into get-ArchivePath()
@@ -43,8 +44,10 @@ function get-ArchivePath {
     .LINK
     https://www.toddomation.com
     #>
-
-    Param() ;
+    [CmdletBinding()]
+    PARAM() # empty param, min verbose req
+    $verbose = ($VerbosePreference -eq "Continue") ; 
+    Write-verbose -verbose:$verbose "$((get-date).ToString('HH:mm:ss')):MSG" ;
     # moved to globals in profile
     $gVaris = "ArchPathProd","ArchPathLync","ArchPathLab","ArchPathLabLync","rgxRestrictedNetwork" ;
     foreach($gVari in $gVaris){
@@ -56,17 +59,17 @@ function get-ArchivePath {
         } ;
     } ;
 
-    if ($showdebug) { write-verbose "$((get-date).ToString('HH:mm:ss')) Start get-ArchivePath" -Verbose:$verbose}
+    if ($showdebug -OR $verbose) { write-verbose "$((get-date).ToString('HH:mm:ss')) Start get-ArchivePath" -Verbose:$verbose}
 
     # if blocked for SMB use custom arch server for reporting
     $IPs=get-WmiObject -Class Win32_NetworkAdapterConfiguration -Filter IPEnabled=TRUE -ComputerName . | Select-Object -Property IPAddress ;
     $IPs | ForEach-Object {
         if ($_.ipaddress -match $rgxRestrictedNetwork){
             # server with blocks to SMB to archserver
-            if ($showdebug) {write-host -foregroundcolor yellow  "$((get-date).ToString('HH:mm:ss')):Restricted Subnet Detected. Using Lync ArchPath";};
+            if ($showdebug -OR $verbose) {write-host -foregroundcolor yellow  "$((get-date).ToString('HH:mm:ss')):Restricted Subnet Detected. Using Lync ArchPath";};
 
             if($env:USERDOMAIN -eq $domLab){
-                if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):LAB Server Detected. Using Lync ArchPathLabLync"};
+                if ($showdebug -OR $verbose) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):LAB Server Detected. Using Lync ArchPathLabLync"};
                 # lync Edge or FE server
                 if(test-path $ArchPathLabLync) {
                     $ArchiveLocation = $ArchPathLabLync;
@@ -86,7 +89,7 @@ function get-ArchivePath {
         } else {
             # non-Lync/restricted subnet
             if($env:USERDOMAIN -eq $domLab){
-                if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):LAB Server Detected. Using Lync ArchPathLab"};
+                if ($showdebug -OR $verbose) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):LAB Server Detected. Using Lync ArchPathLab"};
                 # lync Edge or FE server
                 if(test-path $ArchPathLab) {
                     $ArchiveLocation = $ArchPathLab;
@@ -106,7 +109,7 @@ function get-ArchivePath {
             }; # if-E non-lab
         }; # if-E restricted subnet test
     };  # loop-E $IPs
-    if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):`$ArchiveLocation:$ArchiveLocation"};
+    if ($showdebug -OR $verbose) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):`$ArchiveLocation:$ArchiveLocation"};
 
     Try {
         # validate the archpath
@@ -114,7 +117,7 @@ function get-ArchivePath {
             # gui prompt
             $ArchiveLocation = [Microsoft.VisualBasic.Interaction]::InputBox("Input ArchPath[UNCPath]", "Archpath", "") ;
         }
-        if($showdebug){Write-Verbose "$((get-date).ToString('HH:mm:ss'))End get-ArchivePath" -Verbose:$verbose} ;
+        if($showdebug -OR $verbose){Write-Verbose "$((get-date).ToString('HH:mm:ss'))End get-ArchivePath" -Verbose:$verbose} ;
         # 2:21 PM 4/24/2015 try flattening in here.
         if($ArchiveLocation -is [system.array]){
             write-verbose "Flattening in get-ArchivePath" -verbose:$verbose ;

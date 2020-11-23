@@ -66,10 +66,12 @@ function Archive-Log {
         [Parameter(HelpMessage="Whatif Flag  [-whatIf]")]
         [switch] $whatIf=$true
     ) ;
-    if ($showdebug) {"Archive-Log"}
+    $verbose = ($VerbosePreference -eq "Continue") ; 
+    if ($showdebug -OR $verbose) {"Archive-Log"}
     if( (!$archpath) -OR (-not(Test-Path $archPath -ea 0 )) ){
-            $archPath = get-ArchivePath ;
+            $archPath = get-ArchivePath -Verbose:($VerbosePreference -eq 'Continue') ;
     } ; 
+    
 
     # valid filepath passed in
     $error.clear
@@ -83,20 +85,26 @@ function Archive-Log {
                 # 9:59 AM 12/10/2014 pretest for clash
 
                 $ArchTarg = (Join-Path $archPath (Split-Path $fpath -leaf));
-                if ($showdebug) {write-host -foregroundcolor green "`$ArchTarg:$ArchTarg"}
+                if ($showdebug -OR $verbose) {write-host -foregroundcolor green "`$ArchTarg:$ArchTarg"}
                 if (Test-Path $ArchTarg) {
                     $FilePathObj = Get-ChildItem $fpath;
                     $ArchTarg = (Join-Path $archPath ($FilePathObj.BaseName + "-B" + $FilePathObj.Extension))
-                    if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):CLASH DETECTED, RENAMING ON MOVE: `n`$ArchTarg:$ArchTarg"};
+                    if ($showdebug -OR $verbose) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):CLASH DETECTED, RENAMING ON MOVE: `n`$ArchTarg:$ArchTarg"};
                     # 3:04 PM 10/8/2020 add force, to overwrite on conflict
                     Move-Item -path $fpath -dest $ArchTarg -Force
                 } else {
                     # 8:41 AM 12/10/2014 add error checking
                     $error.Clear()
-                    Move-Item -path $fpath -dest $archPath -Force
+                    $pltFile =@{path = $fpath ;destination = $archPath ;Force = $true ;verbose = $($verbose) ;} ; 
+                    # 10:08 AM 11/23/2020 this is failing on file locks
+                    #Move-Item -path $fpath -dest $archPath -Force
+                    # shift to copy w 2ndary purge
+                    copy-item @pltFile ; 
+                    $pltFile.remove('destination') ; 
+                    remove-item @pltFile ; 
                 } # if-E
             } else {
-            if ($showdebug) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):NO TRANSCRIPT FILE FOUND! SKIPPING MOVE"}
+            if ($showdebug -OR $verbose) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):NO TRANSCRIPT FILE FOUND! SKIPPING MOVE"}
             }  # if-E
 
         } # TRY-E
@@ -108,7 +116,7 @@ function Archive-Log {
             CONTINUE ;#Opts: STOP(debug)|EXIT(close)|CONTINUE(move on in loop cycle)|BREAK(exit loop iteration)|THROW $_/'CustomMsg'(end script with Err output)
         } ;
     } ;  # loop-E
-    if (!(Test-Transcribing)) {  return $true } else {return $false};
+    if (!(Test-Transcribing -Verbose:($VerbosePreference -eq 'Continue'))) {  return $true } else {return $false};
 }
 
 #*------^ Archive-Log.ps1 ^------

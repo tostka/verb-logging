@@ -42,4 +42,5 @@ function test-Transcribing2 {
     write-Verbose -verbose:$verbose "IsTranscribing:$($IsTranscribing)" ; 
     $IsTranscribing | write-output ; 
 }
+
 #*------^ Test-Transcribing2.ps1 ^------

@@ -26,9 +26,9 @@ Function Start-IseTranscript {
                 # optional, normally wouldn't archive ISE debugging passes
                 #Archive-Log $Logname ;
             } else {
-                if($showdebug){ write-host -ForegroundColor Yellow "$((get-date).ToString('HH:mm:ss')):Stop Transcript" };
+                if($showdebug -OR $verbose){ write-host -ForegroundColor Yellow "$((get-date).ToString('HH:mm:ss')):Stop Transcript" };
                 Stop-TranscriptLog ;
-                if($showdebug){ write-host -ForegroundColor Yellow "$((get-date).ToString('HH:mm:ss')):Archive Transcript" };
+                if($showdebug -OR $verbose){ write-host -ForegroundColor Yellow "$((get-date).ToString('HH:mm:ss')):Archive Transcript" };
                 Archive-Log $transcript ;
             } # if-E
         #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -49,9 +49,9 @@ Function Start-IseTranscript {
     Http://www.ScriptingGuys.com
     #Requires -Version 2.0
     #>
-
+    [CmdletBinding()]
     Param([string]$Logname)
-
+    $verbose = ($VerbosePreference -eq "Continue") ; 
     if (!($Logname)) {
         # build from script if nothing passed in
         if (!($scriptDir) -OR !($scriptNameNoExt)) {

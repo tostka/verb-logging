@@ -1,4 +1,4 @@
-#*------v Function Write-Log v------
+#*------v Write-Log.ps1 v------
 function Write-Log {
     <#
     .SYNOPSIS
@@ -14,6 +14,7 @@ function Write-Log {
     Website:	URL
     Twitter:	URL
     REVISIONS   :
+    * 8:46 AM 11/23/2020 ext verbose supp
     * 3:50 PM 3/29/2020 minor tightening layout
     * 11:34 AM 8/26/2019 fixed missing noecho parameter desig in comment help
     * 9:31 AM 2/15/2019:Write-Log: added Level:Debug support, and broader init
@@ -120,8 +121,7 @@ function Write-Log {
         [Parameter(HelpMessage = "Debugging Flag [-showDebug]")]
         [switch] $showDebug
     )  ;
-
-    Begin {$VerbosePreference = 'Continue'  ; }  ;
+    Begin {$VerbosePreference = 'Continue'  ; $verbose = ($VerbosePreference -eq "Continue") ;  }  ;
     Process {
         # If the file already exists and NoClobber was specified, do not write to the log.
         if ((Test-Path $Path) -AND $NoClobber) {
@@ -156,7 +156,7 @@ function Write-Log {
                 $LevelText = 'INFO:'  ;
             }
             'Debug' {
-                if (!$NoEcho) { Write-Debug -Verbose:$true ($EchoTime + $Message) }  ;
+                if (!$NoEcho) { write-verbose -Verbose:$true ($EchoTime + $Message) }  ;
                 $LevelText = 'DEBUG:'  ;
             }
         } ;
@@ -165,4 +165,6 @@ function Write-Log {
         "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append  ;
     }  ; # PROC-E
     End {}  ;
-} ; #*------^ END Function Write-Log ^------
+}
+
+#*------^ Write-Log.ps1 ^------
