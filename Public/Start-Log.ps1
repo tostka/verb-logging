@@ -14,6 +14,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 11:39 AM 11/24/2020 updated examples again
     * 9:18 AM 11/23/2020 updated 2nd example to use splatting
     * 12:35 PM 5/5/2020 added -NotTimeStamp param, and supporting code to return non-timestamped filenames
     * 12:44 PM 4/23/2020 shift $path validation to parent folder - with AllUsers scoped scripts, we need to find paths, and *fake* a path to ensure logs aren't added to AllUsers %progfiles%\wps\scripts\(logs). So the path may not exist, but the parent dir should
@@ -53,6 +54,10 @@ function Start-Log {
         $logging=$logspec.logging ;
         $logfile=$logspec.logfile ;
         $transcript=$logspec.transcript ;
+        if(Test-TranscriptionSupported){
+            $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
+            start-transcript -Path $transcript ;
+        } ;
     } else {throw "Unable to configure logging!" } ;
     Configure default logging from parent script name
     .EXAMPLE
@@ -65,6 +70,13 @@ function Start-Log {
         start-Transcript -path $transcript ; 
     } else {throw "Unable to configure logging!" } ;
     Configure default logging from parent script name, with no Timestamp
+    .EXAMPLE
+    $pltSL=@{ NoTimeStamp=$true ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
+    if($forceall){$pltSL.Tag = "$($TenOrg)-ForceAll" }
+    else {$pltSL.Tag = "($TenOrg)-LASTPASS" } ;
+    if($PSCommandPath){   $logspec = start-Log -Path $PSCommandPath @pltSL }
+    else {    $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL ;  } ;
+    Simpler splatted example with conditional Tag
     .LINK
     https://github.com/tostka/verb-logging
     #>

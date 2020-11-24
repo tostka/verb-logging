@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.54.0
+  Version     : 1.0.53.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1136,7 +1136,6 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
-    * 11:39 AM 11/24/2020 updated examples again
     * 9:18 AM 11/23/2020 updated 2nd example to use splatting
     * 12:35 PM 5/5/2020 added -NotTimeStamp param, and supporting code to return non-timestamped filenames
     * 12:44 PM 4/23/2020 shift $path validation to parent folder - with AllUsers scoped scripts, we need to find paths, and *fake* a path to ensure logs aren't added to AllUsers %progfiles%\wps\scripts\(logs). So the path may not exist, but the parent dir should
@@ -1176,10 +1175,6 @@ function Start-Log {
         $logging=$logspec.logging ;
         $logfile=$logspec.logfile ;
         $transcript=$logspec.transcript ;
-        if(Test-TranscriptionSupported){
-            $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
-            start-transcript -Path $transcript ;
-        } ;
     } else {throw "Unable to configure logging!" } ;
     Configure default logging from parent script name
     .EXAMPLE
@@ -1192,13 +1187,6 @@ function Start-Log {
         start-Transcript -path $transcript ; 
     } else {throw "Unable to configure logging!" } ;
     Configure default logging from parent script name, with no Timestamp
-    .EXAMPLE
-    $pltSL=@{ NoTimeStamp=$true ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
-    if($forceall){$pltSL.Tag = "$($TenOrg)-ForceAll" }
-    else {$pltSL.Tag = "($TenOrg)-LASTPASS" } ;
-    if($PSCommandPath){   $logspec = start-Log -Path $PSCommandPath @pltSL }
-    else {    $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL ;  } ;
-    Simpler splatted example with conditional Tag
     .LINK
     https://github.com/tostka/verb-logging
     #>
@@ -1733,8 +1721,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUg4fLLrot0pmP9j05DyquXvDp
-# l8SgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUJDwm+/uM1O+oSCR6W5FYjyiO
+# MOOgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1749,9 +1737,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBS1mie1
-# DYTWjI2sJMHLvH/aZ42A1TANBgkqhkiG9w0BAQEFAASBgG7rISEUwVK4IVqv6TOC
-# Z5G97+/IiIT62y6FCSt+mhYGVlypx2+0QdCcLEm/ZEW53SN8flFWM7QUpGoyChNj
-# iq2c2evwC59OGpsWb54sA6T8q0f7lyy0LLD51BXBw6sg5yMh7HSb19cqHuLFULkY
-# s5Quw9WcWd921rFaAjiZCqM4
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTxZYFu
+# 7gJys27WLWdQ28QUNQprEzANBgkqhkiG9w0BAQEFAASBgCwlBQFrb1K2oFnccAKB
+# QRS0/5g5w5fPUIBQmAqbAfvYba7ERzev0Luc6ARyN7wYXoLVeOpiYr6uSKmO9vKY
+# KmXNwL6Q4zT4z1Kq1cJpddC/YVtTdtJbWP42MG4AbZzBqSwgxMU8Ue5Iy5RW+Y/g
+# BW3lgTJpHX3kGJidZI5nB9bQ
 # SIG # End signature block
