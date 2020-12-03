@@ -15,6 +15,7 @@ function Archive-Log {
     Github      : https://github.com/tostka/verb-logging
     Tags        : Powershell, logging
     REVISIONS
+    * 4:00 PM 12/2/2020 updated and streamlined added -overwrite to force overwrite on clash, and -UniqueClash to append a GUID chunk to filename, to force unique file at dest, where pre-existing conflict exists
     # 3:04 PM 10/8/2020 add force, to overwrite on conflict
     # 3:37 PM 9/22/2020 added looping/mult $filepath added code to validate $filepath, and force $archpath if not already set
     # 9:15 AM 4/24/2015 shifted all $archpath detection code out to separate get-ArchivePath()
@@ -31,6 +32,10 @@ function Archive-Log {
     Archive-Log - ARCHIVES a designated file (if no archive needed, just use the stock Stop-Transcript cmdlet). Tests and fails back through restricted subnets to find a working archive locally
     .PARAMETER  FilePath
     array of paths to log files to be archived[-FilePath 'c:\pathto\file1.txt','c:\pathto\file2.txt']
+    .PARAMETER Overwrite
+    Overwrite Flag (on pre-existing conflicts)[-Overwrite]
+    .PARAMETER UniqueClash
+    Flag that generates a unique filename, when conflicting file pre-exists, by appending a 4char GUID chunk to the end of the filename [-UniqueClash]
     .PARAMETER ShowDebug
     Parameter to display Debugging messages [-ShowDebug switch]
     .PARAMETER Whatif
@@ -50,17 +55,26 @@ function Archive-Log {
         if($host.version.Major -ge 5){ stop-transcript } ;
     } else {
         Stop-TranscriptLog ;
-        Archive-Log $transcript ;
+        Archive-Log -FilePath $transcript ;
     } # if-E
     Full stack use of get-ArchivePath(), Start-iseTranscript(), Stop-TranscriptLog(), & Archive-Log()
+    .EXAMPLE
+    $LOGFILE = 'c:\pathto\log.txt',c:\pathto\log2.txt'; 
+    Archive-Log -FilePath $logfile -Verbose:($VerbosePreference -eq 'Continue') -Overwrite ;
+    Example passing in an array of files to be archived, with Overwrite (other wise it renames clashes as -B)
     .LINK
     https://github.com/tostka/verb-logging
     #>
+    
     [CmdletBinding()]
     PARAM(
         [parameter(Mandatory=$true,HelpMessage="Array of paths to log files to be archived[-FilePath 'c:\pathto\file1.txt','c:\pathto\file2.txt']")] 
-        [ValidateScript({Test-Path $_})]
+        #[ValidateScript({Test-Path $_})]
         [array]$FilePath,
+        [Parameter(ParameterSetName='Overwrite',HelpMessage="Overwrite Flag (on pre-existing conflicts)[-Overwrite]")]
+        [switch] $Overwrite,
+        [Parameter(ParameterSetName='Unique',HelpMessage="Flag that generates a unique filename, when conflicting file pre-exists, by appending a 4char GUID chunk to the end of the filename [-UniqueClash]")]
+        [switch] $UniqueClash,
         [Parameter(HelpMessage="Debugging Flag [-showDebug]")]
         [switch] $showDebug,
         [Parameter(HelpMessage="Whatif Flag  [-whatIf]")]
@@ -77,38 +91,40 @@ function Archive-Log {
     $error.clear
     foreach($fpath in $FilePath){
         Try {
-            write-verbose "$((get-date).ToString('HH:mm:ss')):`$archPath:$archPath `n`$FilePath:$FilePath"
-        
-            if ((Test-Path $fpath)) {
-                write-host  ("$((get-date).ToString('HH:mm:ss')):Moving `n$fpath `n to:" + $archPath)
-
-                # 9:59 AM 12/10/2014 pretest for clash
-
-                $ArchTarg = (Join-Path $archPath (Split-Path $fpath -leaf));
-                if ($showdebug -OR $verbose) {write-host -foregroundcolor green "`$ArchTarg:$ArchTarg"}
-                if (Test-Path $ArchTarg) {
-                    $FilePathObj = Get-ChildItem $fpath;
-                    $ArchTarg = (Join-Path $archPath ($FilePathObj.BaseName + "-B" + $FilePathObj.Extension))
+            write-verbose "$((get-date).ToString('HH:mm:ss')):`$archPath:$archPath `n`$fpath:$fpath"
+            if (($fsoObj = gci -path $fpath)) {
+                write-host  ("$((get-date).ToString('HH:mm:ss')):Moving `n$($fsoobj.fullname) `n to:" + $archPath)
+                $ArchTarg = (Join-Path -path $archPath -childpath $fsoObj.Name);
+                $pltFile =@{path = $fpath ;destination = $archPath ;Force = $true ;verbose = $($verbose) ;} ; 
+                if ( (Test-Path $ArchTarg) -AND (!$Overwrite) -AND (!$UniqueClash)) {
+                    $pltFile.destination = $ArchTarg.replace($fsoObj.Extension,"-B$($fsoObj.Extension)") ; 
+                    $cmdlet = "Move-Item" ; 
                     if ($showdebug -OR $verbose) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):CLASH DETECTED, RENAMING ON MOVE: `n`$ArchTarg:$ArchTarg"};
-                    # 3:04 PM 10/8/2020 add force, to overwrite on conflict
-                    Move-Item -path $fpath -dest $ArchTarg -Force
+                }elseif ( (Test-Path $ArchTarg) -AND ($UniqueClash)) {
+                    $unqStr = [guid]::NewGuid().tostring().split('-')[1] ; 
+                    pltFile.destination = $ArchTarg.replace($fsoObj.Extension,"-$($unqStr)$($fsoObj.extension)")
+                    $cmdlet = "Move-Item" ; 
+                    if ($showdebug -OR $verbose) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):CLASH DETECTED, RENAMING ON MOVE: `n`$ArchTarg:$ArchTarg"};
                 } else {
                     # 8:41 AM 12/10/2014 add error checking
                     $error.Clear()
-                    $pltFile =@{path = $fpath ;destination = $archPath ;Force = $true ;verbose = $($verbose) ;} ; 
-                    # 10:08 AM 11/23/2020 this is failing on file locks
-                    #Move-Item -path $fpath -dest $archPath -Force
-                    # shift to copy w 2ndary purge
+                    $cmdlet = "Copy-Item" ; 
+                } # if-E
+                write-verbose "$($Cmdlet) w`n$(($pltFile|out-string).trim())" ; 
+                $error.clear() ;
+                if($cmdlet -eq 'Move-Item'){
+                    Move-Item @pltFile ;
+                } elseif($cmdlet -eq 'Copy-Item'){
                     copy-item @pltFile ; 
                     $pltFile.remove('destination') ; 
                     remove-item @pltFile ; 
-                } # if-E
+                } else {
+                    throw "Unrecognized `$cmdlet:$($cmdlet)" ; 
+                } ;
             } else {
-            if ($showdebug -OR $verbose) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):NO TRANSCRIPT FILE FOUND! SKIPPING MOVE"}
+                write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):NO TRANSCRIPT FILE FOUND! SKIPPING MOVE"
             }  # if-E
-
-        } # TRY-E
-        Catch {
+        } Catch {
             $ErrTrapd=$Error[0] ;
             $smsg= "Failed to exec cmd because: $($ErrTrapd)" ;
             if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
