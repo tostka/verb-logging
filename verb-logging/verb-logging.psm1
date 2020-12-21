@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.55.0
+  Version     : 1.0.56.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1152,6 +1152,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 1:46 PM 12/21/2020 added example that builds logfile off of passed in .txt (rather than .ps1 path or pscommandpath)
     * 11:39 AM 11/24/2020 updated examples again
     * 9:18 AM 11/23/2020 updated 2nd example to use splatting
     * 12:35 PM 5/5/2020 added -NotTimeStamp param, and supporting code to return non-timestamped filenames
@@ -1215,12 +1216,18 @@ function Start-Log {
     if($PSCommandPath){   $logspec = start-Log -Path $PSCommandPath @pltSL }
     else {    $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL ;  } ;
     Simpler splatted example with conditional Tag
+    .EXAMPLE
+    $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
+    if($forceall){$pltSL.Tag = "-ForceAll" }
+    else {$pltSL.Tag = "-LASTPASS" } ;
+    $logspec = start-Log -Path c:\scripts\test-script.txt @pltSL ;
+    Path is normally to the execuiting .ps1, but *does not have to be*. Anything with a valid path can be specified, including a .txt file. The above generates logging/transcript paths off of specifying a non-existant text file path.
     .LINK
     https://github.com/tostka/verb-logging
     #>
     [CmdletBinding()]
     PARAM(
-        [Parameter(Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,HelpMessage="Path to target script (defaults to `$PSCommandPath) [-Path -Path .\path-to\script.ps1]")]
+        [Parameter(Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,HelpMessage="Path to target script (defaults to `$PSCommandPath) [-Path .\path-to\script.ps1]")]
         [ValidateScript({Test-Path (split-path $_)})]$Path,
         [Parameter(HelpMessage="Tag string to be used with -Path filename spec, to construct log file name [-tag 'ticket-123456]")]
         [string]$Tag,
@@ -1749,8 +1756,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU02QTFFJHOZtDUA/zc0ozi2nu
-# jEmgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUhz67QI4Xj5n/SEdSXJWARIVt
+# OMGgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1765,9 +1772,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBT3jtV3
-# 0m3xjCUVS07Q5UFBi46kxTANBgkqhkiG9w0BAQEFAASBgCUr6Ee+zJ4wxVSfSy1c
-# vbPqXCWQhjjRf0ffOamgupGZGX+9xGWPFKUiBkhli/W7m8cd6RwRyN1BuX1FCmco
-# 4KYCJd4TNMZrjnMq2EdkwEUshqFZmV2hw2mTOF7Hw8c3tm63HZgJmcWiDxuPjw0T
-# xxZzagTwR0YAa2Gtgrns5oXL
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQX+ZJ0
+# PQCnadNmbAUPLJYRhwQ7RzANBgkqhkiG9w0BAQEFAASBgJliE92A5CEXohOtCi7S
+# 6vgcRjH+z5BMX9oUhfu2mMhZmAOO+xpWKnffPf4+BdVxQe2MztFQtjjdOUJw6Dys
+# /rMZIxSodlc/cltTkPf25Cp5bhwZjiSrLNua89xawOcyBo2pvMP7U0DBexSFh7bg
+# /wPs1Y2dw7tgOgp5Kbd7EPhZ
 # SIG # End signature block
