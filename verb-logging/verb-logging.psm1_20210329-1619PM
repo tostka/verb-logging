@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.57.0
+  Version     : 1.0.56.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -64,7 +64,6 @@ function Archive-Log {
     Github      : https://github.com/tostka/verb-logging
     Tags        : Powershell, logging
     REVISIONS
-    * 4:17 PM 3/29/2021 set move/remove fails to non-terminating echo err, but don't exit
     * 4:00 PM 12/2/2020 updated and streamlined added -overwrite to force overwrite on clash, and -UniqueClash to append a GUID chunk to filename, to force unique file at dest, where pre-existing conflict exists
     # 3:04 PM 10/8/2020 add force, to overwrite on conflict
     # 3:37 PM 9/22/2020 added looping/mult $filepath added code to validate $filepath, and force $archpath if not already set
@@ -140,7 +139,7 @@ function Archive-Log {
     # valid filepath passed in
     $error.clear
     foreach($fpath in $FilePath){
-       
+        Try {
             write-verbose "$((get-date).ToString('HH:mm:ss')):`$archPath:$archPath `n`$fpath:$fpath"
             if (($fsoObj = gci -path $fpath)) {
                 write-host  ("$((get-date).ToString('HH:mm:ss')):Moving `n$($fsoobj.fullname) `n to:" + $archPath)
@@ -152,7 +151,7 @@ function Archive-Log {
                     if ($showdebug -OR $verbose) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):CLASH DETECTED, RENAMING ON MOVE: `n`$ArchTarg:$ArchTarg"};
                 }elseif ( (Test-Path $ArchTarg) -AND ($UniqueClash)) {
                     $unqStr = [guid]::NewGuid().tostring().split('-')[1] ; 
-                    $pltFile.destination = $ArchTarg.replace($fsoObj.Extension,"-$($unqStr)$($fsoObj.extension)")
+                    pltFile.destination = $ArchTarg.replace($fsoObj.Extension,"-$($unqStr)$($fsoObj.extension)")
                     $cmdlet = "Move-Item" ; 
                     if ($showdebug -OR $verbose) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):CLASH DETECTED, RENAMING ON MOVE: `n`$ArchTarg:$ArchTarg"};
                 } else {
@@ -163,41 +162,24 @@ function Archive-Log {
                 write-verbose "$($Cmdlet) w`n$(($pltFile|out-string).trim())" ; 
                 $error.clear() ;
                 if($cmdlet -eq 'Move-Item'){
-                    Try {
-                        Move-Item @pltFile ;
-                    } Catch {
-                        $ErrTrapd=$Error[0] ;
-                        $smsg= "Failed to exec cmd because: $($ErrTrapd)`n(non-terminating err)" ;
-                        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
-                        else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-                    } ;
+                    Move-Item @pltFile ;
                 } elseif($cmdlet -eq 'Copy-Item'){
-                    Try {
-                        copy-item @pltFile ; 
-                    } Catch {
-                        $ErrTrapd=$Error[0] ;
-                        $smsg= "Failed to exec cmd because: $($ErrTrapd)" ;
-                        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
-                        else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-                        CONTINUE ;#Opts: STOP(debug)|EXIT(close)|CONTINUE(move on in loop cycle)|BREAK(exit loop iteration)|THROW $_/'CustomMsg'(end script with Err output)
-                    } ;
+                    copy-item @pltFile ; 
                     $pltFile.remove('destination') ; 
-                    # this frequently fails, make it gracefully continue, without crashing host script
-                    Try {
-                        remove-item @pltFile ; 
-                    } Catch {
-                        $ErrTrapd=$Error[0] ;
-                        $smsg= "Failed to exec cmd because: $($ErrTrapd)`n(non-terminating err)" ;
-                        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
-                        else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-                        #CONTINUE ;#Opts: STOP(debug)|EXIT(close)|CONTINUE(move on in loop cycle)|BREAK(exit loop iteration)|THROW $_/'CustomMsg'(end script with Err output)
-                    } ;
+                    remove-item @pltFile ; 
                 } else {
                     throw "Unrecognized `$cmdlet:$($cmdlet)" ; 
                 } ;
             } else {
                 write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):NO TRANSCRIPT FILE FOUND! SKIPPING MOVE"
             }  # if-E
+        } Catch {
+            $ErrTrapd=$Error[0] ;
+            $smsg= "Failed to exec cmd because: $($ErrTrapd)" ;
+            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
+            else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+            CONTINUE ;#Opts: STOP(debug)|EXIT(close)|CONTINUE(move on in loop cycle)|BREAK(exit loop iteration)|THROW $_/'CustomMsg'(end script with Err output)
+        } ;
     } ;  # loop-E
     if (!(Test-Transcribing -Verbose:($VerbosePreference -eq 'Continue'))) {  return $true } else {return $false};
 }
@@ -1774,8 +1756,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUseeYoha0gKTVVRJqmGPg/frS
-# wyqgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUhz67QI4Xj5n/SEdSXJWARIVt
+# OMGgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1790,9 +1772,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTOnu0J
-# H6D1MrCi2R5sKjUt8v//gzANBgkqhkiG9w0BAQEFAASBgAR4cAsqNmJQVqISDb7A
-# LjmauVt59N9+j2L0lmoTOCIw0QEZx8qNJAhZgPUL6+8HG6rapEojBba2HNhjSOmX
-# F/KU3Q7fKV8EseOAeappx1PmPanqF4VutWD7UkIWEkYW1x6KiT0Ojlo5sK9urAGa
-# LrYVcfO72igmcJmAwAkrAHv7
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQX+ZJ0
+# PQCnadNmbAUPLJYRhwQ7RzANBgkqhkiG9w0BAQEFAASBgJliE92A5CEXohOtCi7S
+# 6vgcRjH+z5BMX9oUhfu2mMhZmAOO+xpWKnffPf4+BdVxQe2MztFQtjjdOUJw6Dys
+# /rMZIxSodlc/cltTkPf25Cp5bhwZjiSrLNua89xawOcyBo2pvMP7U0DBexSFh7bg
+# /wPs1Y2dw7tgOgp5Kbd7EPhZ
 # SIG # End signature block

@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.55.0
+  Version     : 1.0.56.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -64,6 +64,7 @@ function Archive-Log {
     Github      : https://github.com/tostka/verb-logging
     Tags        : Powershell, logging
     REVISIONS
+    * 4:17 PM 3/29/2021 set move/remove fails to non-terminating echo err, but don't exit
     * 4:00 PM 12/2/2020 updated and streamlined added -overwrite to force overwrite on clash, and -UniqueClash to append a GUID chunk to filename, to force unique file at dest, where pre-existing conflict exists
     # 3:04 PM 10/8/2020 add force, to overwrite on conflict
     # 3:37 PM 9/22/2020 added looping/mult $filepath added code to validate $filepath, and force $archpath if not already set
@@ -139,7 +140,7 @@ function Archive-Log {
     # valid filepath passed in
     $error.clear
     foreach($fpath in $FilePath){
-        Try {
+       
             write-verbose "$((get-date).ToString('HH:mm:ss')):`$archPath:$archPath `n`$fpath:$fpath"
             if (($fsoObj = gci -path $fpath)) {
                 write-host  ("$((get-date).ToString('HH:mm:ss')):Moving `n$($fsoobj.fullname) `n to:" + $archPath)
@@ -151,7 +152,7 @@ function Archive-Log {
                     if ($showdebug -OR $verbose) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):CLASH DETECTED, RENAMING ON MOVE: `n`$ArchTarg:$ArchTarg"};
                 }elseif ( (Test-Path $ArchTarg) -AND ($UniqueClash)) {
                     $unqStr = [guid]::NewGuid().tostring().split('-')[1] ; 
-                    pltFile.destination = $ArchTarg.replace($fsoObj.Extension,"-$($unqStr)$($fsoObj.extension)")
+                    $pltFile.destination = $ArchTarg.replace($fsoObj.Extension,"-$($unqStr)$($fsoObj.extension)")
                     $cmdlet = "Move-Item" ; 
                     if ($showdebug -OR $verbose) {write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):CLASH DETECTED, RENAMING ON MOVE: `n`$ArchTarg:$ArchTarg"};
                 } else {
@@ -162,24 +163,41 @@ function Archive-Log {
                 write-verbose "$($Cmdlet) w`n$(($pltFile|out-string).trim())" ; 
                 $error.clear() ;
                 if($cmdlet -eq 'Move-Item'){
-                    Move-Item @pltFile ;
+                    Try {
+                        Move-Item @pltFile ;
+                    } Catch {
+                        $ErrTrapd=$Error[0] ;
+                        $smsg= "Failed to exec cmd because: $($ErrTrapd)`n(non-terminating err)" ;
+                        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
+                        else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+                    } ;
                 } elseif($cmdlet -eq 'Copy-Item'){
-                    copy-item @pltFile ; 
+                    Try {
+                        copy-item @pltFile ; 
+                    } Catch {
+                        $ErrTrapd=$Error[0] ;
+                        $smsg= "Failed to exec cmd because: $($ErrTrapd)" ;
+                        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
+                        else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+                        CONTINUE ;#Opts: STOP(debug)|EXIT(close)|CONTINUE(move on in loop cycle)|BREAK(exit loop iteration)|THROW $_/'CustomMsg'(end script with Err output)
+                    } ;
                     $pltFile.remove('destination') ; 
-                    remove-item @pltFile ; 
+                    # this frequently fails, make it gracefully continue, without crashing host script
+                    Try {
+                        remove-item @pltFile ; 
+                    } Catch {
+                        $ErrTrapd=$Error[0] ;
+                        $smsg= "Failed to exec cmd because: $($ErrTrapd)`n(non-terminating err)" ;
+                        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
+                        else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+                        #CONTINUE ;#Opts: STOP(debug)|EXIT(close)|CONTINUE(move on in loop cycle)|BREAK(exit loop iteration)|THROW $_/'CustomMsg'(end script with Err output)
+                    } ;
                 } else {
                     throw "Unrecognized `$cmdlet:$($cmdlet)" ; 
                 } ;
             } else {
                 write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):NO TRANSCRIPT FILE FOUND! SKIPPING MOVE"
             }  # if-E
-        } Catch {
-            $ErrTrapd=$Error[0] ;
-            $smsg= "Failed to exec cmd because: $($ErrTrapd)" ;
-            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
-            else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-            CONTINUE ;#Opts: STOP(debug)|EXIT(close)|CONTINUE(move on in loop cycle)|BREAK(exit loop iteration)|THROW $_/'CustomMsg'(end script with Err output)
-        } ;
     } ;  # loop-E
     if (!(Test-Transcribing -Verbose:($VerbosePreference -eq 'Continue'))) {  return $true } else {return $false};
 }
