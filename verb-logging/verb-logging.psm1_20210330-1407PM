@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.58.0
+  Version     : 1.0.57.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1170,7 +1170,6 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
-    * 2:05 PM 3/30/2021 added example demo'ing detect/divert off of AllUsers-scoped installed scripts
     * 1:46 PM 12/21/2020 added example that builds logfile off of passed in .txt (rather than .ps1 path or pscommandpath)
     * 11:39 AM 11/24/2020 updated examples again
     * 9:18 AM 11/23/2020 updated 2nd example to use splatting
@@ -1235,29 +1234,6 @@ function Start-Log {
     if($PSCommandPath){   $logspec = start-Log -Path $PSCommandPath @pltSL }
     else {    $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL ;  } ;
     Simpler splatted example with conditional Tag
-    .EXAMPLE
-    $dPref = 'd','c' ; 
-    foreach($budrv in $dpref){
-        if(test-path -path "$($budrv):\scripts" -ea 0 ){
-            break ;
-        } ;
-    } ;
-     [regex]$rgxScriptsAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\Scripts" ;
-    if($PSCommandPath){
-        if($PSCommandPath -match $rgxScriptsAllUsersScope){
-            # AllUsers installed script, divert into [$budrv]:\scripts (don't write logs into allusers context folder)
-            $logspec = start-Log -Path (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $PSCommandPath -leaf)) -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ; 
-        }else {
-            $logspec = start-Log -Path $PSCommandPath -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ; 
-        } ; 
-    } else {
-        if($MyInvocation.MyCommand.Definition -match $rgxScriptsAllUsersScope){
-            $logspec = start-Log -Path (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $PSCommandPath -leaf)) -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ; 
-        } else { 
-            $logspec = start-Log -Path $MyInvocation.MyCommand.Definition -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ; 
-        } ;    
-    } ;    
-    Example that accomodates detect/redirect from AllUsers scope'd installed scripts, and hunts a sereis of drive letters to find an alternate logging dir
     .EXAMPLE
     $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
     if($forceall){$pltSL.Tag = "-ForceAll" }
@@ -1798,8 +1774,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUiMd3jOKVf9xrfs2+OhgLJCgK
-# icygggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUseeYoha0gKTVVRJqmGPg/frS
+# wyqgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1814,9 +1790,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBR8QCPt
-# yyY+vWKo+PBDOLWOT7iLgTANBgkqhkiG9w0BAQEFAASBgKkInKetK/nvLmQRry4B
-# PXLhk/SRbQ9yHaxhUtn20j6crn5WTj6Vp6bIyJOVdNscfvFZA/H8GRW1oLEmCDYO
-# MUBdJjDHAWeELw393j98iCahXqsjUjAaMzsO/4o0yI16LLaxIflcIhcOXWMaiAJD
-# bTYLPe3P3UzmISwPlWSXIwfG
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTOnu0J
+# H6D1MrCi2R5sKjUt8v//gzANBgkqhkiG9w0BAQEFAASBgAR4cAsqNmJQVqISDb7A
+# LjmauVt59N9+j2L0lmoTOCIw0QEZx8qNJAhZgPUL6+8HG6rapEojBba2HNhjSOmX
+# F/KU3Q7fKV8EseOAeappx1PmPanqF4VutWD7UkIWEkYW1x6KiT0Ojlo5sK9urAGa
+# LrYVcfO72igmcJmAwAkrAHv7
 # SIG # End signature block

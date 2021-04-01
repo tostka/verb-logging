@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.56.0
+  Version     : 1.0.57.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1170,6 +1170,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 2:05 PM 3/30/2021 added example demo'ing detect/divert off of AllUsers-scoped installed scripts
     * 1:46 PM 12/21/2020 added example that builds logfile off of passed in .txt (rather than .ps1 path or pscommandpath)
     * 11:39 AM 11/24/2020 updated examples again
     * 9:18 AM 11/23/2020 updated 2nd example to use splatting
@@ -1234,6 +1235,29 @@ function Start-Log {
     if($PSCommandPath){   $logspec = start-Log -Path $PSCommandPath @pltSL }
     else {    $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL ;  } ;
     Simpler splatted example with conditional Tag
+    .EXAMPLE
+    $dPref = 'd','c' ; 
+    foreach($budrv in $dpref){
+        if(test-path -path "$($budrv):\scripts" -ea 0 ){
+            break ;
+        } ;
+    } ;
+     [regex]$rgxScriptsAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\Scripts" ;
+    if($PSCommandPath){
+        if($PSCommandPath -match $rgxScriptsAllUsersScope){
+            # AllUsers installed script, divert into [$budrv]:\scripts (don't write logs into allusers context folder)
+            $logspec = start-Log -Path (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $PSCommandPath -leaf)) -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ; 
+        }else {
+            $logspec = start-Log -Path $PSCommandPath -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ; 
+        } ; 
+    } else {
+        if($MyInvocation.MyCommand.Definition -match $rgxScriptsAllUsersScope){
+            $logspec = start-Log -Path (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $PSCommandPath -leaf)) -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ; 
+        } else { 
+            $logspec = start-Log -Path $MyInvocation.MyCommand.Definition -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ; 
+        } ;    
+    } ;    
+    Example that accomodates detect/redirect from AllUsers scope'd installed scripts, and hunts a sereis of drive letters to find an alternate logging dir
     .EXAMPLE
     $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
     if($forceall){$pltSL.Tag = "-ForceAll" }
