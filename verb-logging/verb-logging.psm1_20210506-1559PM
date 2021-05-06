@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.60.0
+  Version     : 1.0.58.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1170,7 +1170,6 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
-    * 2:23 PM 5/6/2021 disabled $Path test, no bene, and AllUsers redir doesn't need a real file, just a path ; add example for detecting & redirecting logging, when psCommandPath points to Allusers profile (installed module function)
     * 2:05 PM 3/30/2021 added example demo'ing detect/divert off of AllUsers-scoped installed scripts
     * 1:46 PM 12/21/2020 added example that builds logfile off of passed in .txt (rather than .ps1 path or pscommandpath)
     * 11:39 AM 11/24/2020 updated examples again
@@ -1230,25 +1229,6 @@ function Start-Log {
     } else {throw "Unable to configure logging!" } ;
     Configure default logging from parent script name, with no Timestamp
     .EXAMPLE
-    $dPref = 'd','c' ; foreach($budrv in $dpref){ if(test-path -path "$($budrv):\scripts" -ea 0 ){ break ;  } ;  } ;
-    [regex]$rgxScriptsModsAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)" ;
-    [regex]$rgxScriptsModsCurrUserScope="^$([regex]::escape([environment]::getfolderpath('Mydocuments')))\\((Windows)*)PowerShell\\(Scripts|Modules)" ;
-    if($PSCommandPath){
-        if(($PSCommandPath -match $rgxScriptsModsAllUsersScope) -OR ($PSCommandPath -match $rgxScriptsModsCurrUserScope) ){
-            # AllUsers or CU installed script/MOD, divert into [$budrv]:\scripts (don't write logs into allusers context folder)
-            $logspec = start-Log -Path (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $PSCommandPath -leaf)) -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ;
-        }else {
-            $logspec = start-Log -Path $PSCommandPath -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ;
-        } ;
-    } else {
-        if($MyInvocation.MyCommand.Definition -match $rgxScriptsAllUsersScope){
-            $logspec = start-Log -Path (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $PSCommandPath -leaf)) -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ;
-        } else {
-            $logspec = start-Log -Path $MyInvocation.MyCommand.Definition -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ;
-        } ;
-    } ;
-    Detect profile installs (installed mod or script), and redir to stock location, with hunting path
-    .EXAMPLE
     $pltSL=@{ NoTimeStamp=$true ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
     if($forceall){$pltSL.Tag = "$($TenOrg)-ForceAll" }
     else {$pltSL.Tag = "($TenOrg)-LASTPASS" } ;
@@ -1283,16 +1263,14 @@ function Start-Log {
     if($forceall){$pltSL.Tag = "-ForceAll" }
     else {$pltSL.Tag = "-LASTPASS" } ;
     $logspec = start-Log -Path c:\scripts\test-script.txt @pltSL ;
-    Path is normally to the executing .ps1, but *does not have to be*. Anything with a valid path can be specified, including a .txt file. The above generates logging/transcript paths off of specifying a non-existant text file path.
+    Path is normally to the execuiting .ps1, but *does not have to be*. Anything with a valid path can be specified, including a .txt file. The above generates logging/transcript paths off of specifying a non-existant text file path.
     .LINK
     https://github.com/tostka/verb-logging
     #>
     [CmdletBinding()]
     PARAM(
         [Parameter(Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,HelpMessage="Path to target script (defaults to `$PSCommandPath) [-Path .\path-to\script.ps1]")]
-        # rem out validation, for module installed in AllUsers etc, we don't want to have to spec a real existing file. No bene to testing
-        #[ValidateScript({Test-Path (split-path $_)})] 
-        $Path,
+        [ValidateScript({Test-Path (split-path $_)})]$Path,
         [Parameter(HelpMessage="Tag string to be used with -Path filename spec, to construct log file name [-tag 'ticket-123456]")]
         [string]$Tag,
         [Parameter(HelpMessage="Flag that suppresses the trailing timestamp value from the generated filenames[-NoTimestamp]")]
@@ -1820,8 +1798,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUuxgiFb5Fyi/xVKHYg67FUhEL
-# kXegggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUiMd3jOKVf9xrfs2+OhgLJCgK
+# icygggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1836,9 +1814,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBR6dqnt
-# KwDtC+3NvTwAP/uhkvkHsTANBgkqhkiG9w0BAQEFAASBgLTlxlO8gWObgnOrb4W6
-# GeTCvLyxLXZpsSNaqNDigQUAd/ww+eKpy23eecnYxqbbCsCubNlY4T2EpBRc/MK7
-# 51Tc5R6xNYwcCvnAB9Olz9RaSOrEVelso8NE3BvtF3tIXIHy96YU/DaPeeMKEf73
-# fZls6uon78qrBbU8h1LvV6tb
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBR8QCPt
+# yyY+vWKo+PBDOLWOT7iLgTANBgkqhkiG9w0BAQEFAASBgKkInKetK/nvLmQRry4B
+# PXLhk/SRbQ9yHaxhUtn20j6crn5WTj6Vp6bIyJOVdNscfvFZA/H8GRW1oLEmCDYO
+# MUBdJjDHAWeELw393j98iCahXqsjUjAaMzsO/4o0yI16LLaxIflcIhcOXWMaiAJD
+# bTYLPe3P3UzmISwPlWSXIwfG
 # SIG # End signature block
