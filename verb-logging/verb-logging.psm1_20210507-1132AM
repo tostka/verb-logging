@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.61.0
+  Version     : 1.0.60.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1657,7 +1657,6 @@ function Write-Log {
     Website:	URL
     Twitter:	URL
     REVISIONS   :
-    * 10:54 AM 5/7/2021 pulled weird choice to set: $VerbosePreference = 'Continue' , that'd reset pref everytime called
     * 8:46 AM 11/23/2020 ext verbose supp
     * 3:50 PM 3/29/2020 minor tightening layout
     * 11:34 AM 8/26/2019 fixed missing noecho parameter desig in comment help
@@ -1765,7 +1764,7 @@ function Write-Log {
         [Parameter(HelpMessage = "Debugging Flag [-showDebug]")]
         [switch] $showDebug
     )  ;
-    Begin {$verbose = ($VerbosePreference -eq "Continue") ;  }  ;
+    Begin {$VerbosePreference = 'Continue'  ; $verbose = ($VerbosePreference -eq "Continue") ;  }  ;
     Process {
         # If the file already exists and NoClobber was specified, do not write to the log.
         if ((Test-Path $Path) -AND $NoClobber) {
@@ -1821,8 +1820,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU23VV0EiCi0zPSMG5F10aUWYN
-# KkqgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUuxgiFb5Fyi/xVKHYg67FUhEL
+# kXegggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1837,9 +1836,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBS9SoM8
-# 1bJmcdtc9VZGtgs0BdgF/TANBgkqhkiG9w0BAQEFAASBgLSb8zKwAf49Ea9dVKS+
-# JmTKziEyuotaG9Je0Fgk8hgm0HjMEDnQf4Px2OUlaI8Uv0yDTe06dDhzqmCeaTxo
-# LvhBMvLPEciop8Z+fGXoS/nnHSbjshQLMhEXhSqaerXqro2b67QEk+YlIXfVRd70
-# 2vDTyFbWuUKEP7dctGe7SLz7
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBR6dqnt
+# KwDtC+3NvTwAP/uhkvkHsTANBgkqhkiG9w0BAQEFAASBgLTlxlO8gWObgnOrb4W6
+# GeTCvLyxLXZpsSNaqNDigQUAd/ww+eKpy23eecnYxqbbCsCubNlY4T2EpBRc/MK7
+# 51Tc5R6xNYwcCvnAB9Olz9RaSOrEVelso8NE3BvtF3tIXIHy96YU/DaPeeMKEf73
+# fZls6uon78qrBbU8h1LvV6tb
 # SIG # End signature block

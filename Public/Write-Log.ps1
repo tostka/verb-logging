@@ -14,6 +14,7 @@ function Write-Log {
     Website:	URL
     Twitter:	URL
     REVISIONS   :
+    * 10:54 AM 5/7/2021 pulled weird choice to set: $VerbosePreference = 'Continue' , that'd reset pref everytime called
     * 8:46 AM 11/23/2020 ext verbose supp
     * 3:50 PM 3/29/2020 minor tightening layout
     * 11:34 AM 8/26/2019 fixed missing noecho parameter desig in comment help
@@ -121,7 +122,7 @@ function Write-Log {
         [Parameter(HelpMessage = "Debugging Flag [-showDebug]")]
         [switch] $showDebug
     )  ;
-    Begin {$VerbosePreference = 'Continue'  ; $verbose = ($VerbosePreference -eq "Continue") ;  }  ;
+    Begin {$verbose = ($VerbosePreference -eq "Continue") ;  }  ;
     Process {
         # If the file already exists and NoClobber was specified, do not write to the log.
         if ((Test-Path $Path) -AND $NoClobber) {
