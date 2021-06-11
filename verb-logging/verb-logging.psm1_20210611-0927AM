@@ -1,4 +1,4 @@
-# verb-logging.psm1
+﻿# verb-logging.psm1
 
 
   <#
@@ -1647,21 +1647,17 @@ function Write-Log {
     .SYNOPSIS
     Write-Log.ps1 - Write-Log writes a message to a specified log file with the current time stamp, and write-verbose|warn|error's the matching msg.
     .NOTES
-    Version     : 0.0.
-    Author      : Todd Kadrie
-    Website     :	http://www.toddomation.com
-    Twitter     :	@tostka, http://twitter.com/tostka
-    Additional Credits: Based on original concept by Jason Wasser
-    Website     :	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
-    Twitter     :	@wasserja
-    CreatedDate : 2021-06-11
-    FileName    : Write-Log.ps1
-    License     : MIT License
-    Copyright   : (c) 2021 Todd Kadrie
-    Github      : https://github.com/tostka/verb-logging
-    Tags        : Powershell,Logging,Output,Echo
+    Author: Jason Wasser @wasserja
+    Website:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
+    Twitter:	@wasserja
+    Updated By: Todd Kadrie
+    Website:	http://www.toddomation.com
+    Twitter:	@tostka, http://twitter.com/tostka
+    Additional Credits: REFERENCE
+    Website:	URL
+    Twitter:	URL
     REVISIONS   :
-    * 7:59 AM 6/11/2021 added H1|2|3 md-style #|##|## header tags ; added support for get-colorcombo, and enforced bg colors (legible regardless of local color scheme of console); expanded CBH, revised Author - it's diverged so substantially from JW's original concept, it's now "inspired-by", less than a variant of the original.
+    * 7:59 AM 6/11/2021 added H1|2|3 md-style #|##|## header tags ; added support for get-colorcombo, and enforced bg colors (legible regardless of local color scheme of console)-.
     * 10:54 AM 5/7/2021 pulled weird choice to set: $VerbosePreference = 'Continue' , that'd reset pref everytime called
     * 8:46 AM 11/23/2020 ext verbose supp
     * 3:50 PM 3/29/2020 minor tightening layout
@@ -1677,6 +1673,11 @@ function Write-Log {
     * Added documentation.
     * Renamed LogPath parameter to Path to keep it standard - thanks to @JeffHicks  ;
     * Revised the Force switch to work as it should - thanks to @JeffHicks  ;
+
+    To Do:  ;
+    * Add error handling if trying to create a log file in a inaccessible location.
+    * Add ability to write $Message to $Verbose or $Error pipelines to eliminate  ;
+        duplicates.
     .DESCRIPTION
     The Write-Log function is designed to add logging capability to other scripts.
     In addition to writing output and/or verbose you can write to a log file for  ;
@@ -1701,7 +1702,7 @@ function Write-Log {
     Writes output to the specified Path.
     .EXAMPLE
     Write-Log -Message 'Log message'   ;
-    Writes the message to default log loc (c:\Logs\PowerShellLog.log, -level defaults to Info).
+    Writes the message to c:\Logs\PowerShellLog.log.
     .EXAMPLE
     Write-Log -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log
     Writes the content to the specified log file and creates the path and file specified.
@@ -1712,11 +1713,11 @@ function Write-Log {
     # init content in script context ($MyInvocation is blank in function scope)
     $logfile = join-path -path $ofile -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-LOG.txt"  ;
     $logging = $True ;
+    # ...
     $sBnr="#*======v `$tmbx:($($Procd)/$($ttl)):$($tmbx) v======" ;
     $smsg="$($sBnr)" ;
-    if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug|H1|H2|H3 
-    else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-    Example with conditional write-log (with -useHost switch, to trigger native write-host use), else failthru to write-host output
+    if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } ; #Error|Warn
+    Example that uses a variable and the -useHost switch, to trigger write-host use
     .EXAMPLE
     $transcript = join-path -path (Split-Path -parent $MyInvocation.MyCommand.Definition) -ChildPath "logs" ;
     if(!(test-path -path $transcript)){ "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
@@ -1739,28 +1740,11 @@ function Write-Log {
         $transcript=$transcript.replace("-BATCH","-nnnnnn") ;
     } ;
     $logging = $True ;
+
     $sBnr="#*======v START PASS:$($ScriptBaseName) v======" ;
     $smsg= "$($sBnr)" ;
     if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } ; #Error|Warn
     More complete boilerplate including $whatif & $ticket
-    .EXAMPLE
-    $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
-    $pltSL.Tag = "$(split-path -path $CSVPath -leaf)"; # build tag from a variable
-    # construct log name on calling script/function fullname
-    if($PSCommandPath){ $logspec = start-Log -Path $PSCommandPath @pltSL }
-    else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL } ;
-    if($logspec){
-        $logging=$logspec.logging ;
-        $logfile=$logspec.logfile ;
-        $transcript=$logspec.transcript ;
-        $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
-        start-Transcript -path $transcript ;
-    } else {throw "Unable to configure logging!" } ;
-    $sBnr="#*======v $(${CmdletName}): v======" ;
-    $smsg = $sBnr ;
-    if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
-    else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-    Example leveraging splatted start-log(), and either $PSCommandPath or $MyInvocation (support varies by host/psversion) to build the log name. 
     .LINK
     https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0  ;
     #>
@@ -1869,3 +1853,29 @@ function Write-Log {
 
 Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFiltered,get-lastlogon,get-lastevent,get-lastlogon,get-lastshutdown,get-lastsleep,get-lastwake,get-winEventsLoopedIDs,Start-IseTranscript,Start-Log,start-TranscriptLog,Stop-TranscriptLog,Test-Transcribing,test-Transcribing2,Test-TranscriptionSupported,Write-Log -Alias *
 
+
+# SIG # Begin signature block
+# MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
+# gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUHY6/fvWKJTOt2XBW+Uv+xu6z
+# P8OgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
+# Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
+# ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
+# a+NnFYNRPPa8Bnm071ohGe27jNWKPVUbDfd0OY2sqCBQCEFVb5pqcIECRRnlhN5H
+# +EEJmm2x9AU0uS7IHxHeUo8fkW4vm49adkat5gAoOZOwbuNntBOAJy9LCyNs4F1I
+# KKphP3TyDwe8XqsEVwB2m9FPAgMBAAGjdjB0MBMGA1UdJQQMMAoGCCsGAQUFBwMD
+# MF0GA1UdAQRWMFSAEL95r+Rh65kgqZl+tgchMuKhLjAsMSowKAYDVQQDEyFQb3dl
+# clNoZWxsIExvY2FsIENlcnRpZmljYXRlIFJvb3SCEGwiXbeZNci7Rxiz/r43gVsw
+# CQYFKw4DAh0FAAOBgQB6ECSnXHUs7/bCr6Z556K6IDJNWsccjcV89fHA/zKMX0w0
+# 6NefCtxas/QHUA9mS87HRHLzKjFqweA3BnQ5lr5mPDlho8U90Nvtpj58G9I5SPUg
+# CspNr5jEHOL5EdJFBIv3zI2jQ8TPbFGC0Cz72+4oYzSxWpftNX41MmEsZkMaADGC
+# AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
+# Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
+# AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBR+r3uC
+# AqXWWmD1SANJYWIeQRUeWzANBgkqhkiG9w0BAQEFAASBgJUwg/Tx6CtRq/oOaQTc
+# qjtwZ/2fR4en2STdqmx18DIzn3CLIF8R5uhpnjoCkX/JJYEvUzBwmfLP6tUGQVmt
+# +Itljq8dvuiwVjO2fnt4uySUvcgS4yKZK9FEPScKg8dIMbIFgktrpdf9syA4EVzJ
+# tQRDQMn0tGmCUsxgB+nGAo7+
+# SIG # End signature block
