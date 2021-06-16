@@ -18,6 +18,7 @@ function Write-Log {
     Github      : https://github.com/tostka/verb-logging
     Tags        : Powershell,Logging,Output,Echo
     REVISIONS   :
+    * 10:53 AM 6/16/2021 get-help isn't displaying param details, pulled erroneous semi's from end of CBH definitions
     * 7:59 AM 6/11/2021 added H1|2|3 md-style #|##|## header tags ; added support for get-colorcombo, and enforced bg colors (legible regardless of local color scheme of console); expanded CBH, revised Author - it's diverged so substantially from JW's original concept, it's now "inspired-by", less than a variant of the original.
     * 10:54 AM 5/7/2021 pulled weird choice to set: $VerbosePreference = 'Continue' , that'd reset pref everytime called
     * 8:46 AM 11/23/2020 ext verbose supp
@@ -38,17 +39,17 @@ function Write-Log {
     The Write-Log function is designed to add logging capability to other scripts.
     In addition to writing output and/or verbose you can write to a log file for  ;
     later debugging.
-    .PARAMETER Message  ;
+    .PARAMETER Message  
     Message is the content that you wish to add to the log file.
-    .PARAMETER Path  ;
+    .PARAMETER Path  
     The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.
-    .PARAMETER Level  ;
-    Specify the criticality of the log information being written to the log defaults Info: (Error|Warn|Info|H1|H2|H3|Debug)[-level Info]
-    .PARAMETER useHost  ;
+    .PARAMETER Level  
+    Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|Debug)[-level Info]
+    .PARAMETER useHost  
     Switch to use write-host rather than write-[verbose|warn|error] [-useHost]
     .PARAMETER NoEcho
     Switch to suppress console echos (e.g log to file only [-NoEcho]
-    .PARAMETER NoClobber  ;
+    .PARAMETER NoClobber  
     Use NoClobber if you do not wish to overwrite an existing file.
     .PARAMETER ShowDebug
     Parameter to display Debugging messages [-ShowDebug switch]
@@ -130,7 +131,7 @@ function Write-Log {
         [Parameter(Mandatory = $false, HelpMessage = "The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.")]
         [Alias('LogPath')]
         [string]$Path = 'C:\Logs\PowerShellLog.log',
-        [Parameter(Mandatory = $false, HelpMessage = "Specify the criticality of the log information being written to the log defaults Info: (Error|Warn|Info|H1|H2|H3|Debug)[-level Info]")]
+        [Parameter(Mandatory = $false, HelpMessage = "Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|Debug)[-level Info]")]
         [ValidateSet('Error','Warn','Info','H1','H2','H3','Debug')]
         [string]$Level = "Info",
         [Parameter(HelpMessage = "Switch to use write-host rather than write-[verbose|warn|error] [-useHost]")]

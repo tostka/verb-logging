@@ -14,6 +14,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 8:45 AM 6/16/2021 updated example for redir, to latest/fully-expanded concept code (defers to profile constants); added tricked out example for looping UPN/Ticket combo
     * 2:23 PM 5/6/2021 disabled $Path test, no bene, and AllUsers redir doesn't need a real file, just a path ; add example for detecting & redirecting logging, when psCommandPath points to Allusers profile (installed module function)
     * 2:05 PM 3/30/2021 added example demo'ing detect/divert off of AllUsers-scoped installed scripts
     * 1:46 PM 12/21/2020 added example that builds logfile off of passed in .txt (rather than .ps1 path or pscommandpath)
@@ -72,61 +73,117 @@ function Start-Log {
         $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
         start-Transcript -path $transcript ; 
     } else {throw "Unable to configure logging!" } ;
+    
     Configure default logging from parent script name, with no Timestamp
     .EXAMPLE
-    $dPref = 'd','c' ; foreach($budrv in $dpref){ if(test-path -path "$($budrv):\scripts" -ea 0 ){ break ;  } ;  } ;
-    [regex]$rgxScriptsModsAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)" ;
-    [regex]$rgxScriptsModsCurrUserScope="^$([regex]::escape([environment]::getfolderpath('Mydocuments')))\\((Windows)*)PowerShell\\(Scripts|Modules)" ;
-    if($PSCommandPath){
-        if(($PSCommandPath -match $rgxScriptsModsAllUsersScope) -OR ($PSCommandPath -match $rgxScriptsModsCurrUserScope) ){
-            # AllUsers or CU installed script/MOD, divert into [$budrv]:\scripts (don't write logs into allusers context folder)
-            $logspec = start-Log -Path (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $PSCommandPath -leaf)) -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ;
+    if(!(get-variable LogPathDrives -ea 0)){$LogPathDrives = 'd','c' };
+    foreach($budrv in $LogPathDrives){if(test-path -path "$($budrv):\scripts" -ea 0 ){break} } ;
+    if(!(get-variable rgxPSAllUsersScope -ea 0)){
+        $rgxPSAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps(((d|m))*)1|dll)$" ;
+    } ;
+    $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
+    $pltSL.Tag = $tickets -join ',' ; 
+    if($script:PSCommandPath){
+        if($script:PSCommandPath -match $rgxPSAllUsersScope){
+            write-verbose "AllUsers context script/module, divert logging into [$budrv]:\scripts" ;
+            if((split-path $script:PSCommandPath -leaf) -ne $cmdletname){
+                # function in a module/script installed to allusers - defer name to Cmdlet/Function name
+                $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
+            } else { 
+                # installed allusers script, use the hosting script name
+                $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
+            }
         }else {
-            $logspec = start-Log -Path $PSCommandPath -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ;
+            $pltSL.Path = $script:PSCommandPath ;
         } ;
     } else {
-        if($MyInvocation.MyCommand.Definition -match $rgxScriptsAllUsersScope){
-            $logspec = start-Log -Path (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $PSCommandPath -leaf)) -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ;
+        if($MyInvocation.MyCommand.Definition -match $rgxPSAllUsersScope){
+             $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
         } else {
-            $logspec = start-Log -Path $MyInvocation.MyCommand.Definition -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ;
+            $pltSL.Path = $MyInvocation.MyCommand.Definition ;
         } ;
     } ;
-    Detect profile installs (installed mod or script), and redir to stock location, with hunting path
+    write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
+    $logspec = start-Log @pltSL ;
+    $error.clear() ;
+    TRY {
+        if($logspec){
+            $logging=$logspec.logging ;
+            $logfile=$logspec.logfile ;
+            $transcript=$logspec.transcript ;
+            $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
+            start-Transcript -path $transcript ;
+        } else {throw "Unable to configure logging!" } ;
+    } CATCH {
+        $ErrTrapd=$Error[0] ;
+        $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
+        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
+        else{ write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+    } ; 
+    
+    Single log for script/function example that accomodates detect/redirect from AllUsers scope'd installed code, and hunts a series of drive letters to find an alternate logging dir (defers to profile variables)
     .EXAMPLE
-    $pltSL=@{ NoTimeStamp=$true ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
-    if($forceall){$pltSL.Tag = "$($TenOrg)-ForceAll" }
-    else {$pltSL.Tag = "($TenOrg)-LASTPASS" } ;
-    if($PSCommandPath){   $logspec = start-Log -Path $PSCommandPath @pltSL }
-    else {    $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL ;  } ;
-    Simpler splatted example with conditional Tag
-    .EXAMPLE
-    $dPref = 'd','c' ; 
-    foreach($budrv in $dpref){
-        if(test-path -path "$($budrv):\scripts" -ea 0 ){
-            break ;
-        } ;
+    $iProcd=0 ; $ttl = ($UPNs | Measure-Object).count ; $tickNum = ($tickets | Measure-Object).count
+    if ($ttl -ne $tickNum ) {
+        write-host -foregroundcolor RED "$((get-date).ToString('HH:mm:ss')):ERROR!:You have specified $($ttl) UPNs but only $($tickNum) tickets.`nPlease specified a matching number of both objects." ;
+        Break ;
     } ;
-     [regex]$rgxScriptsAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\Scripts" ;
-    if($PSCommandPath){
-        if($PSCommandPath -match $rgxScriptsAllUsersScope){
-            # AllUsers installed script, divert into [$budrv]:\scripts (don't write logs into allusers context folder)
-            $logspec = start-Log -Path (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $PSCommandPath -leaf)) -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ; 
-        }else {
-            $logspec = start-Log -Path $PSCommandPath -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ; 
-        } ; 
-    } else {
-        if($MyInvocation.MyCommand.Definition -match $rgxScriptsAllUsersScope){
-            $logspec = start-Log -Path (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $PSCommandPath -leaf)) -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ; 
-        } else { 
-            $logspec = start-Log -Path $MyInvocation.MyCommand.Definition -NoTimeStamp -Tag "($TenOrg)-LASTPASS" -showdebug:$($showdebug) -whatif:$($whatif) ; 
-        } ;    
-    } ;    
-    Example that accomodates detect/redirect from AllUsers scope'd installed scripts, and hunts a sereis of drive letters to find an alternate logging dir
+    foreach($UPN in $UPNs){
+        $iProcd++ ;
+        if(!(get-variable LogPathDrives -ea 0)){$LogPathDrives = 'd','c' };
+        foreach($budrv in $LogPathDrives){if(test-path -path "$($budrv):\scripts" -ea 0 ){break} } ;
+        if(!(get-variable rgxPSAllUsersScope -ea 0)){
+            $rgxPSAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps(((d|m))*)1|dll)$" ;
+        } ;
+        $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
+        if($tickets[$iProcd-1]){$pltSL.Tag = "$($tickets[$iProcd-1])-$($UPN)"} ;
+        if($script:PSCommandPath){
+            if($script:PSCommandPath -match $rgxPSAllUsersScope){
+                write-verbose "AllUsers context script/module, divert logging into [$budrv]:\scripts" ;
+                if((split-path $script:PSCommandPath -leaf) -ne $cmdletname){
+                    # function in a module/script installed to allusers 
+                    $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
+                } else { 
+                    # installed allusers script
+                    $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
+                }
+            }else {
+                $pltSL.Path = $script:PSCommandPath ;
+            } ;
+        } else {
+            if($MyInvocation.MyCommand.Definition -match $rgxPSAllUsersScope){
+                 $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
+            } else {
+                $pltSL.Path = $MyInvocation.MyCommand.Definition ;
+            } ;
+        } ;
+        write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
+        $logspec = start-Log @pltSL ;
+        $error.clear() ;
+        TRY {
+            if($logspec){
+                $logging=$logspec.logging ;
+                $logfile=$logspec.logfile ;
+                $transcript=$logspec.transcript ;
+                $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
+                start-Transcript -path $transcript ;
+            } else {throw "Unable to configure logging!" } ;
+        } CATCH {
+            $ErrTrapd=$Error[0] ;
+            $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
+            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
+            else{ write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        } ;
+     }  # loop-E $UPN
+     
+     Looping per-pass Logging (uses $UPN & $Ticket array, in this example). 
     .EXAMPLE
     $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
     if($forceall){$pltSL.Tag = "-ForceAll" }
     else {$pltSL.Tag = "-LASTPASS" } ;
+    write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
     $logspec = start-Log -Path c:\scripts\test-script.txt @pltSL ;
+    
     Path is normally to the executing .ps1, but *does not have to be*. Anything with a valid path can be specified, including a .txt file. The above generates logging/transcript paths off of specifying a non-existant text file path.
     .LINK
     https://github.com/tostka/verb-logging
