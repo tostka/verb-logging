@@ -76,6 +76,7 @@ function Start-Log {
     
     Configure default logging from parent script name, with no Timestamp
     .EXAMPLE
+    ${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name ;
     if(!(get-variable LogPathDrives -ea 0)){$LogPathDrives = 'd','c' };
     foreach($budrv in $LogPathDrives){if(test-path -path "$($budrv):\scripts" -ea 0 ){break} } ;
     if(!(get-variable rgxPSAllUsersScope -ea 0)){

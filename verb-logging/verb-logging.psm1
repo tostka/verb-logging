@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.65.0
+  Version     : 1.0.66.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1232,6 +1232,7 @@ function Start-Log {
     
     Configure default logging from parent script name, with no Timestamp
     .EXAMPLE
+    ${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name ;
     if(!(get-variable LogPathDrives -ea 0)){$LogPathDrives = 'd','c' };
     foreach($budrv in $LogPathDrives){if(test-path -path "$($budrv):\scripts" -ea 0 ){break} } ;
     if(!(get-variable rgxPSAllUsersScope -ea 0)){
@@ -1931,8 +1932,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUFybpJjOJYcwlUjewUg+02c/X
-# WtKgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUxQxL4mIwm9Jplxq5MV19XPf0
+# LIOgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1947,9 +1948,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTxpfPv
-# 3g1UizEDgmBndme2Wb2XezANBgkqhkiG9w0BAQEFAASBgDQDHQJ7d8EkOfI4amc/
-# ltA6gVzPU3eQWXQoSWB0YF8S9ldB7BcYKJmBSTTW4+dpKpbtkC6X62dnUG1VRXQx
-# 1NO4ZO8/YENQy7uKFZjm7VCtLpGU9k0KyHTG6TKbc4UINo7HSeny7tzuPO2ckbpY
-# UUkmwBOMp3INNjR1rhukifNw
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBRzR/FS
+# Hc6apjwYomkWG5dnIXkiNDANBgkqhkiG9w0BAQEFAASBgHGuX9Zr9Na2cprtfUER
+# jqCZ1rb8PbhTXKkk2pCSaW/oWe6gXio1YdFkfmO46cDIjdChCQVWO8uDv/W3QDcM
+# RD8GoC5oxfv47+ZFRuG+KFglV5prVDNY6u7o8GjjnwOaaCBkgqjTSZIeB6FJb1Uy
+# a3ScQSPCn19Sg6bK7uY868Rv
 # SIG # End signature block
