@@ -8,6 +8,7 @@ function Stop-TranscriptLog {
     #Twitter:	http://twitter.com/tostka
     Requires test-transcribing() function
     REVISIONS   :
+    # 3:35 PM 9/14/2021 fixed a pipeline-dump (diverted into wv)
     # 11:03 AM 9/22/2020 updated for psv5 ise transcription support
     # 1:18 PM 1/14/2015 added Lync fs rpt share support; added lab support (lynms650d\d$)
     # 10:11 AM 12/10/2014 tshot stop-transcriptlog archmove, for existing file clashes ; shifted more into the try block
@@ -15,20 +16,20 @@ function Stop-TranscriptLog {
     .INPUTS
     leverages the global $transcript variable (must be set in the root script; not functions)
     .OUTPUTS
-    Outputs $TRUE/FALSE reflecting successful archive attempt status
+    Boolean: Outputs $TRUE/FALSE reflecting successful archive attempt status
     .EXAMPLE
-    Stop-TranscriptLog
+    $xRet = Stop-TranscriptLog -Verbose:($VerbosePreference -eq 'Continue') ;
+    Example stopping log with local verbose passed - Be sure to capture output, or it will contaminate the pipeline!
     #>
     [CmdletBinding()]
     param(
         [parameter(Mandatory=$false,Helpmessage="Transcript location")]
-        #[ValidateNotNullOrEmpty()]
         [alias('tfile','outtransfile')]
         [string]$Transcript
     )
     $verbose = ($VerbosePreference -eq "Continue") ; 
     #can't define $transcript as a local param/vari, without toasting the main vari!
-    if ($showdebug -OR $verbose) {"SUB: stop-transcriptlog"}
+    if ($showdebug -OR $verbose) {write-verbose "SUB: stop-transcriptlog"}
 
     if( ($host.Name -eq "Windows PowerShell ISE Host") -AND ($host.version.major -lt 5) ){
         write-host "Stop-Transcribing:SKIP PS ISE $($host.version.major) does not support transcription commands";

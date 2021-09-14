@@ -1,11 +1,11 @@
-# verb-logging.psm1
+﻿# verb-logging.psm1
 
 
   <#
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.68.0
+  Version     : 1.0.67.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1483,7 +1483,6 @@ function Stop-TranscriptLog {
     #Twitter:	http://twitter.com/tostka
     Requires test-transcribing() function
     REVISIONS   :
-    # 3:35 PM 9/14/2021 fixed a pipeline-dump (diverted into wv)
     # 11:03 AM 9/22/2020 updated for psv5 ise transcription support
     # 1:18 PM 1/14/2015 added Lync fs rpt share support; added lab support (lynms650d\d$)
     # 10:11 AM 12/10/2014 tshot stop-transcriptlog archmove, for existing file clashes ; shifted more into the try block
@@ -1491,20 +1490,20 @@ function Stop-TranscriptLog {
     .INPUTS
     leverages the global $transcript variable (must be set in the root script; not functions)
     .OUTPUTS
-    Boolean: Outputs $TRUE/FALSE reflecting successful archive attempt status
+    Outputs $TRUE/FALSE reflecting successful archive attempt status
     .EXAMPLE
-    $xRet = Stop-TranscriptLog -Verbose:($VerbosePreference -eq 'Continue') ;
-    Example stopping log with local verbose passed - Be sure to capture output, or it will contaminate the pipeline!
+    Stop-TranscriptLog
     #>
     [CmdletBinding()]
     param(
         [parameter(Mandatory=$false,Helpmessage="Transcript location")]
+        #[ValidateNotNullOrEmpty()]
         [alias('tfile','outtransfile')]
         [string]$Transcript
     )
     $verbose = ($VerbosePreference -eq "Continue") ; 
     #can't define $transcript as a local param/vari, without toasting the main vari!
-    if ($showdebug -OR $verbose) {write-verbose "SUB: stop-transcriptlog"}
+    if ($showdebug -OR $verbose) {"SUB: stop-transcriptlog"}
 
     if( ($host.Name -eq "Windows PowerShell ISE Host") -AND ($host.version.major -lt 5) ){
         write-host "Stop-Transcribing:SKIP PS ISE $($host.version.major) does not support transcription commands";
@@ -1930,3 +1929,29 @@ function Write-Log {
 
 Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFiltered,get-lastlogon,get-lastevent,get-lastlogon,get-lastshutdown,get-lastsleep,get-lastwake,get-winEventsLoopedIDs,Start-IseTranscript,Start-Log,start-TranscriptLog,Stop-TranscriptLog,Test-Transcribing,test-Transcribing2,Test-TranscriptionSupported,Write-Log -Alias *
 
+
+# SIG # Begin signature block
+# MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
+# gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUu7lXjRkT29kWWKf3Uq2NgH8u
+# YI+gggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
+# Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
+# ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
+# a+NnFYNRPPa8Bnm071ohGe27jNWKPVUbDfd0OY2sqCBQCEFVb5pqcIECRRnlhN5H
+# +EEJmm2x9AU0uS7IHxHeUo8fkW4vm49adkat5gAoOZOwbuNntBOAJy9LCyNs4F1I
+# KKphP3TyDwe8XqsEVwB2m9FPAgMBAAGjdjB0MBMGA1UdJQQMMAoGCCsGAQUFBwMD
+# MF0GA1UdAQRWMFSAEL95r+Rh65kgqZl+tgchMuKhLjAsMSowKAYDVQQDEyFQb3dl
+# clNoZWxsIExvY2FsIENlcnRpZmljYXRlIFJvb3SCEGwiXbeZNci7Rxiz/r43gVsw
+# CQYFKw4DAh0FAAOBgQB6ECSnXHUs7/bCr6Z556K6IDJNWsccjcV89fHA/zKMX0w0
+# 6NefCtxas/QHUA9mS87HRHLzKjFqweA3BnQ5lr5mPDlho8U90Nvtpj58G9I5SPUg
+# CspNr5jEHOL5EdJFBIv3zI2jQ8TPbFGC0Cz72+4oYzSxWpftNX41MmEsZkMaADGC
+# AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
+# Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
+# AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSKtw31
+# fIBue89SMYlf1Nf/AKxtxzANBgkqhkiG9w0BAQEFAASBgG1ybg7umTIBNdJ6WLGD
+# dqR5Ei+XQHrsyoCohg5lH+1zGT8Rr6IsAgaEwD6zwNNWlLB9UwOwi/Si6xo5X4CR
+# 4NFxg5aMKr3ngaWfpZpgnL7WkY1ijIYji1+naDFFhXDDvJ+U02U9Wq+fCxSsCZhv
+# CV1riBUFkU4o2aULwwKuPT3d
+# SIG # End signature block
