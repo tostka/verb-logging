@@ -14,6 +14,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 9/27/2021 Example3, updated to latest diverting rev
     * 5:06 PM 9/21/2021 rewrote Example3 to handle CurrentUser profile installs (along with AllUsers etc).
     * 8:45 AM 6/16/2021 updated example for redir, to latest/fully-expanded concept code (defers to profile constants); added tricked out example for looping UPN/Ticket combo
     * 2:23 PM 5/6/2021 disabled $Path test, no bene, and AllUsers redir doesn't need a real file, just a path ; add example for detecting & redirecting logging, when psCommandPath points to Allusers profile (installed module function)
@@ -87,7 +88,7 @@ function Start-Log {
         $rgxPSCurrUserScope="^$([regex]::escape([Environment]::GetFolderPath('MyDocuments')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps((d|m)*)1|dll)$" ;
     } ;
     $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
-    $pltSL.Tag = $tickets -join ',' ; 
+    $pltSL.Tag = $ModuleName ; 
     if($script:PSCommandPath){
         if(($script:PSCommandPath -match $rgxPSAllUsersScope) -OR ($script:PSCommandPath -match $rgxPSCurrUserScope)){
             $bDivertLog = $true ; 
@@ -112,9 +113,16 @@ function Start-Log {
     } else {
         if(($MyInvocation.MyCommand.Definition -match $rgxPSAllUsersScope) -OR ($MyInvocation.MyCommand.Definition -match $rgxPSCurrUserScope) ){
              $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
-        } else {
+        } elseif(test-path $MyInvocation.MyCommand.Definition) {
             $pltSL.Path = $MyInvocation.MyCommand.Definition ;
-        } ;
+        } elseif($cmdletname){
+            $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
+        } else {
+            $smsg = "UNABLE TO RESOLVE A FUNCTIONAL `$CMDLETNAME, FROM WHICH TO BUILD A START-LOG.PATH!" ; 
+            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Warn } #Error|Warn|Debug 
+            else{ write-WARNING "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+            BREAK ;
+        } ; 
     } ;
     write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
     $logspec = start-Log @pltSL ;
@@ -132,7 +140,7 @@ function Start-Log {
         $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
         if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
         else{ write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-    } ; 
+    } ;
     
     Single log for script/function example that accomodates detect/redirect from AllUsers scope'd installed code, and hunts a series of drive letters to find an alternate logging dir (defers to profile variables)
     .EXAMPLE

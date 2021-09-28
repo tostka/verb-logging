@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.69.0
+  Version     : 1.0.70.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1170,6 +1170,8 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 9/27/2021 Example3, updated to latest diverting rev
+    * 5:06 PM 9/21/2021 rewrote Example3 to handle CurrentUser profile installs (along with AllUsers etc).
     * 8:45 AM 6/16/2021 updated example for redir, to latest/fully-expanded concept code (defers to profile constants); added tricked out example for looping UPN/Ticket combo
     * 2:23 PM 5/6/2021 disabled $Path test, no bene, and AllUsers redir doesn't need a real file, just a path ; add example for detecting & redirecting logging, when psCommandPath points to Allusers profile (installed module function)
     * 2:05 PM 3/30/2021 added example demo'ing detect/divert off of AllUsers-scoped installed scripts
@@ -1238,27 +1240,45 @@ function Start-Log {
     if(!(get-variable rgxPSAllUsersScope -ea 0)){
         $rgxPSAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps(((d|m))*)1|dll)$" ;
     } ;
+    if(!(get-variable rgxPSCurrUserScope -ea 0)){
+        $rgxPSCurrUserScope="^$([regex]::escape([Environment]::GetFolderPath('MyDocuments')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps((d|m)*)1|dll)$" ;
+    } ;
     $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
-    $pltSL.Tag = $tickets -join ',' ; 
+    $pltSL.Tag = $ModuleName ; 
     if($script:PSCommandPath){
-        if($script:PSCommandPath -match $rgxPSAllUsersScope){
-            write-verbose "AllUsers context script/module, divert logging into [$budrv]:\scripts" ;
-            if((split-path $script:PSCommandPath -leaf) -ne $cmdletname){
-                # function in a module/script installed to allusers - defer name to Cmdlet/Function name
-                $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
-            } else { 
-                # installed allusers script, use the hosting script name
-                $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
-            }
-        }else {
+        if(($script:PSCommandPath -match $rgxPSAllUsersScope) -OR ($script:PSCommandPath -match $rgxPSCurrUserScope)){
+            $bDivertLog = $true ; 
+            switch -regex ($script:PSCommandPath){
+                $rgxPSAllUsersScope{$smsg = "AllUsers"} 
+                $rgxPSCurrUserScope{$smsg = "CurrentUser"}
+            } ;
+            $smsg += " context script/module, divert logging into [$budrv]:\scripts" 
+            write-verbose $smsg  ;
+            if($bDivertLog){
+                if((split-path $script:PSCommandPath -leaf) -ne $cmdletname){
+                    # function in a module/script installed to allusers|cu - defer name to Cmdlet/Function name
+                    $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
+                } else {
+                    # installed allusers|CU script, use the hosting script name
+                    $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
+                }
+            } ;
+        } else {
             $pltSL.Path = $script:PSCommandPath ;
         } ;
     } else {
-        if($MyInvocation.MyCommand.Definition -match $rgxPSAllUsersScope){
+        if(($MyInvocation.MyCommand.Definition -match $rgxPSAllUsersScope) -OR ($MyInvocation.MyCommand.Definition -match $rgxPSCurrUserScope) ){
              $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
-        } else {
+        } elseif(test-path $MyInvocation.MyCommand.Definition) {
             $pltSL.Path = $MyInvocation.MyCommand.Definition ;
-        } ;
+        } elseif($cmdletname){
+            $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
+        } else {
+            $smsg = "UNABLE TO RESOLVE A FUNCTIONAL `$CMDLETNAME, FROM WHICH TO BUILD A START-LOG.PATH!" ; 
+            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Warn } #Error|Warn|Debug 
+            else{ write-WARNING "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+            BREAK ;
+        } ; 
     } ;
     write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
     $logspec = start-Log @pltSL ;
@@ -1276,7 +1296,7 @@ function Start-Log {
         $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
         if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
         else{ write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-    } ; 
+    } ;
     
     Single log for script/function example that accomodates detect/redirect from AllUsers scope'd installed code, and hunts a series of drive letters to find an alternate logging dir (defers to profile variables)
     .EXAMPLE
@@ -1934,8 +1954,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUeQE1rcsqVnX3OP1pPkfWgW1k
-# /lygggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUviMw2bXZhg1f6w5aJAI2tTpC
+# +EegggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1950,9 +1970,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSqb+0R
-# 8Kpu9S4bXJ7idl9RAWEsCTANBgkqhkiG9w0BAQEFAASBgGLE+hx+1u0A70ON5v63
-# mmNMKJayAWzaP4dbgbtqu9E8f8lBt4pn+AQwgcW22fX/hi98HFmTIZj7OeZu0szz
-# qVWdfQOiDzeufIXX+XPcDJVbTjNUwFEtZN9IVQK74Ra617YBdrPFc2gOHxQbE8dk
-# f3/ZzAiFKdlpPb7VJpzvsjn0
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSO40GF
+# cs8QvJc69wcoxShCMHG2kzANBgkqhkiG9w0BAQEFAASBgC7wXSlG1CW6d5NdNi9z
+# Nx9ZVJtCGkFOWzx6Q7JaXzTLI+6uMooxk7w6F1KT0iMzppOdlW+T0R2K2d1FkAvl
+# BmEV/xzuVzeSo7IfERWBmvrzE9QzuplxgXQbXnGxqB9jlaK/OJLqiLS65pI8U04O
+# 0gJxCBEXeKDpGe+Zp+2ByKSU
 # SIG # End signature block
