@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.70.0
+  Version     : 1.0.71.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1170,6 +1170,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 10:46 AM 12/3/2021 added Tag cleanup: Remove-StringDiacritic,  Remove-StringLatinCharacters, Remove-IllegalFileNameChars (adds verb-io & verb-text deps); added requires for the usuals.
     * 9/27/2021 Example3, updated to latest diverting rev
     * 5:06 PM 9/21/2021 rewrote Example3 to handle CurrentUser profile installs (along with AllUsers etc).
     * 8:45 AM 6/16/2021 updated example for redir, to latest/fully-expanded concept code (defers to profile constants); added tricked out example for looping UPN/Ticket combo
@@ -1365,6 +1366,7 @@ function Start-Log {
     .LINK
     https://github.com/tostka/verb-logging
     #>
+    #Requires -Modules verb-IO, verb-Text
     [CmdletBinding()]
     PARAM(
         [Parameter(Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,HelpMessage="Path to target script (defaults to `$PSCommandPath) [-Path .\path-to\script.ps1]")]
@@ -1387,6 +1389,10 @@ function Start-Log {
     if (!(test-path -path $transcript)) { "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
     $transcript = join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($Path))" ; 
     if($Tag){
+        # clean for fso use
+        $Tag = Remove-StringDiacritic -String $Tag ; # verb-text
+        $Tag = Remove-StringLatinCharacters -String $Tag ; # verb-text
+        $Tag = Remove-InvalidFileNameChars -Name $Tag ; # verb-io, (inbound Path is assumed to be filesystem safe)
         $transcript += "-$($Tag)" ; 
     } ; 
     $transcript += "-Transcript-BATCH"
@@ -1954,8 +1960,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUviMw2bXZhg1f6w5aJAI2tTpC
-# +EegggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUytgHkH/5kPU5S+6ji+IRg1oA
+# 1k+gggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1970,9 +1976,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSO40GF
-# cs8QvJc69wcoxShCMHG2kzANBgkqhkiG9w0BAQEFAASBgC7wXSlG1CW6d5NdNi9z
-# Nx9ZVJtCGkFOWzx6Q7JaXzTLI+6uMooxk7w6F1KT0iMzppOdlW+T0R2K2d1FkAvl
-# BmEV/xzuVzeSo7IfERWBmvrzE9QzuplxgXQbXnGxqB9jlaK/OJLqiLS65pI8U04O
-# 0gJxCBEXeKDpGe+Zp+2ByKSU
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQjCeHU
+# 8u6Xz3Wm9c9wATmWH7/5gDANBgkqhkiG9w0BAQEFAASBgJOcuKJlvGR6mZQxIr7W
+# 45dVjFO4STDC+atr//wC0c/eX64zUH+/RAHOP3PWho4SP0ZjEJ1I01zr9XFmx+ps
+# O2Cg7aoYYzIHvW0nUzcGC0aZ+jCs43D8qT1cCSugHDOmznObIpn3ZMi39DYWgwWv
+# WCQHuRX82Ji4tqEKpU9PqwdH
 # SIG # End signature block
