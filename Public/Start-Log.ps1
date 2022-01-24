@@ -14,6 +14,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 4:23 PM 1/24/2022 added capture of start-trans - or it echos into pipeline
     * 10:46 AM 12/3/2021 added Tag cleanup: Remove-StringDiacritic,  Remove-StringLatinCharacters, Remove-IllegalFileNameChars (adds verb-io & verb-text deps); added requires for the usuals.
     * 9/27/2021 Example3, updated to latest diverting rev
     * 5:06 PM 9/21/2021 rewrote Example3 to handle CurrentUser profile installs (along with AllUsers etc).
@@ -63,7 +64,7 @@ function Start-Log {
         $transcript=$logspec.transcript ;
         if(Test-TranscriptionSupported){
             $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
-            start-transcript -Path $transcript ;
+            $startResults = start-transcript -Path $transcript ;
         } ;
     } else {throw "Unable to configure logging!" } ;
     Configure default logging from parent script name
