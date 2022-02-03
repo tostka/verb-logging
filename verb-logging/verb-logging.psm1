@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.72.0
+  Version     : 1.0.73.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1642,6 +1642,7 @@ function test-Transcribing2 {
     Github      : 
     Tags        : Powershell,Logging
     REVISIONS   :
+    * 9:15 AM 2/3/2022 pulled verbose -verbose: echos, only echo on stop/resume, added write-log support. Default only returns $true/$false and echos when it resumes logging. 
     * 12:02 PM 5/4/2020 minior cleanup, expanded CBH
     * 1.0 01 October, 2015 posted Initial Version
     .DESCRIPTION
@@ -1661,14 +1662,23 @@ function test-Transcribing2 {
     $Verbose = ($VerbosePreference -eq "Continue") ;
     $IsTranscribing = $false ; 
     $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
-    if (!$stopResults) {write-Verbose -verbose:$verbose "(not transcribing)"}
-    elseif ($stopResults -and $stopResults -match 'not\sbeen\sstarted"') {write-Verbose -verbose:$verbose "(test-Transcribing2:Not transcribing)"}
-    elseif ($stopResults -and $stopResults -match 'Transcript\sstopped,\soutput\sfile\sis'){
-        write-Verbose -verbose:$verbose "(test-Transcribing2:Running transcript was found ; resuming...)" ; 
+    $smsg = "(not transcribing)" ; 
+    if (!$stopResults) {
+        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
+        else{ write-verbose "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ; 
+    } elseif ($stopResults -and $stopResults -match 'not\sbeen\sstarted"') {
+        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
+        else{ write-verbose "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ; 
+    } elseif ($stopResults -and $stopResults -match 'Transcript\sstopped,\soutput\sfile\sis'){
+        $smsg = "(test-Transcribing2:Running transcript was found ; resuming...)" ; 
+        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
+        else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
         Start-Transcript -path $stopResults.Split(" ")[-1] -append  | out-null ; 
         $IsTranscribing = $True ; 
     } ; 
-    write-Verbose -verbose:$verbose "IsTranscribing:$($IsTranscribing)" ; 
+    $smsg = "IsTranscribing:$($IsTranscribing)" ; 
+    if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
+    else{ write-verbose "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ; 
     $IsTranscribing | write-output ; 
 }
 
@@ -1961,8 +1971,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUAQTxmHHAdtuRuZEGqbnhbuZz
-# XVWgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUp5GPvyxutF5r0mmUZvDUYyW7
+# 0C6gggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -1977,9 +1987,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBRtnZr3
-# LL7Pm6tryct7YjQZodlHSTANBgkqhkiG9w0BAQEFAASBgBshrwQd/tM8aYcJ1TS6
-# auimMrcFcyz4xcpOXwyWp9EZ6S3RgwMVJqrlVEYtW73QwdFlwpltwXtSn+4h1+oW
-# tF7QvnKqa01uEmm5GqN+0XhTg55+HNRuZDyR6THQtRzUEn8dmAM05WCQUK5pJe2C
-# 4O+t4KW2wB9dzcROHecwILxg
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBRq1LWI
+# tneGuBiMGyIZGm1b11adqTANBgkqhkiG9w0BAQEFAASBgJfe2R1RiikITASvWRc/
+# RLWcRmhT1G1CsBaAarClGRbahYlKr7MrLSZfHFfMNFSr7RD/y3JpzyB8ehpFSKFo
+# IfVswDa+HQ1nf8L15oHb2154LASAy0kePI9Ds++KLqTALtMEWdTvUIDpKmFa04OG
+# 6HgruSu+3v8V28zXHB5KW7xm
 # SIG # End signature block
