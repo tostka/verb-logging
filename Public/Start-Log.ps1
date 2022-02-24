@@ -14,6 +14,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 2:15 PM 2/24/2022 added -TagFirst param (put the ticket/tag at the start of the filenames)
     * 4:23 PM 1/24/2022 added capture of start-trans - or it echos into pipeline
     * 10:46 AM 12/3/2021 added Tag cleanup: Remove-StringDiacritic,  Remove-StringLatinCharacters, Remove-IllegalFileNameChars (adds verb-io & verb-text deps); added requires for the usuals.
     * 9/27/2021 Example3, updated to latest diverting rev
@@ -30,6 +31,9 @@ function Start-Log {
     * 11:16 AM 12/29/2019 init version
     .DESCRIPTION
     Start-Log.ps1 - Configure base settings for use of write-Log() logging
+    
+    Note: To use -TagFirst: set both -TagFirst & -Ticket; the ticket spec will prefix all generated filenames
+    
     Usage:
     #-=-=-=-=-=-=-=-=
     $backInclDir = "c:\usr\work\exch\scripts\" ;
@@ -52,10 +56,16 @@ function Start-Log {
     Path to target script (defaults to $PSCommandPath)
     .PARAMETER Tag
     Tag string to be used with -Path filename spec, to construct log file name [-tag 'ticket-123456]
+    .PARAMETER NoTimeStamp
+    Flag that suppresses the trailing timestamp value from the generated filenames[-NoTimestamp]
+    .PARAMETER TagFirst
+    Flag that leads the returned filename with the Tag parameter value[-TagFirst]
     .PARAMETER ShowDebug
-    Parameter to display Debugging messages [-ShowDebug switch]
+    Switch to display Debugging messages [-ShowDebug]
+    .PARAMETER whatIf
+    Whatif Flag [-whatIf]
     .EXAMPLE
-    $pltSL=@{ NoTimeStamp=$true ; Tag="($TenOrg)-LASTPASS" ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ; 
+    $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
     if($PSCommandPath){   $logspec = start-Log -Path $PSCommandPath @pltSL ; 
     } else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL ; } ; 
     if($logspec){
@@ -89,8 +99,11 @@ function Start-Log {
     if(!(get-variable rgxPSCurrUserScope -ea 0)){
         $rgxPSCurrUserScope="^$([regex]::escape([Environment]::GetFolderPath('MyDocuments')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps((d|m)*)1|dll)$" ;
     } ;
-    $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
+    $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
     $pltSL.Tag = $ModuleName ; 
+    # variant Ticket/TagFirst Tagging:
+    # $pltSL.Tag = $Ticket ;
+    # $pltSL.TagFirst = $true ;
     if($script:PSCommandPath){
         if(($script:PSCommandPath -match $rgxPSAllUsersScope) -OR ($script:PSCommandPath -match $rgxPSCurrUserScope)){
             $bDivertLog = $true ; 
@@ -158,7 +171,7 @@ function Start-Log {
         if(!(get-variable rgxPSAllUsersScope -ea 0)){
             $rgxPSAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps(((d|m))*)1|dll)$" ;
         } ;
-        $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
+        $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
         if($tickets[$iProcd-1]){$pltSL.Tag = "$($tickets[$iProcd-1])-$($UPN)"} ;
         if($script:PSCommandPath){
             if($script:PSCommandPath -match $rgxPSAllUsersScope){
@@ -222,6 +235,8 @@ function Start-Log {
         [string]$Tag,
         [Parameter(HelpMessage="Flag that suppresses the trailing timestamp value from the generated filenames[-NoTimestamp]")]
         [switch] $NoTimeStamp,
+        [Parameter(HelpMessage="Flag that leads the returned filename with the Tag parameter value[-TagFirst]")]
+        [switch] $TagFirst,
         [Parameter(HelpMessage="Debugging Flag [-showDebug]")]
         [switch] $showDebug,
         [Parameter(HelpMessage="Whatif Flag  [-whatIf]")]
@@ -232,14 +247,25 @@ function Start-Log {
     $Verbose = ($VerbosePreference -eq 'Continue') ; 
     $transcript = join-path -path (Split-Path -parent $Path) -ChildPath "logs" ;
     if (!(test-path -path $transcript)) { "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
-    $transcript = join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($Path))" ; 
+    #$transcript = join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($Path))" ; 
     if($Tag){
         # clean for fso use
         $Tag = Remove-StringDiacritic -String $Tag ; # verb-text
         $Tag = Remove-StringLatinCharacters -String $Tag ; # verb-text
         $Tag = Remove-InvalidFileNameChars -Name $Tag ; # verb-io, (inbound Path is assumed to be filesystem safe)
-        $transcript += "-$($Tag)" ; 
-    } ; 
+        if($TagFirst){
+            $smsg = "(-TagFirst:Building filenames with leading -Tag value)" ; 
+            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
+            else{ write-verbose "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ; 
+            $transcript = join-path -path $transcript -childpath "$($Tag)-$([system.io.path]::GetFilenameWithoutExtension($Path))" ; 
+            #$transcript = "$($Tag)-$($transcript)" ; 
+        } else { 
+            $transcript = join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($Path))" ; 
+            $transcript += "-$($Tag)" ; 
+        } ;
+    } else {
+        $transcript = join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($Path))" ; 
+    }; 
     $transcript += "-Transcript-BATCH"
     if(!$NoTimeStamp){ $transcript += "-$(get-date -format 'yyyyMMdd-HHmmtt')" } ; 
     $transcript += "-trans-log.txt"  ;
