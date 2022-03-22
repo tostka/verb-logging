@@ -273,6 +273,7 @@ Start-IseTranscript:pv
 Start-Log:Path
 Start-Log:Tag
 Start-Log:NoTimeStamp
+Start-Log:TagFirst
 Start-Log:showDebug
 Start-Log:whatIf
 Start-Log:Verbose

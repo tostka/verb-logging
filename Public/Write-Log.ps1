@@ -4,20 +4,21 @@ function Write-Log {
     .SYNOPSIS
     Write-Log.ps1 - Write-Log writes a message to a specified log file with the current time stamp, and write-verbose|warn|error's the matching msg.
     .NOTES
-    Version     : 0.0.
+    Version     : 1.0.0
     Author      : Todd Kadrie
     Website     :	http://www.toddomation.com
-    Twitter     :	@tostka, http://twitter.com/tostka
-    Additional Credits: Based on original concept by Jason Wasser
-    Website     :	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
-    Twitter     :	@wasserja
+    Twitter     :	@tostka / http://twitter.com/tostka
     CreatedDate : 2021-06-11
     FileName    : Write-Log.ps1
     License     : MIT License
-    Copyright   : (c) 2021 Todd Kadrie
+    Copyright   : (c) 2022 Todd Kadrie
     Github      : https://github.com/tostka/verb-logging
-    Tags        : Powershell,Logging,Output,Echo
-    REVISIONS   :
+    Tags        : Powershell,Logging,Output,Echo,Console
+    AddedCredit : Jason Wasser
+    AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
+    AddedTwitter:	@wasserja
+    REVISIONS
+    * 9:07 AM 3/21/2022 added -Level verbose & prompt support, flipped all non-usehost options, but verbose, from w-v -> write-host; added level prefix to console echos
     * 3:11 PM 8/17/2021 added verbose suppress to the get-colorcombo calls, clutters the heck out of outputs on verbose, no benef.
     * 10:53 AM 6/16/2021 get-help isn't displaying param details, pulled erroneous semi's from end of CBH definitions
     * 7:59 AM 6/11/2021 added H1|2|3 md-style #|##|## header tags ; added support for get-colorcombo, and enforced bg colors (legible regardless of local color scheme of console); expanded CBH, revised Author - it's diverged so substantially from JW's original concept, it's now "inspired-by", less than a variant of the original.
@@ -40,90 +41,108 @@ function Write-Log {
     The Write-Log function is designed to add logging capability to other scripts.
     In addition to writing output and/or verbose you can write to a log file for  ;
     later debugging.
+    Reimplementation of original concept by Jason Wasser.
     .PARAMETER Message  
     Message is the content that you wish to add to the log file.
     .PARAMETER Path  
     The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.
     .PARAMETER Level  
-    Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|Debug)[-level Info]
+    Specify the criticality of the log information being written to the log (defaults Info): (Info|Warn|Verbose|Error|Debug|H1|H2|H3)[-level Info]
     .PARAMETER useHost  
-    Switch to use write-host rather than write-[verbose|warn|error] [-useHost]
+    Switch to use write-host rather than write-[verbose|warn|error] (does not apply to H1|H2|H3|DEBUG which alt via uncolored write-host) [-useHost]
     .PARAMETER NoEcho
     Switch to suppress console echos (e.g log to file only [-NoEcho]
     .PARAMETER NoClobber  
     Use NoClobber if you do not wish to overwrite an existing file.
     .PARAMETER ShowDebug
     Parameter to display Debugging messages [-ShowDebug switch]
-    .INPUTS
-    None. Does not accepted piped input.
-    .OUTPUTS
-    Writes output to the specified Path.
     .EXAMPLE
-    Write-Log -Message 'Log message'   ;
-    Writes the message to default log loc (c:\Logs\PowerShellLog.log, -level defaults to Info).
-    .EXAMPLE
-    Write-Log -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log
-    Writes the content to the specified log file and creates the path and file specified.
-    .EXAMPLE
-    Write-Log -Message 'Folder does not exist.' -Path c:\Logs\Script.log -Level Error  ;
-    Writes the message to the specified log file as an error message, and writes the message to the error pipeline.
-    .EXAMPLE
-    # init content in script context ($MyInvocation is blank in function scope)
-    $logfile = join-path -path $ofile -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-LOG.txt"  ;
-    $logging = $True ;
-    $sBnr="#*======v `$tmbx:($($Procd)/$($ttl)):$($tmbx) v======" ;
-    $smsg="$($sBnr)" ;
-    if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug|H1|H2|H3 
-    else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-    Example with conditional write-log (with -useHost switch, to trigger native write-host use), else failthru to write-host output
-    .EXAMPLE
-    $transcript = join-path -path (Split-Path -parent $MyInvocation.MyCommand.Definition) -ChildPath "logs" ;
-    if(!(test-path -path $transcript)){ "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
-    $transcript=join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))"  ;
-    $transcript+= "-Transcript-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-trans-log.txt"  ;
-    # add log file variant as target of Write-Log:
-    $logfile=$transcript.replace("-Transcript","-LOG").replace("-trans-log","-log")
-    if($whatif){
-        $logfile=$logfile.replace("-BATCH","-BATCH-WHATIF") ;
-        $transcript=$transcript.replace("-BATCH","-BATCH-WHATIF") ;
-    } else {
-        $logfile=$logfile.replace("-BATCH","-BATCH-EXEC") ;
-        $transcript=$transcript.replace("-BATCH","-BATCH-EXEC") ;
-    } ;
-    if($Ticket){
-        $logfile=$logfile.replace("-BATCH","-$($Ticket)") ;
-        $transcript=$transcript.replace("-BATCH","-$($Ticket)") ;
-    } else {
-        $logfile=$logfile.replace("-BATCH","-nnnnnn") ;
-        $transcript=$transcript.replace("-BATCH","-nnnnnn") ;
-    } ;
-    $logging = $True ;
-    $sBnr="#*======v START PASS:$($ScriptBaseName) v======" ;
-    $smsg= "$($sBnr)" ;
-    if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } ; #Error|Warn
-    More complete boilerplate including $whatif & $ticket
-    .EXAMPLE
-    $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
-    $pltSL.Tag = "$(split-path -path $CSVPath -leaf)"; # build tag from a variable
-    # construct log name on calling script/function fullname
-    if($PSCommandPath){ $logspec = start-Log -Path $PSCommandPath @pltSL }
-    else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL } ;
-    if($logspec){
-        $logging=$logspec.logging ;
-        $logfile=$logspec.logfile ;
-        $transcript=$logspec.transcript ;
-        $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
-        start-Transcript -path $transcript ;
-    } else {throw "Unable to configure logging!" } ;
-    $sBnr="#*======v $(${CmdletName}): v======" ;
-    $smsg = $sBnr ;
-    if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
-    else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-    Example leveraging splatted start-log(), and either $PSCommandPath or $MyInvocation (support varies by host/psversion) to build the log name. 
-    .LINK
-    https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0  ;
-    #>
-    
+        PS>  Write-Log -Message 'Log message'   ;
+        Writes the message to default log loc (c:\Logs\PowerShellLog.log, -level defaults to Info).
+        .EXAMPLE
+        PS> Write-Log -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log ;
+        Writes the content to the specified log file and creates the path and file specified.
+        .EXAMPLE
+        PS> write-log -level warn "some information" -Path c:\tmp\tmp.txt
+        WARNING: 10:17:59: some information
+        Demo default use of the native write-warning cmdlet (default behavior when -useHost is not used)
+        .EXAMPLE
+        write-log -level warn "some information" -Path c:\tmp\tmp.txt -usehost
+        10:19:14: WARNING: some information
+        Demo use of the "warning" color scheme write-host cmdlet (behavior when -useHost *IS* used)
+        .EXAMPLE
+        PS> Write-Log -level Prompt -Message "Enter Text:" -Path c:\tmp\tmp.txt -usehost  ; 
+        PS> invoke-soundcue -type question ; 
+        PS> $enteredText = read-host ;
+        Echo's a distinctive Prompt color scheme for the message (vs using read-host native non-color-differentiating -prompt parameter), 
+        and writes a 'Prompt'-level entry to the log, uses my verb-io:invoke-soundCue to play a the system question sound; then uses promptless read-host to take typed input. 
+        PS> Write-Log -level Prompt -Message "Enter Password:" -Path c:\tmp\tmp.txt -usehost  ; 
+        PS> invoke-soundcue -type question ; 
+        PS> $SecurePW = read-host -AsSecureString ;        
+        Variant that demos collection of a secure password using read-host's native -AsSecureString param.
+        .EXAMPLE
+        PS>  $smsg = "ENTER CERTIFICATE PFX Password: (use 'dummy' for UserName)" ;
+        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level PROMPT } 
+        PS>  else{ write-host -foregroundcolor Blue -backgroundcolor White "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        PS>  $pfxcred=(Get-Credential -credential dummy) ;
+        PS>  Export-PfxCertificate -Password $pfxcred.password -Cert= $certpath -FilePath c:\path-to\output.pfx;
+        Demo use of write-log -level prompt, leveraging the get-credential popup GUI to collect a secure password (without use of username)
+        .EXAMPLE
+        PS>  # init content in script context ($MyInvocation is blank in function scope)
+        PS>  $logfile = join-path -path $ofile -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-LOG.txt"  ;
+        PS>  $logging = $True ;
+        PS>  $sBnr="#*======v `$tmbx:($($Procd)/$($ttl)):$($tmbx) v======" ;
+        PS>  $smsg="$($sBnr)" ;
+        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug|H1|H2|H3 
+        PS>  else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        PS>  Example with conditional write-log (with -useHost switch, to trigger native write-host use), else failthru to write-host output
+        PS>  .EXAMPLE
+        PS>  $transcript = join-path -path (Split-Path -parent $MyInvocation.MyCommand.Definition) -ChildPath "logs" ;
+        PS>  if(!(test-path -path $transcript)){ "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
+        PS>  $transcript=join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))"  ;
+        PS>  $transcript+= "-Transcript-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-trans-log.txt"  ;
+        PS>  # add log file variant as target of Write-Log:
+        PS>  $logfile=$transcript.replace("-Transcript","-LOG").replace("-trans-log","-log")
+        PS>  if($whatif){
+        PS>      $logfile=$logfile.replace("-BATCH","-BATCH-WHATIF") ;
+        PS>      $transcript=$transcript.replace("-BATCH","-BATCH-WHATIF") ;
+        PS>  } else {
+        PS>      $logfile=$logfile.replace("-BATCH","-BATCH-EXEC") ;
+        PS>      $transcript=$transcript.replace("-BATCH","-BATCH-EXEC") ;
+        PS>  } ;
+        PS>  if($Ticket){
+        PS>      $logfile=$logfile.replace("-BATCH","-$($Ticket)") ;
+        PS>      $transcript=$transcript.replace("-BATCH","-$($Ticket)") ;
+        PS>  } else {
+        PS>      $logfile=$logfile.replace("-BATCH","-nnnnnn") ;
+        PS>      $transcript=$transcript.replace("-BATCH","-nnnnnn") ;
+        PS>  } ;
+        PS>  $logging = $True ;
+        PS>  $sBnr="#*======v START PASS:$($ScriptBaseName) v======" ;
+        PS>  $smsg= "$($sBnr)" ;
+        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } ; #Error|Warn
+        More complete boilerplate including $whatif & $ticket
+        .EXAMPLE
+        PS>  $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
+        PS>  $pltSL.Tag = "$(split-path -path $CSVPath -leaf)"; # build tag from a variable
+        PS>  # construct log name on calling script/function fullname
+        PS>  if($PSCommandPath){ $logspec = start-Log -Path $PSCommandPath @pltSL }
+        PS>  else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL } ;
+        PS>  if($logspec){
+        PS>      $logging=$logspec.logging ;
+        PS>      $logfile=$logspec.logfile ;
+        PS>      $transcript=$logspec.transcript ;
+        PS>      $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
+        PS>      start-Transcript -path $transcript ;
+        PS>  } else {throw "Unable to configure logging!" } ;
+        PS>  $sBnr="#*======v $(${CmdletName}): v======" ;
+        PS>  $smsg = $sBnr ;
+        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
+        PS>  else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        Example leveraging splatted start-log(), and either $PSCommandPath or $MyInvocation (support varies by host/psversion) to build the log name. 
+        .LINK
+        https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0  ;
+    #>    
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, HelpMessage = "Message is the content that you wish to add to the log file")]
@@ -133,7 +152,7 @@ function Write-Log {
         [Alias('LogPath')]
         [string]$Path = 'C:\Logs\PowerShellLog.log',
         [Parameter(Mandatory = $false, HelpMessage = "Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|Debug)[-level Info]")]
-        [ValidateSet('Error','Warn','Info','H1','H2','H3','Debug')]
+        [ValidateSet('Error','Warn','Info','H1','H2','H3','Debug','Verbose','Prompt')]
         [string]$Level = "Info",
         [Parameter(HelpMessage = "Switch to use write-host rather than write-[verbose|warn|error] [-useHost]")]
         [switch] $useHost,
@@ -167,53 +186,77 @@ function Write-Log {
         # Write message to error, warning, or verbose pipeline and specify $LevelText
         switch ($Level) {
             'Error' {
-                $LevelText = 'ERROR: ' ; $smsg = ($EchoTime + $Message) ;
+                $LevelText = 'ERROR: ' ; $smsg = $EchoTime ;
                 if ($useHost) {
+                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 60 -verbose:$false} else { $plt=@{foregroundcolor='yellow';backgroundcolor='red'};};
                     write-host @plt $smsg
-                } else {if (!$NoEcho) { Write-Error $smsg } } ;
+                } else {if (!$NoEcho) { Write-Error ($smsg + $Message) } } ;
             }
             'Warn' {
-                $LevelText = 'WARNING: ' ; $smsg = ($EchoTime + $Message) ;
+                $LevelText = 'WARNING: ' ; $smsg = $EchoTime ;
                 if ($useHost) {
+                        $smsg += $LevelText + $Message ; 
                         if($buseCC){$plt=get-colorcombo 52 -verbose:$false} else { $plt=@{foregroundcolor='black';backgroundcolor='yellow'};};
                         write-host @plt $smsg ; 
-                } else {if (!$NoEcho) { Write-Warning $smsg } } ;
+                } else {if (!$NoEcho) { Write-Warning ($smsg + $Message) } } ;
             }
             'Info' {
-                $LevelText = 'INFO: ' ; $smsg = ($EchoTime + $Message) ;
+                $LevelText = 'INFO: ' ; $smsg = $EchoTime ;
                 if ($useHost) {
+                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 2 -verbose:$false} else { $plt=@{foregroundcolor='green';backgroundcolor='black'};};
                     write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Verbose $smsg } } ;                
+                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;                
             }
             'H1' {
-                $LevelText = '# ' ; $smsg = ($EchoTime + $LevelText + $Message) ;
+                $LevelText = '# ' ; $smsg = $EchoTime ;
                 if ($useHost) {
+                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 22 -verbose:$false } else { $plt=@{foregroundcolor='black';backgroundcolor='darkyellow'};};
                     write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Verbose $smsg } } ;
+                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;
             }
             'H2' {
-                $LevelText = '## ' ; $smsg = ($EchoTime + $LevelText + $Message) ;
+                $LevelText = '## ' ; $smsg = $EchoTime ;
                 if ($useHost) {
+                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 25 -verbose:$false } else { $plt=@{foregroundcolor='black';backgroundcolor='gray'};};
                     write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Verbose $smsg } } ;
+                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;
             }
             'H3' {
-                $LevelText = '### ' ; $smsg = ($EchoTime + $LevelText + $Message) ;
+                $LevelText = '### ' ; $smsg = $EchoTime ;
                 if ($useHost) {
+                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 30 -verbose:$false } else { $plt=@{foregroundcolor='black';backgroundcolor='darkgray'};};
                     write-host @plt $smsg 
-                }else {if (!$NoEcho) { Write-Verbose $smsg } } ;
+                }else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;
             }
             'Debug' {
                 # use of 'real' write-debug has too many dependancies, to function ; over-complicates the concept, just use a pale echo in parenthesis
                 $LevelText = 'DEBUG: ' ; $smsg = ($EchoTime + $LevelText + '(' + $Message + ')') ;
+                $smsg += $LevelText + $Message ; 
                 if($buseCC){$plt=get-colorcombo 4 -verbose:$false } else { $plt=@{foregroundcolor='red';backgroundcolor='black'};};
                 write-host @plt $smsg ;
-                if (!$NoEcho) { write-verbose $smsg }  ;                
+                if (!$NoEcho) { Write-Host $smsg }  ;                
+            }
+            'Verbose' {
+                $LevelText = 'VERBOSE: ' ; $smsg = ($EchoTime + $LevelText + '(' + $Message + ')') ;
+                if ($useHost) {
+                    $smsg += $LevelText + $Message ; 
+                    if($buseCC){$plt=get-colorcombo 1 -verbose:$false } else { $plt=@{foregroundcolor='Gray';backgroundcolor='black'};};
+                    write-host @plt $smsg ;
+                }else {if (!$NoEcho) { Write-Verbose ($smsg + $Message) } } ;          
+            }
+            'Prompt' {
+                # display/log input prompts with distinctive tag, and display them Blue on White, for attention-grabbing
+                $LevelText = 'PROMPT: ' ; $smsg = $EchoTime ;
+                if ($useHost) {
+                    $smsg += $LevelText + $Message ; 
+                    if($buseCC){$plt=get-colorcombo 15 -verbose:$false} else { $plt=@{foregroundcolor='Blue';backgroundcolor='White'};};
+                    write-host @plt $smsg ;
+                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;                       
             }
         } ;
         # Write log entry to $Path

@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.1.1.0
+  Version     : 1.1.0.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -1783,7 +1783,7 @@ function Write-Log {
     AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
     AddedTwitter:	@wasserja
     REVISIONS
-    * 9:07 AM 3/21/2022 added -Level verbose & prompt support, flipped all non-usehost options, but verbose, from w-v -> write-host; 
+    * 9:07 AM 3/21/2022 added -Level verbose support
     * 3:11 PM 8/17/2021 added verbose suppress to the get-colorcombo calls, clutters the heck out of outputs on verbose, no benef.
     * 10:53 AM 6/16/2021 get-help isn't displaying param details, pulled erroneous semi's from end of CBH definitions
     * 7:59 AM 6/11/2021 added H1|2|3 md-style #|##|## header tags ; added support for get-colorcombo, and enforced bg colors (legible regardless of local color scheme of console); expanded CBH, revised Author - it's diverged so substantially from JW's original concept, it's now "inspired-by", less than a variant of the original.
@@ -1814,7 +1814,7 @@ function Write-Log {
     .PARAMETER Level  
     Specify the criticality of the log information being written to the log (defaults Info): (Info|Warn|Verbose|Error|Debug|H1|H2|H3)[-level Info]
     .PARAMETER useHost  
-    Switch to use write-host rather than write-[verbose|warn|error] (does not apply to H1|H2|H3|DEBUG which alt via uncolored write-host) [-useHost]
+    Switch to use write-host rather than write-[verbose|warn|error] [-useHost]
     .PARAMETER NoEcho
     Switch to suppress console echos (e.g log to file only [-NoEcho]
     .PARAMETER NoClobber  
@@ -1825,33 +1825,11 @@ function Write-Log {
         PS>  Write-Log -Message 'Log message'   ;
         Writes the message to default log loc (c:\Logs\PowerShellLog.log, -level defaults to Info).
         .EXAMPLE
-        PS> Write-Log -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log ;
+        PS> Write-Log -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log
         Writes the content to the specified log file and creates the path and file specified.
         .EXAMPLE
-        PS> write-log -level warn "some information" -Path c:\tmp\tmp.txt
-        WARNING: 10:17:59: some information
-        Demo default use of the native write-warning cmdlet (default behavior when -useHost is not used)
-        .EXAMPLE
-        write-log -level warn "some information" -Path c:\tmp\tmp.txt -usehost
-        10:19:14: WARNING: some information
-        Demo use of the "warning" color scheme write-host cmdlet (behavior when -useHost *IS* used)
-        .EXAMPLE
-        PS> Write-Log -level Prompt -Message "Enter Text:" -Path c:\tmp\tmp.txt -usehost  ; 
-        PS> invoke-soundcue -type question ; 
-        PS> $enteredText = read-host ;
-        Echo's a distinctive Prompt color scheme for the message (vs using read-host native non-color-differentiating -prompt parameter), 
-        and writes a 'Prompt'-level entry to the log, uses my verb-io:invoke-soundCue to play a the system question sound; then uses promptless read-host to take typed input. 
-        PS> Write-Log -level Prompt -Message "Enter Password:" -Path c:\tmp\tmp.txt -usehost  ; 
-        PS> invoke-soundcue -type question ; 
-        PS> $SecurePW = read-host -AsSecureString ;        
-        Variant that demos collection of a secure password using read-host's native -AsSecureString param.
-        .EXAMPLE
-        PS>  $smsg = "ENTER CERTIFICATE PFX Password: (use 'dummy' for UserName)" ;
-        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level PROMPT } 
-        PS>  else{ write-host -foregroundcolor Blue -backgroundcolor White "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-        PS>  $pfxcred=(Get-Credential -credential dummy) ;
-        PS>  Export-PfxCertificate -Password $pfxcred.password -Cert= $certpath -FilePath c:\path-to\output.pfx;
-        Demo use of write-log -level prompt, leveraging the get-credential popup GUI to collect a secure password (without use of username)
+        PS> Write-Log -Message 'Folder does not exist.' -Path c:\Logs\Script.log -Level Error  ;
+        Writes the message to the specified log file as an error message, and writes the message to the error pipeline.
         .EXAMPLE
         PS>  # init content in script context ($MyInvocation is blank in function scope)
         PS>  $logfile = join-path -path $ofile -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-LOG.txt"  ;
@@ -1917,7 +1895,7 @@ function Write-Log {
         [Alias('LogPath')]
         [string]$Path = 'C:\Logs\PowerShellLog.log',
         [Parameter(Mandatory = $false, HelpMessage = "Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|Debug)[-level Info]")]
-        [ValidateSet('Error','Warn','Info','H1','H2','H3','Debug','Verbose','Prompt')]
+        [ValidateSet('Error','Warn','Info','H1','H2','H3','Debug','Verbose')]
         [string]$Level = "Info",
         [Parameter(HelpMessage = "Switch to use write-host rather than write-[verbose|warn|error] [-useHost]")]
         [switch] $useHost,
@@ -1951,77 +1929,60 @@ function Write-Log {
         # Write message to error, warning, or verbose pipeline and specify $LevelText
         switch ($Level) {
             'Error' {
-                $LevelText = 'ERROR: ' ; $smsg = $EchoTime ;
+                $LevelText = 'ERROR: ' ; $smsg = ($EchoTime + $Message) ;
                 if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 60 -verbose:$false} else { $plt=@{foregroundcolor='yellow';backgroundcolor='red'};};
                     write-host @plt $smsg
-                } else {if (!$NoEcho) { Write-Error ($smsg + $Message) } } ;
+                } else {if (!$NoEcho) { Write-Error $smsg } } ;
             }
             'Warn' {
-                $LevelText = 'WARNING: ' ; $smsg = $EchoTime ;
+                $LevelText = 'WARNING: ' ; $smsg = ($EchoTime + $Message) ;
                 if ($useHost) {
-                        $smsg += $LevelText + $Message ; 
                         if($buseCC){$plt=get-colorcombo 52 -verbose:$false} else { $plt=@{foregroundcolor='black';backgroundcolor='yellow'};};
                         write-host @plt $smsg ; 
-                } else {if (!$NoEcho) { Write-Warning ($smsg + $Message) } } ;
+                } else {if (!$NoEcho) { Write-Warning $smsg } } ;
             }
             'Info' {
-                $LevelText = 'INFO: ' ; $smsg = $EchoTime ;
+                $LevelText = 'INFO: ' ; $smsg = ($EchoTime + $Message) ;
                 if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 2 -verbose:$false} else { $plt=@{foregroundcolor='green';backgroundcolor='black'};};
                     write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;                
+                } else {if (!$NoEcho) { Write-Verbose $smsg } } ;                
             }
             'H1' {
-                $LevelText = '# ' ; $smsg = $EchoTime ;
+                $LevelText = '# ' ; $smsg = ($EchoTime + $LevelText + $Message) ;
                 if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 22 -verbose:$false } else { $plt=@{foregroundcolor='black';backgroundcolor='darkyellow'};};
                     write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;
+                } else {if (!$NoEcho) { Write-Verbose $smsg } } ;
             }
             'H2' {
-                $LevelText = '## ' ; $smsg = $EchoTime ;
+                $LevelText = '## ' ; $smsg = ($EchoTime + $LevelText + $Message) ;
                 if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 25 -verbose:$false } else { $plt=@{foregroundcolor='black';backgroundcolor='gray'};};
                     write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;
+                } else {if (!$NoEcho) { Write-Verbose $smsg } } ;
             }
             'H3' {
-                $LevelText = '### ' ; $smsg = $EchoTime ;
+                $LevelText = '### ' ; $smsg = ($EchoTime + $LevelText + $Message) ;
                 if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 30 -verbose:$false } else { $plt=@{foregroundcolor='black';backgroundcolor='darkgray'};};
                     write-host @plt $smsg 
-                }else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;
+                }else {if (!$NoEcho) { Write-Verbose $smsg } } ;
             }
             'Debug' {
                 # use of 'real' write-debug has too many dependancies, to function ; over-complicates the concept, just use a pale echo in parenthesis
                 $LevelText = 'DEBUG: ' ; $smsg = ($EchoTime + $LevelText + '(' + $Message + ')') ;
-                $smsg += $LevelText + $Message ; 
                 if($buseCC){$plt=get-colorcombo 4 -verbose:$false } else { $plt=@{foregroundcolor='red';backgroundcolor='black'};};
                 write-host @plt $smsg ;
-                if (!$NoEcho) { Write-Host $smsg }  ;                
+                if (!$NoEcho) { write-verbose $smsg }  ;                
             }
             'Verbose' {
                 $LevelText = 'VERBOSE: ' ; $smsg = ($EchoTime + $LevelText + '(' + $Message + ')') ;
                 if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 1 -verbose:$false } else { $plt=@{foregroundcolor='Gray';backgroundcolor='black'};};
                     write-host @plt $smsg ;
-                }else {if (!$NoEcho) { Write-Verbose ($smsg + $Message) } } ;          
-            }
-            'Prompt' {
-                # display/log input prompts with distinctive tag, and display them Blue on White, for attention-grabbing
-                $LevelText = 'PROMPT: ' ; $smsg = $EchoTime ;
-                if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
-                    if($buseCC){$plt=get-colorcombo 15 -verbose:$false} else { $plt=@{foregroundcolor='Blue';backgroundcolor='White'};};
-                    write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;                       
+                }else {if (!$NoEcho) { Write-Verbose $smsg } } ;          
             }
         } ;
         # Write log entry to $Path
@@ -2040,8 +2001,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUH1njxag635N/ngxgoUywYpHu
-# HhagggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU7IYGt2WxHraQTfYqKmwMMgPo
+# IsqgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -2056,9 +2017,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSUelaE
-# 2NTQkkxu881NyuBtPKtA5TANBgkqhkiG9w0BAQEFAASBgGjfJN8sAln51R0byywj
-# K73Yu2gbmHEqxMVlCbl4lE4nWhjIyq8Z8ZQKWXfsWA3zrQDeL/wu87blY8g8G7cR
-# cNvA32C+oJW3o8x20QKI62f/AMZyOy7i9MG38DK22qDsc9F62zJSXBhOVKbkrL8t
-# JlaXX539U5RqFka7qL1ObzEt
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBT+/FSZ
+# VR96QrT/ffN97pI2y31gXDANBgkqhkiG9w0BAQEFAASBgJSVXeSIk5A5Yz3p7KVU
+# ULVkXd/IDIVZCKyRD/D9iTbF7IbkYUzAPIbiku2PJvk8OgotxJsrBGwdBNgh7QRR
+# jgJmbZ8K1OqpuGWvnWZ6E2sfFaTp3Q2z1HwZV5VU9PI8PmmQn4laP7I2E66vxPen
+# 85EFZ/xIOSFt9H5+xoX68sNu
 # SIG # End signature block
