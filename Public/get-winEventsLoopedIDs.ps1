@@ -2,7 +2,7 @@
 function get-winEventsLoopedIDs {
     <#
     .SYNOPSIS
-    get-lastevent - return the last 7 wake events on the local pc
+    get-winEventsLoopedIDs - get-winevent -filterhashtable paremeter supports an array in the ID key, but I want MaxEvents _per event_ filtered, not overall (total most recent 7 drawn from most recent 14 of each type, sorted by date). This function pulls the ID array off and loops & aggregates the events, sorts on time, and returns the most recent x. 
     .NOTES
     Version     : 1.0.11.0
     Author      : Todd Kadrie
@@ -17,14 +17,12 @@ function get-winEventsLoopedIDs {
     AddedWebsite:	REFERENCEURL
     AddedTwitter:	@HANDLE / http://twitter.com/HANDLE
     REVISIONS
+    * 12:28 PM 7/7/2022 updated CBH syn/desc to more accurately reflect function
     * 8:11 AM 3/9/2020 added verbose support & verbose echo'ing of hash values
     * 4:00 PM 3/7/2020 ran vsc expalias
     * 1:11 PM 3/6/2020 init
     .DESCRIPTION
-    get-winevents -filterhashtable supports an array in the ID field, but I want MaxEvents _per event_ filtered,
-    not overall (total most recent 7 drawn from most recent 14 of each type, sorted by date)
-    This function pulls the ID array off and loops & aggregate the events,
-    sorts on time, and returns the most recent x
+    get-winEventsLoopedIDs -filterhashtable supports an array in the ID key, but I want MaxEvents _per event_ filtered, not overall (total most recent 7 drawn from most recent 14 of each type, sorted by date). Passed a -filter hashtable, this function pulls the ID array off and loops & aggregates the events, sorts on time, and returns the most recent x of each ID. 
     .PARAMETER MaxEvents
     Maximum # of events to poll for each event specified -MaxEvents 14]
     .PARAMETER FinalEvents
@@ -34,9 +32,9 @@ function get-winEventsLoopedIDs {
     A typical hash of this type, could look like: @{logname='System';id=6009 ;ProviderName='EventLog';Level=4;}
     Corresponding to a search of the System log, EventLog source, for ID 6009, of Informational type (Level 4).
     .EXAMPLE
-    [array]$evts = @() ;
-    $hlastShutdown=@{logname = 'System'; ProviderName = $null ;  ID = '13','6008','13','6008','6006' ; Level = 4 ; } ;
-    $evts += get-winEventsLoopedIDs -filter $hlastShutdown -MaxEvents ;
+    PS> [array]$evts = @() ;
+    PS> $hlastShutdown=@{logname = 'System'; ProviderName = $null ;  ID = '13','6008','13','6008','6006' ; Level = 4 ; } ;
+    PS> $evts += get-winEventsLoopedIDs -filter $hlastShutdown -MaxEvents ;
     The above runs a collection pass for each of the ID's specified above (which are associated with shutdowns),
     returns the 14 most recent of each type, sorts the aggregate matched events on timestamp, and returns the most
     recent 7 events of any of the matched types.
