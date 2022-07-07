@@ -2,7 +2,7 @@
 function get-lastevent {
     <#
     .SYNOPSIS
-    get-lastevent - return the last 7 wake events on the local pc
+    get-lastevent - get-winevent wrapper to pull most recent (Bootup|Shutdown|Sleep|Wake|Logon|Logoff) system eventlog markers on local system. Expands get-winevents builtin -filterhashtable, with post-filtering on Message content. By default returns most recent 7 of each ID specified.
     .NOTES
     Version     : 1.0.29.0
     Author      : Todd Kadrie
@@ -17,6 +17,7 @@ function get-lastevent {
     AddedWebsite:	REFERENCEURL
     AddedTwitter:	@HANDLE / http://twitter.com/HANDLE
     REVISIONS
+    * 12:51 PM 7/7/2022 fixed tag typo in logoff; updated CBH to dump examples of native get-winevent filters for each role (simple routine reference for other work); added std PS> prefixes to examples
     * 7:47 AM 3/9/2020 reworked get-winEventsLoopedIDs; added Verbose support across all get-last*()
     * 4:00 PM 3/7/2020 ran vsc expalias
     * 7:19 AM 3/6/2020 rewriting to consolidate several get-lastxxx, with params to tag the variants, and an alias/function to deliver the matching names
@@ -25,7 +26,7 @@ function get-lastevent {
     # vers: 7:17 AM 8/26/2014 corrected date fmt string
     # ver: 2:48 PM 8/25/2014 - fixed output to display day of week as well
     .DESCRIPTION
-    get-lastevent - return the last 7 sleep/wake/shutdown/bootup events on the local pc
+    get-lastevent - get-winevent wrapper to pull most recent (Bootup|Shutdown|Sleep|Wake|Logon|Logoff) system eventlog markers on local system. Expands get-winevents builtin -filterhashtable, with post-filtering on Message content. By default returns most recent 7 of each ID specified.
 
     ## FilterhashTable param options:
     |Key name|Value data type|Accepts wildcard characters?|
@@ -64,6 +65,7 @@ function get-lastevent {
     |Error|2|
     |Critical|1|
     |LogAlways|0|
+    
     .PARAMETER MaxEvents
     Maximum # of events to poll for each event specified[-MaxEvents 14]
     .PARAMETER FinalEvents
@@ -79,43 +81,108 @@ function get-lastevent {
     .PARAMETER Logon
     Return most recent Logon events [-Logon]
     .PARAMETER Logoff
-    Return most recent Logoff events [-Logon]
+    Return most recent Logoff events [-Logoff]
     .EXAMPLE
-    get-lastevent -Shutdown -verbose
+    PS> get-lastevent -Shutdown -verbose
     Get last Shutdown events w verbose output
     .EXAMPLE
-    get-lastevent -Bootup 
-    Get last Bootup events w verbose output
+    PS> get-lastevent -Bootup 
+    Get last Bootup events
     .EXAMPLE
-    get-lastevent -Sleep 
-    Get last Sleep events w verbose output
+    PS> get-lastevent -Sleep 
+    Get last Sleep events
     .EXAMPLE
-    get-lastevent -Wake 
-    Get last Wake events w verbose output
+    PS> get-lastevent -Wake 
+    Get last Wake events 
     .EXAMPLE
-    get-lastevent -Logoff
-    Return most recent Logoff events [-Logon]
+    PS> get-lastevent -Logon
+    Return most recent Logon events
+    .EXAMPLE
+    PS> get-lastevent -Logoff
+    Return most recent Logoff events
+    .EXAMPLE
+    PS> $hlastBootUp=@{
+    PS>     logname      = "System" ;
+    PS>     ProviderName = "EventLog" ;
+    PS>     ID           = 6009 ;
+    PS>     Level        = 4 ;
+    PS>     Verbose      = $($VerbosePreference -eq 'Continue') ;
+    PS> } ;
+    PS> $evts = get-winevent -FilterHashtable $hlastBootUp ; 
+    Demo native get-winevent -filter for LastBootup events
+    .EXAMPLE
+    PS>  $hlastShutdown=@{
+    PS>      logname      = 'System';
+    PS>      ProviderName = $null ;
+    PS>      ID           = '13','6008','13','6008','6006' ;
+    PS>      Level        = 4 ;
+    PS>      Verbose      = $($VerbosePreference -eq 'Continue') ;
+    PS>  } ;
+    PS>  $evts = get-winevent -FilterHashtable $hlastShutdown ; 
+    Demo native get-winevent -filter for lastShutdown events
+    .EXAMPLE
+    PS>  $hlastSleep=@{
+    PS>      logname      = "System" ;
+    PS>      ProviderName = "Microsoft-Windows-Kernel-Power" ;
+    PS>      ID           = 42 ;
+    PS>      Level        = 4  ;
+    PS>      Verbose      = $($VerbosePreference -eq 'Continue') ;
+    PS>  } ;
+    PS>  $evts = get-winevent -FilterHashtable $hlastSleep ; 
+    PS>  
+    Demo native get-winevent -filter for lastSleep events
+    .EXAMPLE
+    PS>  $hlastWake=@{
+    PS>      logname      = "System" ;
+    PS>      ProviderName = "NETLOGON" ;
+    PS>      ID           = 5719 ;
+    PS>      Level    = 2 ;
+    PS>      Verbose      = $($VerbosePreference -eq 'Continue') ;
+    PS>  } ;
+    PS>  $evts = get-winevent -FilterHashtable $hlastWake ; 
+    PS>  
+    Demo native get-winevent -filter for lastWake events
+    .EXAMPLE
+    PS>  $hlastLogon=@{
+    PS>      logname      = "security";
+    PS>      ProviderName = $null ;
+    PS>      ID           = 4624 ;
+    PS>      Level        = 4  ;
+    PS>      Verbose      = $($VerbosePreference -eq 'Continue') ;
+    PS>  } ;
+    PS>  $evts = get-winevent -FilterHashtable $hlastLogon ; 
+    Demo native get-winevent -filter for lastLogon events
+    .EXAMPLE
+    PS>  $hlastLogoff=@{
+    PS>      logname      = "Security";
+    PS>      ProviderName = $null ;
+    PS>      ID           = 4634 ;
+    PS>      Level        = 4  ;
+    PS>      Verbose      = $($VerbosePreference -eq 'Continue') ;
+    PS>  } ;
+    PS>  $evts = get-winevent -FilterHashtable $hlastLogoff ; 
+    Demo native get-winevent -filter for lastLogoff events
     .LINK
     https://github.com/tostka/verb-logging
     #>
-    ##Requires -Module verb-Logging
+    ##Requires -Module verb-xxx
     [CmdletBinding()]
     PARAM(
         [Parameter(HelpMessage = "Maximum # of events to poll for each event specified[-MaxEvents 14]")]
         [int] $MaxEvents = 14,
         [Parameter(HelpMessage = "Final # of sorted events of all types to return [-FinalEvents 7]")]
         [int] $FinalEvents = 7,
-        [Parameter(HelpMessage="Return most recent Bootup events [-Bootup]")]
+        [Parameter(HelpMessage="Return most recent System Bootup events [-Bootup]")]
         [switch] $Bootup,
-        [Parameter(HelpMessage="Return most recent Shutdown events [-Shutdown]")]
+        [Parameter(HelpMessage="Return most recent System Shutdown events [-Shutdown]")]
         [switch] $Shutdown,
-        [Parameter(HelpMessage="Return most recent Sleep events [-Sleep]")]
+        [Parameter(HelpMessage="Return most recent System Sleep events [-Sleep]")]
         [switch] $Sleep,
-        [Parameter(HelpMessage="Return most recent Wake events [-Wake]")]
+        [Parameter(HelpMessage="Return most recent System Wake events [-Wake]")]
         [switch] $Wake,
-        [Parameter(HelpMessage="Return most recent Logon events [-Logon]")]
+        [Parameter(HelpMessage="Return most recent System Logon events [-Logon]")]
         [switch] $Logon,
-        [Parameter(HelpMessage="Return most recent Logoff events [-Logon]")]
+        [Parameter(HelpMessage="Return most recent System Logoff events [-Logoff]")]
         [switch] $Logoff
     ) ;
     $Verbose = ($VerbosePreference -eq 'Continue') ;
@@ -208,15 +275,15 @@ function get-lastevent {
         $evts = $evts | Where-Object { $_.properties[8].value -eq 2 } ;
         If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
     } elseif ($Logoff) {
-        $hlastLogon=@{
+        $hlastLogoff=@{
             logname      = "Security";
             ProviderName = $null ;
             ID           = 4634 ;
             Level        = 4  ;
             Verbose      = $($VerbosePreference -eq 'Continue') ;
         } ;
-        $filter =  $hlastLogon ;
-        $Tag = "Logon" ;
+        $filter =  $hlastLogoff ;
+        $Tag = "Logoff" ;
         $message = $null ;
         $AMPMFilter = $null ;
         write-verbose -verbose:$verbose  "$((get-date).ToString('HH:mm:ss')):get-winEventsLoopedIDs w`n$(($filter|out-string).trim())" ; 
