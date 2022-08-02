@@ -8,6 +8,7 @@ Function Start-IseTranscript {
     EDITED BY: Todd Kadrie
     AUTHOR: ed wilson, msft
     REVISIONS:
+    * 8:38 AM 7/29/2022 updated CBH example, to preclear consolet text, ahead of use (at the normal start-transcript loc); also added example code to defer to new start-transcript support on ISE for Psv5+ 
     * 12:05 PM 3/1/2020 rewrote header to loosely emulate most of psv5.1 stock transcirpt header
     * 8:40 AM 3/11/2015 revised to support PSv3's break of the $psise.CurrentPowerShellTab.consolePane.text object
         and replacement with the new...
@@ -15,23 +16,6 @@ Function Start-IseTranscript {
         (L13 FEs are PSv4, lyn650 is PSv2)
     * 9:22 AM 3/5/2015 tweaked, added autologname generation (from script loc & name)
     * 09/10/2010 17:27:22 - original
-    TYPICAL USAGE:
-        Call from Cleanup() (or script-end, only populated post-exec, not realtime)
-        #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-        if($host.Name -eq "Windows PowerShell ISE Host"){
-                # 8:46 AM 3/11/2015 shift the logfilename gen out here, so that we can arch it
-                $Logname= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + (get-date -uformat "%Y%m%d-%H%M" ) + "-ISEtrans.log")) ;
-                write-host "`$Logname: $Logname";
-                Start-iseTranscript -logname $Logname ;
-                # optional, normally wouldn't archive ISE debugging passes
-                #Archive-Log $Logname ;
-            } else {
-                if($showdebug -OR $verbose){ write-host -ForegroundColor Yellow "$((get-date).ToString('HH:mm:ss')):Stop Transcript" };
-                Stop-TranscriptLog ;
-                if($showdebug -OR $verbose){ write-host -ForegroundColor Yellow "$((get-date).ToString('HH:mm:ss')):Archive Transcript" };
-                Archive-Log $transcript ;
-            } # if-E
-        #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     KEYWORDS: Transcript, Logging, ISE, Debugging
     HSG: WES-09-25-10
     .DESCRIPTION
@@ -43,8 +27,89 @@ Function Start-IseTranscript {
     .OUTPUTS
     [io.file]
     .EXAMPLE
-    Archive-Log $Logname ;
-    Archives specified file to Archive
+    PS> #region  ; #*------v GENERIC PATH DETECTION/TRANSCRIPT CODE v------
+    PS> # switch path detection depending on if in func or in script
+    PS> switch($pscmdlet.myinvocation.mycommand.CommandType){
+    PS>     'Function' {
+    PS>         $smsg = "(CommandType:Function:interpolating Context Path values from other configured sources)" ;
+    PS>         write-verbose $smsg ;
+    PS>         Try {$ScriptRoot = Get-Variable -Name PSScriptRoot -ValueOnly -ErrorAction Stop }
+    PS>         Catch {$ScriptRoot = Split-Path $script:MyInvocation.MyCommand.Path } ;
+    PS>         $ScriptDir= $ScriptRoot ;
+    PS>         $ScriptBaseName = $pscmdlet.myinvocation.mycommand.Name ;
+    PS>         $ScriptNameNoExt = [system.io.path]::GetFilenameWithoutExtension($pscmdlet.myinvocation.mycommand.Name ) ;
+    PS>         $smsg += "`n--Legacy Path resolutions:" ;
+    PS>         $smsg += "`n`$ScriptDir (fr `$PSScriptRoot):`t$($ScriptDir)" ;
+    PS>         $smsg += "`n`$ScriptBaseName (fr `$pscmdlet.myinvocation.mycommand.Name):`t$($ScriptBaseName)" ;
+    PS>         $smsg += "`n`$ScriptNameNoExt (fr `$pscmdlet.myinvocation.mycommand.Name):`t$($ScriptNameNoExt)" ;
+    PS>     }
+    PS>     'ExternalScript' {
+    PS>         $smsg = "CommandType:ExternalScript:.ps1:Determining values from legacy sources)" ;
+    PS>         write-verbose $smsg ;
+    PS>         TRY{
+    PS>             $ScriptDir=((Split-Path -parent $MyInvocation.MyCommand.Definition -ErrorAction STOP) + "\");
+    PS>             $ScriptBaseName = (Split-Path -Leaf ((&{$myInvocation}).ScriptName))  ;
+    PS>             $ScriptNameNoExt = [system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName) ;
+    PS>             $smsg += "`n--Legacy Path resolutions:" ;
+    PS>             $smsg += "`n`$ScriptDir (fr `$MyInvocation):`t$($ScriptDir)" ;
+    PS>             $smsg += "`n`$ScriptBaseName (fr &{$myInvocation}).ScriptName):`t$($ScriptBaseName)" ;
+    PS>             $smsg += "`n`$ScriptNameNoExt (fr `$MyInvocation.InvocationName):`t$($ScriptNameNoExt)" ;
+    PS>             $smsg += "`n`$MyInvocation.MyCommand.Path:`t$((Split-Path -parent $MyInvocation.MyCommand.Path))" ;
+    PS>         } CATCH {
+    PS>             $smsg = "Running context does not support populated `$MyInvocation.MyCommand.Definition|Path" ;
+    PS>             $smsg += "(interpolating values from other configured sources)" ;
+    PS>         } ;
+    PS>     }
+    PS>     default {
+    PS>         write-warning "Unrecognized `$pscmdlet.myinvocation.mycommand.CommandType:$($pscmdlet.myinvocation.mycommand.CommandType)!" ;
+    PS>     } ;
+    PS> } ; 
+    PS> write-verbose $smsg ; 
+    PS> $transcript = join-path -path $ScriptDir -childpath 'Logs' ; 
+    PS> if(!(test-path $transcript)){ mkdir $transcript -verbose } ; 
+    PS> $transcript = join-path $transcript -childpath "$($ScriptNameNoExt)" ; 
+    PS> # $transcript += "-TAG" ; 
+    PS> if($whatif){$transcript += "-WHATIF" } ELSE { $transcript += "-EXEC" } ; 
+    PS> $transcript += "-$(get-date -format 'yyyyMMdd-HHmmtt')" ; 
+    PS> $transcript += "-trans-log.txt" ; 
+    PS> $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
+    PS> TRY {
+    PS>     if($psise -and ($host.version.major -lt 5)){
+    PS>         Write-host -foregroundcolor white "Start-Transcript *is not* supported under PS$($host.version.major): (pre-clearing console for trailing start-ISETranscript use)" ;
+    PS>         if ($host.version.major -lt 3) {$psISE.CurrentPowerShellTab.Output.Clear()}
+    PS>         else {$psise.CurrentPowerShellTab.consolePane.Clear()} ;
+    PS>     } else {
+    PS>         $startResults = Start-transcript -path $transcript -ErrorAction stop;
+    PS>         write-host $startResults ;
+    PS>     } ;
+    PS> } CATCH {
+    PS>     Break ;
+    PS> } ;    
+    PS> #endregion  ; #*------^ END GENERIC TRANSCRIPT W PATH DETECTION ^------
+    PS> #region  ; #*------v START-ISETRANSCRIPT WRAPPER BLOCK v------    
+    PS> write-verbose "2. Call from Cleanup() (or script-end, only populated post-exec, not realtime)" ; 
+    PS> if($psise -and ($host.version.major -lt 5)){
+    PS>     if(-not $transcript){
+    PS>         if($scriptNameNoExt){
+    PS>             $transcript= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + (get-date -uformat "%Y%m%d-%H%M" ) + "-ISEtrans.log")) ;
+    PS>         } else {
+    PS>             $smsg = "unable to find/construct a $transcript!" ; 
+    PS>             write-warning $smsg ; 
+    PS>             throw $smsg ; 
+    PS>             Break ; 
+    PS>         } ;  
+    PS>     } ;    
+    PS>     write-host "`$Transcript: $transcript";
+    PS>     Start-iseTranscript -logname $transcript ;
+    PS>     # optional, normally wouldn't archive ISE debugging passes
+    PS>     #Archive-Log $Logname ;
+    PS> } else {
+    PS>     $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
+    PS>     write-host $stopResults ; 
+    PS>     #Archive-Log $transcript ;
+    PS> } ; 
+    PS> #endregion  ; #*------^ END START-ISETRANSCRIPT WRAPPER BLOCK ^------  
+    Demo full set of wrapper calls covering path detection, transcript path construction, and calls to Start-ISETranscript
     .Link
     Http://www.ScriptingGuys.com
     #Requires -Version 2.0
