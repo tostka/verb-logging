@@ -1,4 +1,4 @@
-#*------v Write-Log.ps1 v------
+﻿#*------v Write-Log.ps1 v------
 function Write-Log {
     <#
     .SYNOPSIS

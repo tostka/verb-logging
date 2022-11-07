@@ -1,4 +1,4 @@
-#*------v get-EventsFiltered.ps1 v------
+﻿#*------v get-EventsFiltered.ps1 v------
 function get-EventsFiltered {
     <#
     .SYNOPSIS

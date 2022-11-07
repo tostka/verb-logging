@@ -1,4 +1,4 @@
-#*------v get-winEventsLoopedIDs.ps1 v------
+﻿#*------v get-winEventsLoopedIDs.ps1 v------
 function get-winEventsLoopedIDs {
     <#
     .SYNOPSIS
