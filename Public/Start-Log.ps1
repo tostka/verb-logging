@@ -14,6 +14,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 3:46 PM 11/16/2022 added catch blog around start-trans, that traps 'not compatible' errors, distict from generic catch
     * 2:15 PM 2/24/2022 added -TagFirst param (put the ticket/tag at the start of the filenames)
     * 4:23 PM 1/24/2022 added capture of start-trans - or it echos into pipeline
     * 10:46 AM 12/3/2021 added Tag cleanup: Remove-StringDiacritic,  Remove-StringLatinCharacters, Remove-IllegalFileNameChars (adds verb-io & verb-text deps); added requires for the usuals.
@@ -85,7 +86,7 @@ function Start-Log {
         $logfile=$logspec.logfile ;
         $transcript=$logspec.transcript ;
         $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
-        start-Transcript -path $transcript ; 
+        $startResults = start-Transcript -path $transcript ; 
     } else {throw "Unable to configure logging!" } ;
     
     Configure default logging from parent script name, with no Timestamp
@@ -148,13 +149,19 @@ function Start-Log {
             $logfile=$logspec.logfile ;
             $transcript=$logspec.transcript ;
             $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
-            start-Transcript -path $transcript ;
+            $startResults = start-Transcript -path $transcript ;
         } else {throw "Unable to configure logging!" } ;
+    } CATCH [System.Management.Automation.PSNotSupportedException]{
+        if($host.name -eq 'Windows PowerShell ISE Host'){
+            $smsg = "This version of $($host.name):$($host.version) does *not* support native (start-)transcription" ; 
+        } else { 
+            $smsg = "This host does *not* support native (start-)transcription" ; 
+        } ; 
+        write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
     } CATCH {
         $ErrTrapd=$Error[0] ;
         $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
-        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
-        else{ write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
     } ;
     
     Single log for script/function example that accomodates detect/redirect from AllUsers scope'd installed code, and hunts a series of drive letters to find an alternate logging dir (defers to profile variables)
@@ -202,8 +209,15 @@ function Start-Log {
                 $logfile=$logspec.logfile ;
                 $transcript=$logspec.transcript ;
                 $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
-                start-Transcript -path $transcript ;
+                $startResults = start-Transcript -path $transcript ;
             } else {throw "Unable to configure logging!" } ;
+        } CATCH [System.Management.Automation.PSNotSupportedException]{
+            if($host.name -eq 'Windows PowerShell ISE Host'){
+                $smsg = "This version of $($host.name):$($host.version) does *not* support native (start-)transcription" ; 
+            } else { 
+                $smsg = "This host does *not* support native (start-)transcription" ; 
+            } ; 
+            write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
         } CATCH {
             $ErrTrapd=$Error[0] ;
             $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
@@ -292,4 +306,4 @@ function Start-Log {
     Write-Output $hshRet ;
 }
 
-#*------^ Start-Log.ps1 ^------
+#*------^ END Start-Log.ps1 ^------

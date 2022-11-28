@@ -18,6 +18,7 @@ function Write-Log {
     AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
     AddedTwitter:	@wasserja
     REVISIONS
+    * 11:38 AM 11/16/2022 moved splats to top, added ISE v2 alt-color options (ISE isn't readable on psv2, by default using w-h etc)
     * 9:07 AM 3/21/2022 added -Level verbose & prompt support, flipped all non-usehost options, but verbose, from w-v -> write-host; added level prefix to console echos
     * 3:11 PM 8/17/2021 added verbose suppress to the get-colorcombo calls, clutters the heck out of outputs on verbose, no benef.
     * 10:53 AM 6/16/2021 get-help isn't displaying param details, pulled erroneous semi's from end of CBH definitions
@@ -151,7 +152,7 @@ function Write-Log {
         [Parameter(Mandatory = $false, HelpMessage = "The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.")]
         [Alias('LogPath')]
         [string]$Path = 'C:\Logs\PowerShellLog.log',
-        [Parameter(Mandatory = $false, HelpMessage = "Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|Debug)[-level Info]")]
+        [Parameter(Mandatory = $false, HelpMessage = "Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|Debug|Verbose|Prompt)[-level Info]")]
         [ValidateSet('Error','Warn','Info','H1','H2','H3','Debug','Verbose','Prompt')]
         [string]$Level = "Info",
         [Parameter(HelpMessage = "Switch to use write-host rather than write-[verbose|warn|error] [-useHost]")]
@@ -166,6 +167,30 @@ function Write-Log {
     Begin {
         $verbose = ($VerbosePreference -eq "Continue") ;  
         if(get-command get-colorcombo -ErrorAction SilentlyContinue){$buseCC=$true} else {$buseCC=$false} ;
+        if($host.Name -eq 'Windows PowerShell ISE Host' -AND $host.version.major -lt 3){
+            write-verbose "(low-contrast/visibility ISE 2 detected: using alt colors)" ;
+            $pltWH = @{foregroundcolor = 'yellow' ; backgroundcolor = 'black'} ;
+            $pltErr=@{foregroundcolor='yellow';backgroundcolor='red'};
+            $pltWarn=@{foregroundcolor='black';backgroundcolor='yellow'};
+            $pltInfo=@{foregroundcolor='green';backgroundcolor='black'};
+            $pltH1=@{foregroundcolor='black';backgroundcolor='darkyellow'};
+            $pltH2=@{foregroundcolor='black';backgroundcolor='gray'};
+            $pltH3=@{foregroundcolor='black';backgroundcolor='darkgray'};
+            $pltDbg=@{foregroundcolor='red';backgroundcolor='black'};
+            $pltVerb=@{foregroundcolor='Gray';backgroundcolor='black'};
+            $pltPrmpt=@{foregroundcolor='Blue';backgroundcolor='White'};
+        } else {
+            $pltWH = @{} ;
+            if($buseCC){$pltErr=get-colorcombo 60 -verbose:$false} else { $pltErr=@{foregroundcolor='yellow';backgroundcolor='red'};};
+            if($buseCC){$pltWarn=get-colorcombo 52 -verbose:$false} else { $pltWarn=@{foregroundcolor='yellow';backgroundcolor='red'};};
+            if($buseCC){$pltInfo=get-colorcombo 2 -verbose:$false} else { $pltInfo=@{foregroundcolor='yellow';backgroundcolor='red'};};
+            if($buseCC){$pltH1=get-colorcombo 22 -verbose:$false } else { $pltH1=@{foregroundcolor='black';backgroundcolor='darkyellow'};};
+            if($buseCC){$pltH2=get-colorcombo 25 -verbose:$false } else { $pltH2=@{foregroundcolor='black';backgroundcolor='gray'};};
+            if($buseCC){$pltH3=get-colorcombo 30 -verbose:$false } else { $pltH3=@{foregroundcolor='black';backgroundcolor='darkgray'};};
+            if($buseCC){$pltDbg=get-colorcombo 4 -verbose:$false } else { $pltDbg=@{foregroundcolor='red';backgroundcolor='black'};};
+            if($buseCC){$pltVerb=get-colorcombo 1 -verbose:$false} else { $pltVerb=@{foregroundcolor='yellow';backgroundcolor='red'};};
+            if($buseCC){$pltPrmpt=get-colorcombo 15 -verbose:$false} else { $pltPrmpt=@{foregroundcolor='Blue';backgroundcolor='White'};};
+        } ; 
     }  ;
     Process {
         # If the file already exists and NoClobber was specified, do not write to the log.
@@ -188,75 +213,54 @@ function Write-Log {
             'Error' {
                 $LevelText = 'ERROR: ' ; $smsg = $EchoTime ;
                 if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
-                    if($buseCC){$plt=get-colorcombo 60 -verbose:$false} else { $plt=@{foregroundcolor='yellow';backgroundcolor='red'};};
-                    write-host @plt $smsg
+                    $smsg += $LevelText + $Message ;
+                    write-host @pltErr $smsg ; 
                 } else {if (!$NoEcho) { Write-Error ($smsg + $Message) } } ;
             }
             'Warn' {
                 $LevelText = 'WARNING: ' ; $smsg = $EchoTime ;
                 if ($useHost) {
-                        $smsg += $LevelText + $Message ; 
-                        if($buseCC){$plt=get-colorcombo 52 -verbose:$false} else { $plt=@{foregroundcolor='black';backgroundcolor='yellow'};};
-                        write-host @plt $smsg ; 
+                    $smsg += $LevelText + $Message ; 
+                    write-host @pltWarn $smsg ; 
                 } else {if (!$NoEcho) { Write-Warning ($smsg + $Message) } } ;
             }
             'Info' {
                 $LevelText = 'INFO: ' ; $smsg = $EchoTime ;
-                if ($useHost) {
                     $smsg += $LevelText + $Message ; 
-                    if($buseCC){$plt=get-colorcombo 2 -verbose:$false} else { $plt=@{foregroundcolor='green';backgroundcolor='black'};};
-                    write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;                
+                    if (!$NoEcho) { write-host @pltInfo $smsg ;} ;
             }
             'H1' {
                 $LevelText = '# ' ; $smsg = $EchoTime ;
-                if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
-                    if($buseCC){$plt=get-colorcombo 22 -verbose:$false } else { $plt=@{foregroundcolor='black';backgroundcolor='darkyellow'};};
-                    write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;
+                $smsg += $LevelText + $Message ;  
+                if (!$NoEcho) { write-host @pltH1 $smsg ; };             
             }
             'H2' {
                 $LevelText = '## ' ; $smsg = $EchoTime ;
-                if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
-                    if($buseCC){$plt=get-colorcombo 25 -verbose:$false } else { $plt=@{foregroundcolor='black';backgroundcolor='gray'};};
-                    write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;
+                $smsg += $LevelText + $Message ; 
+                if (!$NoEcho) { write-host @pltH2 $smsg ;};
             }
             'H3' {
                 $LevelText = '### ' ; $smsg = $EchoTime ;
-                if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
-                    if($buseCC){$plt=get-colorcombo 30 -verbose:$false } else { $plt=@{foregroundcolor='black';backgroundcolor='darkgray'};};
-                    write-host @plt $smsg 
-                }else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;
+                $smsg += $LevelText + $Message ; 
+                if (!$NoEcho) { write-host @pltH3 $smsg };
             }
             'Debug' {
-                # use of 'real' write-debug has too many dependancies, to function ; over-complicates the concept, just use a pale echo in parenthesis
                 $LevelText = 'DEBUG: ' ; $smsg = ($EchoTime + $LevelText + '(' + $Message + ')') ;
-                $smsg += $LevelText + $Message ; 
-                if($buseCC){$plt=get-colorcombo 4 -verbose:$false } else { $plt=@{foregroundcolor='red';backgroundcolor='black'};};
-                write-host @plt $smsg ;
+                write-host @pltDbg $smsg ;
                 if (!$NoEcho) { Write-Host $smsg }  ;                
             }
             'Verbose' {
-                $LevelText = 'VERBOSE: ' ; $smsg = ($EchoTime + $LevelText + '(' + $Message + ')') ;
-                if ($useHost) {
+                $LevelText = 'VERBOSE: ' ; $smsg = ($EchoTime + '(' + $Message + ')') ;
+                if ($useHost) {                    
+                    $smsg = ($EchoTime + $LevelText + '(' + $Message + ')') ;
                     $smsg += $LevelText + $Message ; 
-                    if($buseCC){$plt=get-colorcombo 1 -verbose:$false } else { $plt=@{foregroundcolor='Gray';backgroundcolor='black'};};
-                    write-host @plt $smsg ;
-                }else {if (!$NoEcho) { Write-Verbose ($smsg + $Message) } } ;          
+                    if (!$NoEcho) {write-host @pltVerb $smsg ;} ; 
+                }else {if (!$NoEcho) { Write-Verbose ($smsg) } } ;          
             }
             'Prompt' {
-                # display/log input prompts with distinctive tag, and display them Blue on White, for attention-grabbing
                 $LevelText = 'PROMPT: ' ; $smsg = $EchoTime ;
-                if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
-                    if($buseCC){$plt=get-colorcombo 15 -verbose:$false} else { $plt=@{foregroundcolor='Blue';backgroundcolor='White'};};
-                    write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;                       
+                $smsg += $LevelText + $Message ; 
+                if (!$NoEcho) { write-host @pltPrmpt $smsg ; } ; 
             }
         } ;
         # Write log entry to $Path
