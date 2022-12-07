@@ -8,6 +8,7 @@ Function Start-IseTranscript {
     EDITED BY: Todd Kadrie
     AUTHOR: ed wilson, msft
     REVISIONS:
+    * 10:11 AM 12/2/2022 CBH expl update (-ISEtrans-log.txt)
     * 8:38 AM 7/29/2022 updated CBH example, to preclear consolet text, ahead of use (at the normal start-transcript loc); also added example code to defer to new start-transcript support on ISE for Psv5+ 
     * 12:05 PM 3/1/2020 rewrote header to loosely emulate most of psv5.1 stock transcirpt header
     * 8:40 AM 3/11/2015 revised to support PSv3's break of the $psise.CurrentPowerShellTab.consolePane.text object
@@ -91,7 +92,7 @@ Function Start-IseTranscript {
     PS> if($psise -and ($host.version.major -lt 5)){
     PS>     if(-not $transcript){
     PS>         if($scriptNameNoExt){
-    PS>             $transcript= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + (get-date -uformat "%Y%m%d-%H%M" ) + "-ISEtrans.log")) ;
+    PS>             $transcript= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + (get-date -uformat "%Y%m%d-%H%M" ) + "-ISEtrans-log.txt")) ;
     PS>         } else {
     PS>             $smsg = "unable to find/construct a $transcript!" ; 
     PS>             write-warning $smsg ; 
