@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.1.2.0
+  Version     : 1.1.3.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -32,7 +32,7 @@
   * 8:57 PM 11/25/2018 Write-Log:shifted copy to verb-transcript, added defer to scope $script versions
   * 8:13 AM 10/2/2018 Cleanup():make it defer to existing script-copy, ren'd $bdebug -> $showdebug
   * 2:37 PM 9/19/2018 fixed a filename invocation bug in Start-IseTranscript ; added CleanUp() example (with archivevelog disabled), formalized notes block, w demo load
-  * 11:29 AM 11/1/2017 initial version
+  * 11:29 AM 11.1.3017 initial version
   .DESCRIPTION
   verb-logging - Logging-related generic functions
   .LINK
@@ -1121,6 +1121,7 @@ Function Start-IseTranscript {
     EDITED BY: Todd Kadrie
     AUTHOR: ed wilson, msft
     REVISIONS:
+    * 10:11 AM 12/2/2022 CBH expl update (-ISEtrans-log.txt)
     * 8:38 AM 7/29/2022 updated CBH example, to preclear consolet text, ahead of use (at the normal start-transcript loc); also added example code to defer to new start-transcript support on ISE for Psv5+ 
     * 12:05 PM 3/1/2020 rewrote header to loosely emulate most of psv5.1 stock transcirpt header
     * 8:40 AM 3/11/2015 revised to support PSv3's break of the $psise.CurrentPowerShellTab.consolePane.text object
@@ -1204,7 +1205,7 @@ Function Start-IseTranscript {
     PS> if($psise -and ($host.version.major -lt 5)){
     PS>     if(-not $transcript){
     PS>         if($scriptNameNoExt){
-    PS>             $transcript= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + (get-date -uformat "%Y%m%d-%H%M" ) + "-ISEtrans.log")) ;
+    PS>             $transcript= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + (get-date -uformat "%Y%m%d-%H%M" ) + "-ISEtrans-log.txt")) ;
     PS>         } else {
     PS>             $smsg = "unable to find/construct a $transcript!" ; 
     PS>             write-warning $smsg ; 
@@ -1314,6 +1315,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 3:46 PM 11/16/2022 added catch blog around start-trans, that traps 'not compatible' errors, distict from generic catch
     * 2:15 PM 2/24/2022 added -TagFirst param (put the ticket/tag at the start of the filenames)
     * 4:23 PM 1/24/2022 added capture of start-trans - or it echos into pipeline
     * 10:46 AM 12/3/2021 added Tag cleanup: Remove-StringDiacritic,  Remove-StringLatinCharacters, Remove-IllegalFileNameChars (adds verb-io & verb-text deps); added requires for the usuals.
@@ -1385,7 +1387,7 @@ function Start-Log {
         $logfile=$logspec.logfile ;
         $transcript=$logspec.transcript ;
         $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
-        start-Transcript -path $transcript ; 
+        $startResults = start-Transcript -path $transcript ; 
     } else {throw "Unable to configure logging!" } ;
     
     Configure default logging from parent script name, with no Timestamp
@@ -1448,13 +1450,19 @@ function Start-Log {
             $logfile=$logspec.logfile ;
             $transcript=$logspec.transcript ;
             $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
-            start-Transcript -path $transcript ;
+            $startResults = start-Transcript -path $transcript ;
         } else {throw "Unable to configure logging!" } ;
+    } CATCH [System.Management.Automation.PSNotSupportedException]{
+        if($host.name -eq 'Windows PowerShell ISE Host'){
+            $smsg = "This version of $($host.name):$($host.version) does *not* support native (start-)transcription" ; 
+        } else { 
+            $smsg = "This host does *not* support native (start-)transcription" ; 
+        } ; 
+        write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
     } CATCH {
         $ErrTrapd=$Error[0] ;
         $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
-        if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
-        else{ write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
     } ;
     
     Single log for script/function example that accomodates detect/redirect from AllUsers scope'd installed code, and hunts a series of drive letters to find an alternate logging dir (defers to profile variables)
@@ -1502,8 +1510,15 @@ function Start-Log {
                 $logfile=$logspec.logfile ;
                 $transcript=$logspec.transcript ;
                 $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
-                start-Transcript -path $transcript ;
+                $startResults = start-Transcript -path $transcript ;
             } else {throw "Unable to configure logging!" } ;
+        } CATCH [System.Management.Automation.PSNotSupportedException]{
+            if($host.name -eq 'Windows PowerShell ISE Host'){
+                $smsg = "This version of $($host.name):$($host.version) does *not* support native (start-)transcription" ; 
+            } else { 
+                $smsg = "This host does *not* support native (start-)transcription" ; 
+            } ; 
+            write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
         } CATCH {
             $ErrTrapd=$Error[0] ;
             $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
@@ -1933,6 +1948,7 @@ function Write-Log {
     AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
     AddedTwitter:	@wasserja
     REVISIONS
+    * 11:38 AM 11/16/2022 moved splats to top, added ISE v2 alt-color options (ISE isn't readable on psv2, by default using w-h etc)
     * 9:07 AM 3/21/2022 added -Level verbose & prompt support, flipped all non-usehost options, but verbose, from w-v -> write-host; added level prefix to console echos
     * 3:11 PM 8/17/2021 added verbose suppress to the get-colorcombo calls, clutters the heck out of outputs on verbose, no benef.
     * 10:53 AM 6/16/2021 get-help isn't displaying param details, pulled erroneous semi's from end of CBH definitions
@@ -2066,7 +2082,7 @@ function Write-Log {
         [Parameter(Mandatory = $false, HelpMessage = "The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.")]
         [Alias('LogPath')]
         [string]$Path = 'C:\Logs\PowerShellLog.log',
-        [Parameter(Mandatory = $false, HelpMessage = "Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|Debug)[-level Info]")]
+        [Parameter(Mandatory = $false, HelpMessage = "Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|Debug|Verbose|Prompt)[-level Info]")]
         [ValidateSet('Error','Warn','Info','H1','H2','H3','Debug','Verbose','Prompt')]
         [string]$Level = "Info",
         [Parameter(HelpMessage = "Switch to use write-host rather than write-[verbose|warn|error] [-useHost]")]
@@ -2081,6 +2097,30 @@ function Write-Log {
     Begin {
         $verbose = ($VerbosePreference -eq "Continue") ;  
         if(get-command get-colorcombo -ErrorAction SilentlyContinue){$buseCC=$true} else {$buseCC=$false} ;
+        if($host.Name -eq 'Windows PowerShell ISE Host' -AND $host.version.major -lt 3){
+            write-verbose "(low-contrast/visibility ISE 2 detected: using alt colors)" ;
+            $pltWH = @{foregroundcolor = 'yellow' ; backgroundcolor = 'black'} ;
+            $pltErr=@{foregroundcolor='yellow';backgroundcolor='red'};
+            $pltWarn=@{foregroundcolor='black';backgroundcolor='yellow'};
+            $pltInfo=@{foregroundcolor='green';backgroundcolor='black'};
+            $pltH1=@{foregroundcolor='black';backgroundcolor='darkyellow'};
+            $pltH2=@{foregroundcolor='black';backgroundcolor='gray'};
+            $pltH3=@{foregroundcolor='black';backgroundcolor='darkgray'};
+            $pltDbg=@{foregroundcolor='red';backgroundcolor='black'};
+            $pltVerb=@{foregroundcolor='Gray';backgroundcolor='black'};
+            $pltPrmpt=@{foregroundcolor='Blue';backgroundcolor='White'};
+        } else {
+            $pltWH = @{} ;
+            if($buseCC){$pltErr=get-colorcombo 60 -verbose:$false} else { $pltErr=@{foregroundcolor='yellow';backgroundcolor='red'};};
+            if($buseCC){$pltWarn=get-colorcombo 52 -verbose:$false} else { $pltWarn=@{foregroundcolor='yellow';backgroundcolor='red'};};
+            if($buseCC){$pltInfo=get-colorcombo 2 -verbose:$false} else { $pltInfo=@{foregroundcolor='yellow';backgroundcolor='red'};};
+            if($buseCC){$pltH1=get-colorcombo 22 -verbose:$false } else { $pltH1=@{foregroundcolor='black';backgroundcolor='darkyellow'};};
+            if($buseCC){$pltH2=get-colorcombo 25 -verbose:$false } else { $pltH2=@{foregroundcolor='black';backgroundcolor='gray'};};
+            if($buseCC){$pltH3=get-colorcombo 30 -verbose:$false } else { $pltH3=@{foregroundcolor='black';backgroundcolor='darkgray'};};
+            if($buseCC){$pltDbg=get-colorcombo 4 -verbose:$false } else { $pltDbg=@{foregroundcolor='red';backgroundcolor='black'};};
+            if($buseCC){$pltVerb=get-colorcombo 1 -verbose:$false} else { $pltVerb=@{foregroundcolor='yellow';backgroundcolor='red'};};
+            if($buseCC){$pltPrmpt=get-colorcombo 15 -verbose:$false} else { $pltPrmpt=@{foregroundcolor='Blue';backgroundcolor='White'};};
+        } ; 
     }  ;
     Process {
         # If the file already exists and NoClobber was specified, do not write to the log.
@@ -2103,75 +2143,54 @@ function Write-Log {
             'Error' {
                 $LevelText = 'ERROR: ' ; $smsg = $EchoTime ;
                 if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
-                    if($buseCC){$plt=get-colorcombo 60 -verbose:$false} else { $plt=@{foregroundcolor='yellow';backgroundcolor='red'};};
-                    write-host @plt $smsg
+                    $smsg += $LevelText + $Message ;
+                    write-host @pltErr $smsg ; 
                 } else {if (!$NoEcho) { Write-Error ($smsg + $Message) } } ;
             }
             'Warn' {
                 $LevelText = 'WARNING: ' ; $smsg = $EchoTime ;
                 if ($useHost) {
-                        $smsg += $LevelText + $Message ; 
-                        if($buseCC){$plt=get-colorcombo 52 -verbose:$false} else { $plt=@{foregroundcolor='black';backgroundcolor='yellow'};};
-                        write-host @plt $smsg ; 
+                    $smsg += $LevelText + $Message ; 
+                    write-host @pltWarn $smsg ; 
                 } else {if (!$NoEcho) { Write-Warning ($smsg + $Message) } } ;
             }
             'Info' {
                 $LevelText = 'INFO: ' ; $smsg = $EchoTime ;
-                if ($useHost) {
                     $smsg += $LevelText + $Message ; 
-                    if($buseCC){$plt=get-colorcombo 2 -verbose:$false} else { $plt=@{foregroundcolor='green';backgroundcolor='black'};};
-                    write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;                
+                    if (!$NoEcho) { write-host @pltInfo $smsg ;} ;
             }
             'H1' {
                 $LevelText = '# ' ; $smsg = $EchoTime ;
-                if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
-                    if($buseCC){$plt=get-colorcombo 22 -verbose:$false } else { $plt=@{foregroundcolor='black';backgroundcolor='darkyellow'};};
-                    write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;
+                $smsg += $LevelText + $Message ;  
+                if (!$NoEcho) { write-host @pltH1 $smsg ; };             
             }
             'H2' {
                 $LevelText = '## ' ; $smsg = $EchoTime ;
-                if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
-                    if($buseCC){$plt=get-colorcombo 25 -verbose:$false } else { $plt=@{foregroundcolor='black';backgroundcolor='gray'};};
-                    write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;
+                $smsg += $LevelText + $Message ; 
+                if (!$NoEcho) { write-host @pltH2 $smsg ;};
             }
             'H3' {
                 $LevelText = '### ' ; $smsg = $EchoTime ;
-                if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
-                    if($buseCC){$plt=get-colorcombo 30 -verbose:$false } else { $plt=@{foregroundcolor='black';backgroundcolor='darkgray'};};
-                    write-host @plt $smsg 
-                }else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;
+                $smsg += $LevelText + $Message ; 
+                if (!$NoEcho) { write-host @pltH3 $smsg };
             }
             'Debug' {
-                # use of 'real' write-debug has too many dependancies, to function ; over-complicates the concept, just use a pale echo in parenthesis
                 $LevelText = 'DEBUG: ' ; $smsg = ($EchoTime + $LevelText + '(' + $Message + ')') ;
-                $smsg += $LevelText + $Message ; 
-                if($buseCC){$plt=get-colorcombo 4 -verbose:$false } else { $plt=@{foregroundcolor='red';backgroundcolor='black'};};
-                write-host @plt $smsg ;
+                write-host @pltDbg $smsg ;
                 if (!$NoEcho) { Write-Host $smsg }  ;                
             }
             'Verbose' {
-                $LevelText = 'VERBOSE: ' ; $smsg = ($EchoTime + $LevelText + '(' + $Message + ')') ;
-                if ($useHost) {
+                $LevelText = 'VERBOSE: ' ; $smsg = ($EchoTime + '(' + $Message + ')') ;
+                if ($useHost) {                    
+                    $smsg = ($EchoTime + $LevelText + '(' + $Message + ')') ;
                     $smsg += $LevelText + $Message ; 
-                    if($buseCC){$plt=get-colorcombo 1 -verbose:$false } else { $plt=@{foregroundcolor='Gray';backgroundcolor='black'};};
-                    write-host @plt $smsg ;
-                }else {if (!$NoEcho) { Write-Verbose ($smsg + $Message) } } ;          
+                    if (!$NoEcho) {write-host @pltVerb $smsg ;} ; 
+                }else {if (!$NoEcho) { Write-Verbose ($smsg) } } ;          
             }
             'Prompt' {
-                # display/log input prompts with distinctive tag, and display them Blue on White, for attention-grabbing
                 $LevelText = 'PROMPT: ' ; $smsg = $EchoTime ;
-                if ($useHost) {
-                    $smsg += $LevelText + $Message ; 
-                    if($buseCC){$plt=get-colorcombo 15 -verbose:$false} else { $plt=@{foregroundcolor='Blue';backgroundcolor='White'};};
-                    write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;                       
+                $smsg += $LevelText + $Message ; 
+                if (!$NoEcho) { write-host @pltPrmpt $smsg ; } ; 
             }
         } ;
         # Write log entry to $Path
@@ -2193,8 +2212,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU5lwAJfpWRaHTInEEpWZL9VEI
-# cBGgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUNx2MaIi5P3LEV+Dl3wPsSmak
+# UtCgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -2209,9 +2228,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSbFkbR
-# 1pHIlT4+MbVvBpsUeipGazANBgkqhkiG9w0BAQEFAASBgEWpk5pIW77rGKav97wx
-# wOOWngR2TlmKPhKlXZC+62+AW+LDIe/gL55em0mvxuqy/cpbpSVvFP9lXV1Emr3p
-# Y1cd6edXZpWNHixvZ9ZbIo1SuqKDUHdh2/Gg8ylfx9phwD6tPO1TuGprqcDdGJ0n
-# S/0zWA9ieLXAa0J58lvILCT9
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBRemZrk
+# OAVEQSUy2WckK8NAYvQTPTANBgkqhkiG9w0BAQEFAASBgLEOjertqTtQ7Q6+XI8o
+# zsjkGxBkINRXnH5RNjzkvHqCzxlY/bRLiSDFbqemVxpgAPAw+/k8p+3NHnTjsiPS
+# UxJbATd6pS1O4lrFV3yzrg2+wNRW1t2+HYJ6r+6ZrCsDlJi1CO73dMJ1D+K1LHla
+# 0eD0om1d5uU7xM3pQJh4qCoW
 # SIG # End signature block

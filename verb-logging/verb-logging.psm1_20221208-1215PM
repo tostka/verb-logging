@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.0.74.0
+  Version     : 1.1.2.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -40,10 +40,12 @@
   #>
 
 
-$script:ModuleRoot = $PSScriptRoot ;
-$script:ModuleVersion = (Import-PowerShellDataFile -Path (get-childitem $script:moduleroot\*.psd1).fullname).moduleversion ;
+    $script:ModuleRoot = $PSScriptRoot ;
+    $script:ModuleVersion = (Import-PowerShellDataFile -Path (get-childitem $script:moduleroot\*.psd1).fullname).moduleversion ;
+    $runningInVsCode = $env:TERM_PROGRAM -eq 'vscode' ;
 
 #*======v FUNCTIONS v======
+
 
 
 
@@ -204,6 +206,7 @@ function Archive-Log {
 
 #*------^ Archive-Log.ps1 ^------
 
+
 #*------v Cleanup.ps1 v------
 function Cleanup {
     <#
@@ -354,6 +357,7 @@ function Cleanup {
 
 #*------^ Cleanup.ps1 ^------
 
+
 #*------v get-ArchivePath.ps1 v------
 function get-ArchivePath {
     <#.SYNOPSIS
@@ -494,6 +498,7 @@ function get-ArchivePath {
 }
 
 #*------^ get-ArchivePath.ps1 ^------
+
 
 #*------v get-EventsFiltered.ps1 v------
 function get-EventsFiltered {
@@ -670,16 +675,18 @@ function get-EventsFiltered {
 
 #*------^ get-EventsFiltered.ps1 ^------
 
+
 #*------v get-lastboot.ps1 v------
 function get-lastlogon {[CmdletBinding()]PARAM() ; get-lastevent -Logon -Verbose:$($VerbosePreference -eq 'Continue') }
 
 #*------^ get-lastboot.ps1 ^------
 
+
 #*------v get-LastEvent.ps1 v------
 function get-lastevent {
     <#
     .SYNOPSIS
-    get-lastevent - return the last 7 wake events on the local pc
+    get-lastevent - get-winevent wrapper to pull most recent (Bootup|Shutdown|Sleep|Wake|Logon|Logoff) system eventlog markers on local system. Expands get-winevents builtin -filterhashtable, with post-filtering on Message content. By default returns most recent 7 of each ID specified.
     .NOTES
     Version     : 1.0.29.0
     Author      : Todd Kadrie
@@ -694,6 +701,7 @@ function get-lastevent {
     AddedWebsite:	REFERENCEURL
     AddedTwitter:	@HANDLE / http://twitter.com/HANDLE
     REVISIONS
+    * 12:51 PM 7/7/2022 fixed tag typo in logoff; updated CBH to dump examples of native get-winevent filters for each role (simple routine reference for other work); added std PS> prefixes to examples
     * 7:47 AM 3/9/2020 reworked get-winEventsLoopedIDs; added Verbose support across all get-last*()
     * 4:00 PM 3/7/2020 ran vsc expalias
     * 7:19 AM 3/6/2020 rewriting to consolidate several get-lastxxx, with params to tag the variants, and an alias/function to deliver the matching names
@@ -702,7 +710,7 @@ function get-lastevent {
     # vers: 7:17 AM 8/26/2014 corrected date fmt string
     # ver: 2:48 PM 8/25/2014 - fixed output to display day of week as well
     .DESCRIPTION
-    get-lastevent - return the last 7 sleep/wake/shutdown/bootup events on the local pc
+    get-lastevent - get-winevent wrapper to pull most recent (Bootup|Shutdown|Sleep|Wake|Logon|Logoff) system eventlog markers on local system. Expands get-winevents builtin -filterhashtable, with post-filtering on Message content. By default returns most recent 7 of each ID specified.
 
     ## FilterhashTable param options:
     |Key name|Value data type|Accepts wildcard characters?|
@@ -741,6 +749,7 @@ function get-lastevent {
     |Error|2|
     |Critical|1|
     |LogAlways|0|
+    
     .PARAMETER MaxEvents
     Maximum # of events to poll for each event specified[-MaxEvents 14]
     .PARAMETER FinalEvents
@@ -756,43 +765,108 @@ function get-lastevent {
     .PARAMETER Logon
     Return most recent Logon events [-Logon]
     .PARAMETER Logoff
-    Return most recent Logoff events [-Logon]
+    Return most recent Logoff events [-Logoff]
     .EXAMPLE
-    get-lastevent -Shutdown -verbose
+    PS> get-lastevent -Shutdown -verbose
     Get last Shutdown events w verbose output
     .EXAMPLE
-    get-lastevent -Bootup 
-    Get last Bootup events w verbose output
+    PS> get-lastevent -Bootup 
+    Get last Bootup events
     .EXAMPLE
-    get-lastevent -Sleep 
-    Get last Sleep events w verbose output
+    PS> get-lastevent -Sleep 
+    Get last Sleep events
     .EXAMPLE
-    get-lastevent -Wake 
-    Get last Wake events w verbose output
+    PS> get-lastevent -Wake 
+    Get last Wake events 
     .EXAMPLE
-    get-lastevent -Logoff
-    Return most recent Logoff events [-Logon]
+    PS> get-lastevent -Logon
+    Return most recent Logon events
+    .EXAMPLE
+    PS> get-lastevent -Logoff
+    Return most recent Logoff events
+    .EXAMPLE
+    PS> $hlastBootUp=@{
+    PS>     logname      = "System" ;
+    PS>     ProviderName = "EventLog" ;
+    PS>     ID           = 6009 ;
+    PS>     Level        = 4 ;
+    PS>     Verbose      = $($VerbosePreference -eq 'Continue') ;
+    PS> } ;
+    PS> $evts = get-winevent -FilterHashtable $hlastBootUp ; 
+    Demo native get-winevent -filter for LastBootup events
+    .EXAMPLE
+    PS>  $hlastShutdown=@{
+    PS>      logname      = 'System';
+    PS>      ProviderName = $null ;
+    PS>      ID           = '13','6008','13','6008','6006' ;
+    PS>      Level        = 4 ;
+    PS>      Verbose      = $($VerbosePreference -eq 'Continue') ;
+    PS>  } ;
+    PS>  $evts = get-winevent -FilterHashtable $hlastShutdown ; 
+    Demo native get-winevent -filter for lastShutdown events
+    .EXAMPLE
+    PS>  $hlastSleep=@{
+    PS>      logname      = "System" ;
+    PS>      ProviderName = "Microsoft-Windows-Kernel-Power" ;
+    PS>      ID           = 42 ;
+    PS>      Level        = 4  ;
+    PS>      Verbose      = $($VerbosePreference -eq 'Continue') ;
+    PS>  } ;
+    PS>  $evts = get-winevent -FilterHashtable $hlastSleep ; 
+    PS>  
+    Demo native get-winevent -filter for lastSleep events
+    .EXAMPLE
+    PS>  $hlastWake=@{
+    PS>      logname      = "System" ;
+    PS>      ProviderName = "NETLOGON" ;
+    PS>      ID           = 5719 ;
+    PS>      Level    = 2 ;
+    PS>      Verbose      = $($VerbosePreference -eq 'Continue') ;
+    PS>  } ;
+    PS>  $evts = get-winevent -FilterHashtable $hlastWake ; 
+    PS>  
+    Demo native get-winevent -filter for lastWake events
+    .EXAMPLE
+    PS>  $hlastLogon=@{
+    PS>      logname      = "security";
+    PS>      ProviderName = $null ;
+    PS>      ID           = 4624 ;
+    PS>      Level        = 4  ;
+    PS>      Verbose      = $($VerbosePreference -eq 'Continue') ;
+    PS>  } ;
+    PS>  $evts = get-winevent -FilterHashtable $hlastLogon ; 
+    Demo native get-winevent -filter for lastLogon events
+    .EXAMPLE
+    PS>  $hlastLogoff=@{
+    PS>      logname      = "Security";
+    PS>      ProviderName = $null ;
+    PS>      ID           = 4634 ;
+    PS>      Level        = 4  ;
+    PS>      Verbose      = $($VerbosePreference -eq 'Continue') ;
+    PS>  } ;
+    PS>  $evts = get-winevent -FilterHashtable $hlastLogoff ; 
+    Demo native get-winevent -filter for lastLogoff events
     .LINK
     https://github.com/tostka/verb-logging
     #>
-    ##Requires -Module verb-Logging
+    ##Requires -Module verb-xxx
     [CmdletBinding()]
     PARAM(
         [Parameter(HelpMessage = "Maximum # of events to poll for each event specified[-MaxEvents 14]")]
         [int] $MaxEvents = 14,
         [Parameter(HelpMessage = "Final # of sorted events of all types to return [-FinalEvents 7]")]
         [int] $FinalEvents = 7,
-        [Parameter(HelpMessage="Return most recent Bootup events [-Bootup]")]
+        [Parameter(HelpMessage="Return most recent System Bootup events [-Bootup]")]
         [switch] $Bootup,
-        [Parameter(HelpMessage="Return most recent Shutdown events [-Shutdown]")]
+        [Parameter(HelpMessage="Return most recent System Shutdown events [-Shutdown]")]
         [switch] $Shutdown,
-        [Parameter(HelpMessage="Return most recent Sleep events [-Sleep]")]
+        [Parameter(HelpMessage="Return most recent System Sleep events [-Sleep]")]
         [switch] $Sleep,
-        [Parameter(HelpMessage="Return most recent Wake events [-Wake]")]
+        [Parameter(HelpMessage="Return most recent System Wake events [-Wake]")]
         [switch] $Wake,
-        [Parameter(HelpMessage="Return most recent Logon events [-Logon]")]
+        [Parameter(HelpMessage="Return most recent System Logon events [-Logon]")]
         [switch] $Logon,
-        [Parameter(HelpMessage="Return most recent Logoff events [-Logon]")]
+        [Parameter(HelpMessage="Return most recent System Logoff events [-Logoff]")]
         [switch] $Logoff
     ) ;
     $Verbose = ($VerbosePreference -eq 'Continue') ;
@@ -885,15 +959,15 @@ function get-lastevent {
         $evts = $evts | Where-Object { $_.properties[8].value -eq 2 } ;
         If ($message) {$evts = $evts | Where-Object { ($_.Message -like $($message)) } } ;
     } elseif ($Logoff) {
-        $hlastLogon=@{
+        $hlastLogoff=@{
             logname      = "Security";
             ProviderName = $null ;
             ID           = 4634 ;
             Level        = 4  ;
             Verbose      = $($VerbosePreference -eq 'Continue') ;
         } ;
-        $filter =  $hlastLogon ;
-        $Tag = "Logon" ;
+        $filter =  $hlastLogoff ;
+        $Tag = "Logoff" ;
         $message = $null ;
         $AMPMFilter = $null ;
         write-verbose -verbose:$verbose  "$((get-date).ToString('HH:mm:ss')):get-winEventsLoopedIDs w`n$(($filter|out-string).trim())" ; 
@@ -933,10 +1007,12 @@ function get-lastevent {
 
 #*------^ get-LastEvent.ps1 ^------
 
+
 #*------v get-lastlogon.ps1 v------
 function get-lastlogon {[CmdletBinding()]PARAM() ; get-lastevent -Logon -Verbose:$($VerbosePreference -eq 'Continue') }
 
 #*------^ get-lastlogon.ps1 ^------
+
 
 #*------v get-lastshutdown.ps1 v------
 function get-lastshutdown {[CmdletBinding()]PARAM() ; get-lastevent -Shutdown -Verbose:$($VerbosePreference -eq 'Continue') }
@@ -944,21 +1020,24 @@ if (!(get-alias -name "gls" -ea 0 )) { Set-Alias -Name 'gls' -Value 'get-lastshu
 
 #*------^ get-lastshutdown.ps1 ^------
 
+
 #*------v get-lastsleep.ps1 v------
 function get-lastsleep {[CmdletBinding()]PARAM() ; get-lastevent -Sleep -Verbose:$($VerbosePreference -eq 'Continue') }
 
 #*------^ get-lastsleep.ps1 ^------
+
 
 #*------v get-lastwake.ps1 v------
 function get-lastwake {[CmdletBinding()]PARAM() ; get-lastevent -Wake -Verbose:$($VerbosePreference -eq 'Continue') }
 
 #*------^ get-lastwake.ps1 ^------
 
+
 #*------v get-winEventsLoopedIDs.ps1 v------
 function get-winEventsLoopedIDs {
     <#
     .SYNOPSIS
-    get-lastevent - return the last 7 wake events on the local pc
+    get-winEventsLoopedIDs - get-winevent -filterhashtable paremeter supports an array in the ID key, but I want MaxEvents _per event_ filtered, not overall (total most recent 7 drawn from most recent 14 of each type, sorted by date). This function pulls the ID array off and loops & aggregates the events, sorts on time, and returns the most recent x. 
     .NOTES
     Version     : 1.0.11.0
     Author      : Todd Kadrie
@@ -973,14 +1052,12 @@ function get-winEventsLoopedIDs {
     AddedWebsite:	REFERENCEURL
     AddedTwitter:	@HANDLE / http://twitter.com/HANDLE
     REVISIONS
+    * 12:28 PM 7/7/2022 updated CBH syn/desc to more accurately reflect function
     * 8:11 AM 3/9/2020 added verbose support & verbose echo'ing of hash values
     * 4:00 PM 3/7/2020 ran vsc expalias
     * 1:11 PM 3/6/2020 init
     .DESCRIPTION
-    get-winevents -filterhashtable supports an array in the ID field, but I want MaxEvents _per event_ filtered,
-    not overall (total most recent 7 drawn from most recent 14 of each type, sorted by date)
-    This function pulls the ID array off and loops & aggregate the events,
-    sorts on time, and returns the most recent x
+    get-winEventsLoopedIDs -filterhashtable supports an array in the ID key, but I want MaxEvents _per event_ filtered, not overall (total most recent 7 drawn from most recent 14 of each type, sorted by date). Passed a -filter hashtable, this function pulls the ID array off and loops & aggregates the events, sorts on time, and returns the most recent x of each ID. 
     .PARAMETER MaxEvents
     Maximum # of events to poll for each event specified -MaxEvents 14]
     .PARAMETER FinalEvents
@@ -990,9 +1067,9 @@ function get-winEventsLoopedIDs {
     A typical hash of this type, could look like: @{logname='System';id=6009 ;ProviderName='EventLog';Level=4;}
     Corresponding to a search of the System log, EventLog source, for ID 6009, of Informational type (Level 4).
     .EXAMPLE
-    [array]$evts = @() ;
-    $hlastShutdown=@{logname = 'System'; ProviderName = $null ;  ID = '13','6008','13','6008','6006' ; Level = 4 ; } ;
-    $evts += get-winEventsLoopedIDs -filter $hlastShutdown -MaxEvents ;
+    PS> [array]$evts = @() ;
+    PS> $hlastShutdown=@{logname = 'System'; ProviderName = $null ;  ID = '13','6008','13','6008','6006' ; Level = 4 ; } ;
+    PS> $evts += get-winEventsLoopedIDs -filter $hlastShutdown -MaxEvents ;
     The above runs a collection pass for each of the ID's specified above (which are associated with shutdowns),
     returns the 14 most recent of each type, sorts the aggregate matched events on timestamp, and returns the most
     recent 7 events of any of the matched types.
@@ -1033,6 +1110,7 @@ function get-winEventsLoopedIDs {
 
 #*------^ get-winEventsLoopedIDs.ps1 ^------
 
+
 #*------v Start-IseTranscript.ps1 v------
 Function Start-IseTranscript {
     <#
@@ -1043,6 +1121,7 @@ Function Start-IseTranscript {
     EDITED BY: Todd Kadrie
     AUTHOR: ed wilson, msft
     REVISIONS:
+    * 8:38 AM 7/29/2022 updated CBH example, to preclear consolet text, ahead of use (at the normal start-transcript loc); also added example code to defer to new start-transcript support on ISE for Psv5+ 
     * 12:05 PM 3/1/2020 rewrote header to loosely emulate most of psv5.1 stock transcirpt header
     * 8:40 AM 3/11/2015 revised to support PSv3's break of the $psise.CurrentPowerShellTab.consolePane.text object
         and replacement with the new...
@@ -1050,23 +1129,6 @@ Function Start-IseTranscript {
         (L13 FEs are PSv4, lyn650 is PSv2)
     * 9:22 AM 3/5/2015 tweaked, added autologname generation (from script loc & name)
     * 09/10/2010 17:27:22 - original
-    TYPICAL USAGE:
-        Call from Cleanup() (or script-end, only populated post-exec, not realtime)
-        #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-        if($host.Name -eq "Windows PowerShell ISE Host"){
-                # 8:46 AM 3/11/2015 shift the logfilename gen out here, so that we can arch it
-                $Logname= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + (get-date -uformat "%Y%m%d-%H%M" ) + "-ISEtrans.log")) ;
-                write-host "`$Logname: $Logname";
-                Start-iseTranscript -logname $Logname ;
-                # optional, normally wouldn't archive ISE debugging passes
-                #Archive-Log $Logname ;
-            } else {
-                if($showdebug -OR $verbose){ write-host -ForegroundColor Yellow "$((get-date).ToString('HH:mm:ss')):Stop Transcript" };
-                Stop-TranscriptLog ;
-                if($showdebug -OR $verbose){ write-host -ForegroundColor Yellow "$((get-date).ToString('HH:mm:ss')):Archive Transcript" };
-                Archive-Log $transcript ;
-            } # if-E
-        #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     KEYWORDS: Transcript, Logging, ISE, Debugging
     HSG: WES-09-25-10
     .DESCRIPTION
@@ -1078,8 +1140,89 @@ Function Start-IseTranscript {
     .OUTPUTS
     [io.file]
     .EXAMPLE
-    Archive-Log $Logname ;
-    Archives specified file to Archive
+    PS> #region  ; #*------v GENERIC PATH DETECTION/TRANSCRIPT CODE v------
+    PS> # switch path detection depending on if in func or in script
+    PS> switch($pscmdlet.myinvocation.mycommand.CommandType){
+    PS>     'Function' {
+    PS>         $smsg = "(CommandType:Function:interpolating Context Path values from other configured sources)" ;
+    PS>         write-verbose $smsg ;
+    PS>         Try {$ScriptRoot = Get-Variable -Name PSScriptRoot -ValueOnly -ErrorAction Stop }
+    PS>         Catch {$ScriptRoot = Split-Path $script:MyInvocation.MyCommand.Path } ;
+    PS>         $ScriptDir= $ScriptRoot ;
+    PS>         $ScriptBaseName = $pscmdlet.myinvocation.mycommand.Name ;
+    PS>         $ScriptNameNoExt = [system.io.path]::GetFilenameWithoutExtension($pscmdlet.myinvocation.mycommand.Name ) ;
+    PS>         $smsg += "`n--Legacy Path resolutions:" ;
+    PS>         $smsg += "`n`$ScriptDir (fr `$PSScriptRoot):`t$($ScriptDir)" ;
+    PS>         $smsg += "`n`$ScriptBaseName (fr `$pscmdlet.myinvocation.mycommand.Name):`t$($ScriptBaseName)" ;
+    PS>         $smsg += "`n`$ScriptNameNoExt (fr `$pscmdlet.myinvocation.mycommand.Name):`t$($ScriptNameNoExt)" ;
+    PS>     }
+    PS>     'ExternalScript' {
+    PS>         $smsg = "CommandType:ExternalScript:.ps1:Determining values from legacy sources)" ;
+    PS>         write-verbose $smsg ;
+    PS>         TRY{
+    PS>             $ScriptDir=((Split-Path -parent $MyInvocation.MyCommand.Definition -ErrorAction STOP) + "\");
+    PS>             $ScriptBaseName = (Split-Path -Leaf ((&{$myInvocation}).ScriptName))  ;
+    PS>             $ScriptNameNoExt = [system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName) ;
+    PS>             $smsg += "`n--Legacy Path resolutions:" ;
+    PS>             $smsg += "`n`$ScriptDir (fr `$MyInvocation):`t$($ScriptDir)" ;
+    PS>             $smsg += "`n`$ScriptBaseName (fr &{$myInvocation}).ScriptName):`t$($ScriptBaseName)" ;
+    PS>             $smsg += "`n`$ScriptNameNoExt (fr `$MyInvocation.InvocationName):`t$($ScriptNameNoExt)" ;
+    PS>             $smsg += "`n`$MyInvocation.MyCommand.Path:`t$((Split-Path -parent $MyInvocation.MyCommand.Path))" ;
+    PS>         } CATCH {
+    PS>             $smsg = "Running context does not support populated `$MyInvocation.MyCommand.Definition|Path" ;
+    PS>             $smsg += "(interpolating values from other configured sources)" ;
+    PS>         } ;
+    PS>     }
+    PS>     default {
+    PS>         write-warning "Unrecognized `$pscmdlet.myinvocation.mycommand.CommandType:$($pscmdlet.myinvocation.mycommand.CommandType)!" ;
+    PS>     } ;
+    PS> } ; 
+    PS> write-verbose $smsg ; 
+    PS> $transcript = join-path -path $ScriptDir -childpath 'Logs' ; 
+    PS> if(!(test-path $transcript)){ mkdir $transcript -verbose } ; 
+    PS> $transcript = join-path $transcript -childpath "$($ScriptNameNoExt)" ; 
+    PS> # $transcript += "-TAG" ; 
+    PS> if($whatif){$transcript += "-WHATIF" } ELSE { $transcript += "-EXEC" } ; 
+    PS> $transcript += "-$(get-date -format 'yyyyMMdd-HHmmtt')" ; 
+    PS> $transcript += "-trans-log.txt" ; 
+    PS> $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
+    PS> TRY {
+    PS>     if($psise -and ($host.version.major -lt 5)){
+    PS>         Write-host -foregroundcolor white "Start-Transcript *is not* supported under PS$($host.version.major): (pre-clearing console for trailing start-ISETranscript use)" ;
+    PS>         if ($host.version.major -lt 3) {$psISE.CurrentPowerShellTab.Output.Clear()}
+    PS>         else {$psise.CurrentPowerShellTab.consolePane.Clear()} ;
+    PS>     } else {
+    PS>         $startResults = Start-transcript -path $transcript -ErrorAction stop;
+    PS>         write-host $startResults ;
+    PS>     } ;
+    PS> } CATCH {
+    PS>     Break ;
+    PS> } ;    
+    PS> #endregion  ; #*------^ END GENERIC TRANSCRIPT W PATH DETECTION ^------
+    PS> #region  ; #*------v START-ISETRANSCRIPT WRAPPER BLOCK v------    
+    PS> write-verbose "2. Call from Cleanup() (or script-end, only populated post-exec, not realtime)" ; 
+    PS> if($psise -and ($host.version.major -lt 5)){
+    PS>     if(-not $transcript){
+    PS>         if($scriptNameNoExt){
+    PS>             $transcript= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + (get-date -uformat "%Y%m%d-%H%M" ) + "-ISEtrans.log")) ;
+    PS>         } else {
+    PS>             $smsg = "unable to find/construct a $transcript!" ; 
+    PS>             write-warning $smsg ; 
+    PS>             throw $smsg ; 
+    PS>             Break ; 
+    PS>         } ;  
+    PS>     } ;    
+    PS>     write-host "`$Transcript: $transcript";
+    PS>     Start-iseTranscript -logname $transcript ;
+    PS>     # optional, normally wouldn't archive ISE debugging passes
+    PS>     #Archive-Log $Logname ;
+    PS> } else {
+    PS>     $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
+    PS>     write-host $stopResults ; 
+    PS>     #Archive-Log $transcript ;
+    PS> } ; 
+    PS> #endregion  ; #*------^ END START-ISETRANSCRIPT WRAPPER BLOCK ^------  
+    Demo full set of wrapper calls covering path detection, transcript path construction, and calls to Start-ISETranscript
     .Link
     Http://www.ScriptingGuys.com
     #Requires -Version 2.0
@@ -1153,6 +1296,7 @@ Transcript started. Output file is $Logname
 }
 
 #*------^ Start-IseTranscript.ps1 ^------
+
 
 #*------v Start-Log.ps1 v------
 function Start-Log {
@@ -1450,6 +1594,7 @@ function Start-Log {
 
 #*------^ Start-Log.ps1 ^------
 
+
 #*------v start-TranscriptLog.ps1 v------
 function start-TranscriptLog {
     <#.SYNOPSIS
@@ -1526,6 +1671,7 @@ function start-TranscriptLog {
 
 #*------^ start-TranscriptLog.ps1 ^------
 
+
 #*------v Stop-TranscriptLog.ps1 v------
 function Stop-TranscriptLog {
     <#.SYNOPSIS
@@ -1598,6 +1744,7 @@ function Stop-TranscriptLog {
 
 #*------^ Stop-TranscriptLog.ps1 ^------
 
+
 #*------v Test-Transcribing.ps1 v------
 function Test-Transcribing {
     <#.SYNOPSIS
@@ -1652,6 +1799,7 @@ function Test-Transcribing {
 }
 
 #*------^ Test-Transcribing.ps1 ^------
+
 
 #*------v Test-Transcribing2.ps1 v------
 function test-Transcribing2 {
@@ -1710,6 +1858,7 @@ function test-Transcribing2 {
 
 #*------^ Test-Transcribing2.ps1 ^------
 
+
 #*------v Test-TranscriptionSupported.ps1 v------
 function Test-TranscriptionSupported {
     <#
@@ -1763,26 +1912,28 @@ function Test-TranscriptionSupported {
 
 #*------^ Test-TranscriptionSupported.ps1 ^------
 
+
 #*------v Write-Log.ps1 v------
 function Write-Log {
     <#
     .SYNOPSIS
     Write-Log.ps1 - Write-Log writes a message to a specified log file with the current time stamp, and write-verbose|warn|error's the matching msg.
     .NOTES
-    Version     : 0.0.
+    Version     : 1.0.0
     Author      : Todd Kadrie
     Website     :	http://www.toddomation.com
-    Twitter     :	@tostka, http://twitter.com/tostka
-    Additional Credits: Based on original concept by Jason Wasser
-    Website     :	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
-    Twitter     :	@wasserja
+    Twitter     :	@tostka / http://twitter.com/tostka
     CreatedDate : 2021-06-11
     FileName    : Write-Log.ps1
     License     : MIT License
-    Copyright   : (c) 2021 Todd Kadrie
+    Copyright   : (c) 2022 Todd Kadrie
     Github      : https://github.com/tostka/verb-logging
-    Tags        : Powershell,Logging,Output,Echo
-    REVISIONS   :
+    Tags        : Powershell,Logging,Output,Echo,Console
+    AddedCredit : Jason Wasser
+    AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
+    AddedTwitter:	@wasserja
+    REVISIONS
+    * 9:07 AM 3/21/2022 added -Level verbose & prompt support, flipped all non-usehost options, but verbose, from w-v -> write-host; added level prefix to console echos
     * 3:11 PM 8/17/2021 added verbose suppress to the get-colorcombo calls, clutters the heck out of outputs on verbose, no benef.
     * 10:53 AM 6/16/2021 get-help isn't displaying param details, pulled erroneous semi's from end of CBH definitions
     * 7:59 AM 6/11/2021 added H1|2|3 md-style #|##|## header tags ; added support for get-colorcombo, and enforced bg colors (legible regardless of local color scheme of console); expanded CBH, revised Author - it's diverged so substantially from JW's original concept, it's now "inspired-by", less than a variant of the original.
@@ -1805,90 +1956,108 @@ function Write-Log {
     The Write-Log function is designed to add logging capability to other scripts.
     In addition to writing output and/or verbose you can write to a log file for  ;
     later debugging.
+    Reimplementation of original concept by Jason Wasser.
     .PARAMETER Message  
     Message is the content that you wish to add to the log file.
     .PARAMETER Path  
     The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.
     .PARAMETER Level  
-    Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|Debug)[-level Info]
+    Specify the criticality of the log information being written to the log (defaults Info): (Info|Warn|Verbose|Error|Debug|H1|H2|H3)[-level Info]
     .PARAMETER useHost  
-    Switch to use write-host rather than write-[verbose|warn|error] [-useHost]
+    Switch to use write-host rather than write-[verbose|warn|error] (does not apply to H1|H2|H3|DEBUG which alt via uncolored write-host) [-useHost]
     .PARAMETER NoEcho
     Switch to suppress console echos (e.g log to file only [-NoEcho]
     .PARAMETER NoClobber  
     Use NoClobber if you do not wish to overwrite an existing file.
     .PARAMETER ShowDebug
     Parameter to display Debugging messages [-ShowDebug switch]
-    .INPUTS
-    None. Does not accepted piped input.
-    .OUTPUTS
-    Writes output to the specified Path.
     .EXAMPLE
-    Write-Log -Message 'Log message'   ;
-    Writes the message to default log loc (c:\Logs\PowerShellLog.log, -level defaults to Info).
-    .EXAMPLE
-    Write-Log -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log
-    Writes the content to the specified log file and creates the path and file specified.
-    .EXAMPLE
-    Write-Log -Message 'Folder does not exist.' -Path c:\Logs\Script.log -Level Error  ;
-    Writes the message to the specified log file as an error message, and writes the message to the error pipeline.
-    .EXAMPLE
-    # init content in script context ($MyInvocation is blank in function scope)
-    $logfile = join-path -path $ofile -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-LOG.txt"  ;
-    $logging = $True ;
-    $sBnr="#*======v `$tmbx:($($Procd)/$($ttl)):$($tmbx) v======" ;
-    $smsg="$($sBnr)" ;
-    if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug|H1|H2|H3 
-    else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-    Example with conditional write-log (with -useHost switch, to trigger native write-host use), else failthru to write-host output
-    .EXAMPLE
-    $transcript = join-path -path (Split-Path -parent $MyInvocation.MyCommand.Definition) -ChildPath "logs" ;
-    if(!(test-path -path $transcript)){ "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
-    $transcript=join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))"  ;
-    $transcript+= "-Transcript-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-trans-log.txt"  ;
-    # add log file variant as target of Write-Log:
-    $logfile=$transcript.replace("-Transcript","-LOG").replace("-trans-log","-log")
-    if($whatif){
-        $logfile=$logfile.replace("-BATCH","-BATCH-WHATIF") ;
-        $transcript=$transcript.replace("-BATCH","-BATCH-WHATIF") ;
-    } else {
-        $logfile=$logfile.replace("-BATCH","-BATCH-EXEC") ;
-        $transcript=$transcript.replace("-BATCH","-BATCH-EXEC") ;
-    } ;
-    if($Ticket){
-        $logfile=$logfile.replace("-BATCH","-$($Ticket)") ;
-        $transcript=$transcript.replace("-BATCH","-$($Ticket)") ;
-    } else {
-        $logfile=$logfile.replace("-BATCH","-nnnnnn") ;
-        $transcript=$transcript.replace("-BATCH","-nnnnnn") ;
-    } ;
-    $logging = $True ;
-    $sBnr="#*======v START PASS:$($ScriptBaseName) v======" ;
-    $smsg= "$($sBnr)" ;
-    if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } ; #Error|Warn
-    More complete boilerplate including $whatif & $ticket
-    .EXAMPLE
-    $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
-    $pltSL.Tag = "$(split-path -path $CSVPath -leaf)"; # build tag from a variable
-    # construct log name on calling script/function fullname
-    if($PSCommandPath){ $logspec = start-Log -Path $PSCommandPath @pltSL }
-    else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL } ;
-    if($logspec){
-        $logging=$logspec.logging ;
-        $logfile=$logspec.logfile ;
-        $transcript=$logspec.transcript ;
-        $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
-        start-Transcript -path $transcript ;
-    } else {throw "Unable to configure logging!" } ;
-    $sBnr="#*======v $(${CmdletName}): v======" ;
-    $smsg = $sBnr ;
-    if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
-    else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-    Example leveraging splatted start-log(), and either $PSCommandPath or $MyInvocation (support varies by host/psversion) to build the log name. 
-    .LINK
-    https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0  ;
-    #>
-    
+        PS>  Write-Log -Message 'Log message'   ;
+        Writes the message to default log loc (c:\Logs\PowerShellLog.log, -level defaults to Info).
+        .EXAMPLE
+        PS> Write-Log -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log ;
+        Writes the content to the specified log file and creates the path and file specified.
+        .EXAMPLE
+        PS> write-log -level warn "some information" -Path c:\tmp\tmp.txt
+        WARNING: 10:17:59: some information
+        Demo default use of the native write-warning cmdlet (default behavior when -useHost is not used)
+        .EXAMPLE
+        write-log -level warn "some information" -Path c:\tmp\tmp.txt -usehost
+        10:19:14: WARNING: some information
+        Demo use of the "warning" color scheme write-host cmdlet (behavior when -useHost *IS* used)
+        .EXAMPLE
+        PS> Write-Log -level Prompt -Message "Enter Text:" -Path c:\tmp\tmp.txt -usehost  ; 
+        PS> invoke-soundcue -type question ; 
+        PS> $enteredText = read-host ;
+        Echo's a distinctive Prompt color scheme for the message (vs using read-host native non-color-differentiating -prompt parameter), 
+        and writes a 'Prompt'-level entry to the log, uses my verb-io:invoke-soundCue to play a the system question sound; then uses promptless read-host to take typed input. 
+        PS> Write-Log -level Prompt -Message "Enter Password:" -Path c:\tmp\tmp.txt -usehost  ; 
+        PS> invoke-soundcue -type question ; 
+        PS> $SecurePW = read-host -AsSecureString ;        
+        Variant that demos collection of a secure password using read-host's native -AsSecureString param.
+        .EXAMPLE
+        PS>  $smsg = "ENTER CERTIFICATE PFX Password: (use 'dummy' for UserName)" ;
+        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level PROMPT } 
+        PS>  else{ write-host -foregroundcolor Blue -backgroundcolor White "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        PS>  $pfxcred=(Get-Credential -credential dummy) ;
+        PS>  Export-PfxCertificate -Password $pfxcred.password -Cert= $certpath -FilePath c:\path-to\output.pfx;
+        Demo use of write-log -level prompt, leveraging the get-credential popup GUI to collect a secure password (without use of username)
+        .EXAMPLE
+        PS>  # init content in script context ($MyInvocation is blank in function scope)
+        PS>  $logfile = join-path -path $ofile -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-LOG.txt"  ;
+        PS>  $logging = $True ;
+        PS>  $sBnr="#*======v `$tmbx:($($Procd)/$($ttl)):$($tmbx) v======" ;
+        PS>  $smsg="$($sBnr)" ;
+        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug|H1|H2|H3 
+        PS>  else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        PS>  Example with conditional write-log (with -useHost switch, to trigger native write-host use), else failthru to write-host output
+        PS>  .EXAMPLE
+        PS>  $transcript = join-path -path (Split-Path -parent $MyInvocation.MyCommand.Definition) -ChildPath "logs" ;
+        PS>  if(!(test-path -path $transcript)){ "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
+        PS>  $transcript=join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))"  ;
+        PS>  $transcript+= "-Transcript-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-trans-log.txt"  ;
+        PS>  # add log file variant as target of Write-Log:
+        PS>  $logfile=$transcript.replace("-Transcript","-LOG").replace("-trans-log","-log")
+        PS>  if($whatif){
+        PS>      $logfile=$logfile.replace("-BATCH","-BATCH-WHATIF") ;
+        PS>      $transcript=$transcript.replace("-BATCH","-BATCH-WHATIF") ;
+        PS>  } else {
+        PS>      $logfile=$logfile.replace("-BATCH","-BATCH-EXEC") ;
+        PS>      $transcript=$transcript.replace("-BATCH","-BATCH-EXEC") ;
+        PS>  } ;
+        PS>  if($Ticket){
+        PS>      $logfile=$logfile.replace("-BATCH","-$($Ticket)") ;
+        PS>      $transcript=$transcript.replace("-BATCH","-$($Ticket)") ;
+        PS>  } else {
+        PS>      $logfile=$logfile.replace("-BATCH","-nnnnnn") ;
+        PS>      $transcript=$transcript.replace("-BATCH","-nnnnnn") ;
+        PS>  } ;
+        PS>  $logging = $True ;
+        PS>  $sBnr="#*======v START PASS:$($ScriptBaseName) v======" ;
+        PS>  $smsg= "$($sBnr)" ;
+        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } ; #Error|Warn
+        More complete boilerplate including $whatif & $ticket
+        .EXAMPLE
+        PS>  $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
+        PS>  $pltSL.Tag = "$(split-path -path $CSVPath -leaf)"; # build tag from a variable
+        PS>  # construct log name on calling script/function fullname
+        PS>  if($PSCommandPath){ $logspec = start-Log -Path $PSCommandPath @pltSL }
+        PS>  else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL } ;
+        PS>  if($logspec){
+        PS>      $logging=$logspec.logging ;
+        PS>      $logfile=$logspec.logfile ;
+        PS>      $transcript=$logspec.transcript ;
+        PS>      $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
+        PS>      start-Transcript -path $transcript ;
+        PS>  } else {throw "Unable to configure logging!" } ;
+        PS>  $sBnr="#*======v $(${CmdletName}): v======" ;
+        PS>  $smsg = $sBnr ;
+        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
+        PS>  else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        Example leveraging splatted start-log(), and either $PSCommandPath or $MyInvocation (support varies by host/psversion) to build the log name. 
+        .LINK
+        https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0  ;
+    #>    
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, HelpMessage = "Message is the content that you wish to add to the log file")]
@@ -1898,7 +2067,7 @@ function Write-Log {
         [Alias('LogPath')]
         [string]$Path = 'C:\Logs\PowerShellLog.log',
         [Parameter(Mandatory = $false, HelpMessage = "Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|Debug)[-level Info]")]
-        [ValidateSet('Error','Warn','Info','H1','H2','H3','Debug')]
+        [ValidateSet('Error','Warn','Info','H1','H2','H3','Debug','Verbose','Prompt')]
         [string]$Level = "Info",
         [Parameter(HelpMessage = "Switch to use write-host rather than write-[verbose|warn|error] [-useHost]")]
         [switch] $useHost,
@@ -1932,53 +2101,77 @@ function Write-Log {
         # Write message to error, warning, or verbose pipeline and specify $LevelText
         switch ($Level) {
             'Error' {
-                $LevelText = 'ERROR: ' ; $smsg = ($EchoTime + $Message) ;
+                $LevelText = 'ERROR: ' ; $smsg = $EchoTime ;
                 if ($useHost) {
+                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 60 -verbose:$false} else { $plt=@{foregroundcolor='yellow';backgroundcolor='red'};};
                     write-host @plt $smsg
-                } else {if (!$NoEcho) { Write-Error $smsg } } ;
+                } else {if (!$NoEcho) { Write-Error ($smsg + $Message) } } ;
             }
             'Warn' {
-                $LevelText = 'WARNING: ' ; $smsg = ($EchoTime + $Message) ;
+                $LevelText = 'WARNING: ' ; $smsg = $EchoTime ;
                 if ($useHost) {
+                        $smsg += $LevelText + $Message ; 
                         if($buseCC){$plt=get-colorcombo 52 -verbose:$false} else { $plt=@{foregroundcolor='black';backgroundcolor='yellow'};};
                         write-host @plt $smsg ; 
-                } else {if (!$NoEcho) { Write-Warning $smsg } } ;
+                } else {if (!$NoEcho) { Write-Warning ($smsg + $Message) } } ;
             }
             'Info' {
-                $LevelText = 'INFO: ' ; $smsg = ($EchoTime + $Message) ;
+                $LevelText = 'INFO: ' ; $smsg = $EchoTime ;
                 if ($useHost) {
+                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 2 -verbose:$false} else { $plt=@{foregroundcolor='green';backgroundcolor='black'};};
                     write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Verbose $smsg } } ;                
+                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;                
             }
             'H1' {
-                $LevelText = '# ' ; $smsg = ($EchoTime + $LevelText + $Message) ;
+                $LevelText = '# ' ; $smsg = $EchoTime ;
                 if ($useHost) {
+                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 22 -verbose:$false } else { $plt=@{foregroundcolor='black';backgroundcolor='darkyellow'};};
                     write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Verbose $smsg } } ;
+                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;
             }
             'H2' {
-                $LevelText = '## ' ; $smsg = ($EchoTime + $LevelText + $Message) ;
+                $LevelText = '## ' ; $smsg = $EchoTime ;
                 if ($useHost) {
+                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 25 -verbose:$false } else { $plt=@{foregroundcolor='black';backgroundcolor='gray'};};
                     write-host @plt $smsg ;
-                } else {if (!$NoEcho) { Write-Verbose $smsg } } ;
+                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;
             }
             'H3' {
-                $LevelText = '### ' ; $smsg = ($EchoTime + $LevelText + $Message) ;
+                $LevelText = '### ' ; $smsg = $EchoTime ;
                 if ($useHost) {
+                    $smsg += $LevelText + $Message ; 
                     if($buseCC){$plt=get-colorcombo 30 -verbose:$false } else { $plt=@{foregroundcolor='black';backgroundcolor='darkgray'};};
                     write-host @plt $smsg 
-                }else {if (!$NoEcho) { Write-Verbose $smsg } } ;
+                }else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;
             }
             'Debug' {
                 # use of 'real' write-debug has too many dependancies, to function ; over-complicates the concept, just use a pale echo in parenthesis
                 $LevelText = 'DEBUG: ' ; $smsg = ($EchoTime + $LevelText + '(' + $Message + ')') ;
+                $smsg += $LevelText + $Message ; 
                 if($buseCC){$plt=get-colorcombo 4 -verbose:$false } else { $plt=@{foregroundcolor='red';backgroundcolor='black'};};
                 write-host @plt $smsg ;
-                if (!$NoEcho) { write-verbose $smsg }  ;                
+                if (!$NoEcho) { Write-Host $smsg }  ;                
+            }
+            'Verbose' {
+                $LevelText = 'VERBOSE: ' ; $smsg = ($EchoTime + $LevelText + '(' + $Message + ')') ;
+                if ($useHost) {
+                    $smsg += $LevelText + $Message ; 
+                    if($buseCC){$plt=get-colorcombo 1 -verbose:$false } else { $plt=@{foregroundcolor='Gray';backgroundcolor='black'};};
+                    write-host @plt $smsg ;
+                }else {if (!$NoEcho) { Write-Verbose ($smsg + $Message) } } ;          
+            }
+            'Prompt' {
+                # display/log input prompts with distinctive tag, and display them Blue on White, for attention-grabbing
+                $LevelText = 'PROMPT: ' ; $smsg = $EchoTime ;
+                if ($useHost) {
+                    $smsg += $LevelText + $Message ; 
+                    if($buseCC){$plt=get-colorcombo 15 -verbose:$false} else { $plt=@{foregroundcolor='Blue';backgroundcolor='White'};};
+                    write-host @plt $smsg ;
+                } else {if (!$NoEcho) { Write-Host ($smsg + $Message) } } ;                       
             }
         } ;
         # Write log entry to $Path
@@ -1989,16 +2182,19 @@ function Write-Log {
 
 #*------^ Write-Log.ps1 ^------
 
+
 #*======^ END FUNCTIONS ^======
 
 Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFiltered,get-lastlogon,get-lastevent,get-lastlogon,get-lastshutdown,get-lastsleep,get-lastwake,get-winEventsLoopedIDs,Start-IseTranscript,Start-Log,start-TranscriptLog,Stop-TranscriptLog,Test-Transcribing,test-Transcribing2,Test-TranscriptionSupported,Write-Log -Alias *
 
 
+
+
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUfPxkbnX3vQy9ptt51sEoodxf
-# ffWgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU5lwAJfpWRaHTInEEpWZL9VEI
+# cBGgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -2013,9 +2209,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQjAXBQ
-# 0wAUoYa8fCQAgJLCFC4pJzANBgkqhkiG9w0BAQEFAASBgEF+GgsdOAr+CYoa26ni
-# njqSSIWG/Yn1SWgvcUlubc2SSkta17IQDQeEudJvwscjQyiS1IWLxjDgLpt3o7QH
-# xk4A/jecrGy8Hq9v3/56FpJ39chZ4LnJWJZAXTtcSHRGXZpgwweK8u5a86Ja2jP8
-# X1ENoh/kuUnEg2AIoy6gs3Lh
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSbFkbR
+# 1pHIlT4+MbVvBpsUeipGazANBgkqhkiG9w0BAQEFAASBgEWpk5pIW77rGKav97wx
+# wOOWngR2TlmKPhKlXZC+62+AW+LDIe/gL55em0mvxuqy/cpbpSVvFP9lXV1Emr3p
+# Y1cd6edXZpWNHixvZ9ZbIo1SuqKDUHdh2/Gg8ylfx9phwD6tPO1TuGprqcDdGJ0n
+# S/0zWA9ieLXAa0J58lvILCT9
 # SIG # End signature block
