@@ -14,6 +14,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+    * 11:57 AM 1/17/2023 updated output object to be psv2 compat (OrderedDictionary object under v2)
     * 3:46 PM 11/16/2022 added catch blog around start-trans, that traps 'not compatible' errors, distict from generic catch
     * 2:15 PM 2/24/2022 added -TagFirst param (put the ticket/tag at the start of the filenames)
     * 4:23 PM 1/24/2022 added capture of start-trans - or it echos into pipeline
@@ -295,12 +296,27 @@ function Start-Log {
     } ;
     $logging = $True ;
 
-    $hshRet= [ordered]@{
+    # [ordered] not psv2 backward compat - use an orderedDict for psv2
+    <#$hshRet= [ordered]@{
         logging=$logging ;
         logfile=$logfile ;
         transcript=$transcript ;
     } ;
+    #>
+    # refactor back rev support to psv2
+    if($host.version.major -ge 3){
+        $hshRet=[ordered]@{Dummy = $null ; } ;
+    } else {
+        # psv2 Ordered obj (can't use with new-object -properites)
+        $hshRet = New-Object Collections.Specialized.OrderedDictionary ; 
+        # or use an UN-ORDERED psv2 hash: $Hash=@{ Dummy = $null ; } ;
+    } ;
+    If($hshRet.Contains("Dummy")){$hshRet.remove("Dummy")} ; 
+    $hshRet.add('logging',$logging) ;
+    $hshRet.add('logfile',$logfile);
+    $hshRet.add('transcript',$transcript) ;
     if($showdebug -OR $verbose){
+        # retaining historical $showDebug support, even tho' not generally used now.
         write-verbose -verbose:$true "$(($hshRet|out-string).trim())" ;  ;
     } ;
     Write-Output $hshRet ;
