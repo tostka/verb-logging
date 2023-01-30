@@ -168,7 +168,7 @@ function Write-Log {
         $verbose = ($VerbosePreference -eq "Continue") ;  
         if(get-command get-colorcombo -ErrorAction SilentlyContinue){$buseCC=$true} else {$buseCC=$false} ;
         if($host.Name -eq 'Windows PowerShell ISE Host' -AND $host.version.major -lt 3){
-            write-verbose "(low-contrast/visibility ISE 2 detected: using alt colors)" ;
+            #write-verbose "(low-contrast/visibility ISE 2 detected: using alt colors)" ; # too NOISEY!
             $pltWH = @{foregroundcolor = 'yellow' ; backgroundcolor = 'black'} ;
             $pltErr=@{foregroundcolor='yellow';backgroundcolor='red'};
             $pltWarn=@{foregroundcolor='black';backgroundcolor='yellow'};
