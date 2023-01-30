@@ -18,6 +18,7 @@ function Write-Log {
     AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
     AddedTwitter:	@wasserja
     REVISIONS
+    * 4:47 PM 1/30/2023 tweaked color schemes, renamed splat varis to exactly match levels; added -demo; added Level 'H4','H5', and Success (rounds out the set of banrs I setup in psBnr)
     * 11:38 AM 11/16/2022 moved splats to top, added ISE v2 alt-color options (ISE isn't readable on psv2, by default using w-h etc)
     * 9:07 AM 3/21/2022 added -Level verbose & prompt support, flipped all non-usehost options, but verbose, from w-v -> write-host; added level prefix to console echos
     * 3:11 PM 8/17/2021 added verbose suppress to the get-colorcombo calls, clutters the heck out of outputs on verbose, no benef.
@@ -39,16 +40,41 @@ function Write-Log {
     * Renamed LogPath parameter to Path to keep it standard - thanks to @JeffHicks  ;
     * Revised the Force switch to work as it should - thanks to @JeffHicks  ;
     .DESCRIPTION
-    The Write-Log function is designed to add logging capability to other scripts.
-    In addition to writing output and/or verbose you can write to a log file for  ;
-    later debugging.
-    Reimplementation of original concept by Jason Wasser.
+    Write-Log is intended to provide console write-log echos in addition to commiting text to a log file. 
+    
+    It was originally based on a concept by Jason Wasser demoed at...
+    [](https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0)
+    
+    ... of course as is typical that link was subsequently broken by MS over time... [facealm]
+    
+    But since that time I have substantially reimplemented jason's code from scratch to implement my evolving concept for the function. My variant now includes a wide range of Levels, a -useHost parameter that implements a more useful write-host color coded output for console output (vs use of the native write-error write-warning write-verbose cmdlets that don't permit you to differentiate types of output, beyond those three niche standardized formats). 
+    
+    ### I typically use write-host in the following way:
+    
+    1. I configure a $logfile variable centrally in the host script/function, pointed at a suitable output file. 
+    2. I set a [boolean]$logging variable to indicate if a log file is present, and should be written to via write-log 
+		or if a simple native output should be used (I also use this for scripts that can use the block below, without access to my hosting verb-io module's copy of write-log).
+	3. I then call write-log from an if/then block to fed the message via an $smsg variable.
+	
+	```powershell
+    $smsg = "" ; 
+	if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } 
+	else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+	#Levels:Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success
+    ```
+    ### Hn Levels
+    
+    The H1..H5 Levels are intended to "somewhat" emulate Markdown's Heading Levels (#,##,###...#####) for output. No it's not native Markdown, but it does provide another layer of visible output demarcation for scanning dense blocks of text from process & analysis code.
+   
+    Note: Psv2 ISE fundementally mangles and fails to shows these colors properly (you can clearly see it running get-Colornames() from verb-io). 
+    It appears to just not like writing mixed fg & bg color combos quickly. Works fine for writing and logging to file, just don't be surprised when the ISE console output looks like technicolor vomit.
+    
     .PARAMETER Message  
     Message is the content that you wish to add to the log file.
     .PARAMETER Path  
     The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.
     .PARAMETER Level  
-    Specify the criticality of the log information being written to the log (defaults Info): (Info|Warn|Verbose|Error|Debug|H1|H2|H3)[-level Info]
+    Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success)[-level Info]
     .PARAMETER useHost  
     Switch to use write-host rather than write-[verbose|warn|error] (does not apply to H1|H2|H3|DEBUG which alt via uncolored write-host) [-useHost]
     .PARAMETER NoEcho
@@ -57,6 +83,8 @@ function Write-Log {
     Use NoClobber if you do not wish to overwrite an existing file.
     .PARAMETER ShowDebug
     Parameter to display Debugging messages [-ShowDebug switch]
+    .PARAMETER demo
+	Switch to output a demo display of each Level, and it's configured color scheme (requires specification of a 'dummy' message string to avoid an error).[-Demo]
     .EXAMPLE
         PS>  Write-Log -Message 'Log message'   ;
         Writes the message to default log loc (c:\Logs\PowerShellLog.log, -level defaults to Info).
@@ -141,6 +169,9 @@ function Write-Log {
         PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
         PS>  else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
         Example leveraging splatted start-log(), and either $PSCommandPath or $MyInvocation (support varies by host/psversion) to build the log name. 
+        .EXAMPLE
+        PS> write-log -demo -message 'Dummy' ; 
+        Demo (using required dummy error-suppressing messasge) of sample outputs/color combos for each Level configured).
         .LINK
         https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0  ;
     #>    
@@ -152,8 +183,8 @@ function Write-Log {
         [Parameter(Mandatory = $false, HelpMessage = "The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.")]
         [Alias('LogPath')]
         [string]$Path = 'C:\Logs\PowerShellLog.log',
-        [Parameter(Mandatory = $false, HelpMessage = "Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|Debug|Verbose|Prompt)[-level Info]")]
-        [ValidateSet('Error','Warn','Info','H1','H2','H3','Debug','Verbose','Prompt')]
+        [Parameter(Mandatory = $false, HelpMessage = "Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success)[-level Info]")]
+        [ValidateSet('Error','Warn','Info','H1','H2','H3','H4','H5','Debug','Verbose','Prompt','Success')]
         [string]$Level = "Info",
         [Parameter(HelpMessage = "Switch to use write-host rather than write-[verbose|warn|error] [-useHost]")]
         [switch] $useHost,
@@ -163,6 +194,8 @@ function Write-Log {
         [switch]$NoClobber,
         [Parameter(HelpMessage = "Debugging Flag [-showDebug]")]
         [switch] $showDebug
+        [Parameter(HelpMessage = "Switch to output a demo display of each Level, and it's configured color scheme (requires specification of a 'dummy' message string to avoid an error).[-Demo]")]
+        [switch] $demo
     )  ;
     Begin {
         $verbose = ($VerbosePreference -eq "Continue") ;  
