@@ -18,8 +18,8 @@ function Write-Log {
     AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
     AddedTwitter:	@wasserja
     REVISIONS
-    * 8:38 AM 2/1/2023 ren $Message -> $Object (aliased prior) splice over from w-hi, and is the param used natively by w-h; refactored/simplified logic prep for w-hi support. Working now with the refactor.
-    
+    * 4:20 PM 2/1/2023 added full -indent support; updated CBH w related demos; flipped $Object to [System.Object]$Object (was coercing multiline into single text string); 
+        ren $Message -> $Object (aliased prior) splice over from w-hi, and is the param used natively by w-h; refactored/simplified logic prep for w-hi support. Working now with the refactor.
     * 4:47 PM 1/30/2023 tweaked color schemes, renamed splat varis to exactly match levels; added -demo; added Level 'H4','H5', and Success (rounds out the set of banrs I setup in psBnr)
     * 11:38 AM 11/16/2022 moved splats to top, added ISE v2 alt-color options (ISE isn't readable on psv2, by default using w-h etc)
     * 9:07 AM 3/21/2022 added -Level verbose & prompt support, flipped all non-usehost options, but verbose, from w-v -> write-host; added level prefix to console echos
@@ -174,6 +174,61 @@ function Write-Log {
         .EXAMPLE
         PS> write-log -demo -message 'Dummy' ; 
         Demo (using required dummy error-suppressing messasge) of sample outputs/color combos for each Level configured).
+        .EXAMPLE
+        PS>  $smsg = "`n`n===TESTIPAddress: was *validated* as covered by the recursed ipv4 specification:" ; 
+        PS>  $smsg += "`n" ; 
+        PS>  $smsg += "`n---> This host *should be able to* send email on behalf of the configured SPF domain (at least in terms of SPF checks)" ; 
+        PS>  $env:hostindentspaces = 8 ; 
+        PS>  $lvl = 'Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success'.split('|') ; 
+        PS>  foreach ($l in $lvl){Write-Log -LogContent $smsg -Path $tmpfile -Level $l -useHost -Indent} ; 
+        Demo indent function across range of Levels (alt to native -Demo which also supports -indent). 
+        .EXAMPLE
+        PS>  write-verbose 'set to baseline' ; 
+        PS>  reset-HostIndent ; 
+        PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
+        PS>  write-verbose 'write an H1 banner'
+        PS>  $sBnr="#*======v  H1 Banner: v======" ;
+        PS>  $smsg = $sBnr ;
+        PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level H1;
+        PS>  write-verbose 'push indent level+1' ; 
+        PS>  push-HostIndent ; 
+        PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
+        PS>  write-verbose 'write an INFO entry with -Indent specified' ; 
+        PS>  $smsg = "This is information (indented)" ; 
+        PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info -Indent:$true ;
+        PS>  write-verbose 'push indent level+2' ; 
+        PS>  push-HostIndent ; 
+        PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
+        PS>  write-verbose 'write a PROMPT entry with -Indent specified' ; 
+        PS>  $smsg = "This is a subset of information (indented)" ; 
+        PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level Prompt -Indent:$true ;
+        PS>  write-verbose 'pop indent level out one -1' ; 
+        PS>  pop-HostIndent ; 
+        PS>  write-verbose 'write a Success entry with -Indent specified' ; 
+        PS>  $smsg = "This is a Successful information (indented)" ; 
+        PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level Success -Indent:$true ;
+        PS>  write-verbose 'reset to baseline for trailing banner'
+        PS>  reset-HostIndent ; 
+        PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
+        PS>  write-verbose 'write the trailing H1 banner'
+        PS>  $smsg = "$($sBnr.replace('=v','=^').replace('v=','^='))" ;
+        PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level H1;
+        PS>  write-verbose 'clear indent `$env:HostIndentSpaces' ; 
+        PS>  clear-HostIndent ; 
+        PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
+        
+            $env:HostIndentSpaces:0
+            16:16:17: #  #*======v  H1 Banner: v======
+            $env:HostIndentSpaces:4
+                16:16:17: INFO:  This is information (indented)
+            $env:HostIndentSpaces:8
+                    16:16:17: PROMPT:  This is a subset of information (indented)
+                16:16:17: SUCCESS:  This is a Successful information (indented)
+            $env:HostIndentSpaces:0
+            16:16:17: #  #*======^  H1 Banner: ^======
+            $env:HostIndentSpaces:
+
+        Demo broad process for use of verb-HostIndent funcs and write-log with -indent parameter.
         .LINK
         https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0  ;
     #>    
@@ -183,7 +238,7 @@ function Write-Log {
             HelpMessage = "Message is the content that you wish to add to the log file")]
             [ValidateNotNullOrEmpty()][Alias("LogContent")]
             [Alias('Message')] # splice over from w-hi, and is the param used natively by w-h
-            [string]$Object,
+            [System.Object]$Object,
         [Parameter(Mandatory = $false, 
             HelpMessage = "The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.")]
             [Alias('LogPath')]
@@ -270,7 +325,10 @@ the output strings. No newline is added after the last output string.")]
             write-verbose "$($CmdletName): Discovered `$env:HostIndentSpaces:$($CurrIndent)" ; 
 
             # if $object has multiple lines, split it:
-            $Object = $Object.Split([Environment]::NewLine) ; 
+            #$Object = $Object.Split([Environment]::NewLine) ; 
+            # have to coerce the system.object to string array, to get access to a .split method (raw object doese't have it)
+            # and you have to recast the type to string array (can't assign a string[] to [system.object] type vari
+            [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine) 
 
         } ; 
 
@@ -351,6 +409,8 @@ the output strings. No newline is added after the last output string.")]
                     Path=$tmpfile  ;
                     useHost=$true;
                 } ;
+                if($Indent){$PltWL.add('Indent',$true)} ; 
+
                 $whsmsg += "write-log w`n$(($pltWL|out-string).trim())`n" ; 
                 write-host $whsmsg ; 
                 write-log @pltWL ; 
@@ -436,20 +496,47 @@ the output strings. No newline is added after the last output string.")]
             } ;
             # build msg string down here, once, v in ea above
             #$smsg = $EchoTime ;
+            # always defer to explicit cmdline colors
+            if(-not ($pltWH.foregroundcolor) -AND $pltColors.foregroundcolor){$pltWH.add('foregroundcolor',$pltColors.foregroundcolor) } ; 
+            if(-not ($pltWH.backgroundcolor) -AND $pltColors.backgroundcolor){$pltWH.add('backgroundcolor',$pltColors.backgroundcolor) } ; 
             if ($useHost) {
-                if($Level -match '(Debug|Verbose)' ){
-                    #$pltWH.Object += ($LevelText + '(' + $Object + ')') ; 
-                    $pltWH.Object += "$($LevelText) ($($Object))" ;
+                if(-not $Indent){
+                    if($Level -match '(Debug|Verbose)' ){
+                        #$pltWH.Object += ($LevelText + '(' + $Object + ')') ; 
+                        $pltWH.Object += "$($LevelText) ($($Object))" ;
+                    } else { 
+                        #$pltWH.Object += $LevelText + $Object ;
+                        $pltWH.Object += "$($LevelText) $($Object)" ;
+                    } ; 
+                    $smsg = "write-host w`n$(($pltWH|out-string).trim())" ; 
+                    write-verbose $smsg ; 
+                    #write-host @pltErr $smsg ; 
+                    write-host @pltwh ; 
                 } else { 
-                    #$pltWH.Object += $LevelText + $Object ;
-                    $pltWH.Object += "$($LevelText) $($Object)" ;
+                    # indent support
+                    foreach ($obj in $object){
+                        # here we're looping the object, so completely do the object build in here:
+                        $pltWH.Object = $EchoTime ; 
+                        # issue: empty lines/elements with the above are gen'ing: 15:31:44: VERBOSE:  ()
+                        if($Level -match '(Debug|Verbose)' ){
+                            if($obj.length -gt 0){
+                                $pltWH.Object += "$($LevelText) ($($obj))" ;
+                            } else { 
+                                $pltWH.Object += "$($LevelText)" ;
+                            } ; 
+                        } else { 
+                            $pltWH.Object += "$($LevelText) $($obj)" ;
+                        } ; 
+                        $smsg = "write-host w`n$(($pltWH|out-string).trim())" ; 
+                        write-verbose $smsg ; 
+                        # write the indent, then writhe the styled obj/msg
+                        Write-Host -NoNewline $($PadChar * $CurrIndent)  ; 
+                        #write-host @pltWH -object $obj ; 
+                        write-host @pltwh ; 
+                    } ; 
+
+
                 } ; 
-                if($pltColors.foregroundcolor){$pltWH.add('foregroundcolor',$pltColors.foregroundcolor) } ; 
-                if($pltColors.backgroundcolor){$pltWH.add('backgroundcolor',$pltColors.backgroundcolor) } ; 
-                $smsg = "write-host w`n$(($pltWH|out-string).trim())" ; 
-                write-verbose $smsg ; 
-                #write-host @pltErr $smsg ; 
-                write-host @pltwh ; 
             } 
             # Write log entry to $Path
             "$FormattedDate $LevelText : $Object" | Out-File -FilePath $Path -Append  ;
