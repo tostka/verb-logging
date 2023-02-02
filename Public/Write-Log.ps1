@@ -18,6 +18,7 @@ function Write-Log {
     AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
     AddedTwitter:	@wasserja
     REVISIONS
+    * 2:17 PM 2/2/2023 cbh updates, expanded info on new -indent support, added -indent demo
     * 4:20 PM 2/1/2023 added full -indent support; updated CBH w related demos; flipped $Object to [System.Object]$Object (was coercing multiline into single text string); 
         ren $Message -> $Object (aliased prior) splice over from w-hi, and is the param used natively by w-h; refactored/simplified logic prep for w-hi support. Working now with the refactor.
     * 4:47 PM 1/30/2023 tweaked color schemes, renamed splat varis to exactly match levels; added -demo; added Level 'H4','H5', and Success (rounds out the set of banrs I setup in psBnr)
@@ -49,8 +50,15 @@ function Write-Log {
     
     ... of course as is typical that link was subsequently broken by MS over time... [facealm]
     
-    But since that time I have substantially reimplemented jason's code from scratch to implement my evolving concept for the function. My variant now includes a wide range of Levels, a -useHost parameter that implements a more useful write-host color coded output for console output (vs use of the native write-error write-warning write-verbose cmdlets that don't permit you to differentiate types of output, beyond those three niche standardized formats). 
-    
+    But since that time I have substantially reimplemented jason's code from 
+    scratch to implement my evolving concept for the function
+
+    My variant now includes a wide range of Levels, a -useHost parameter 
+    that implements a more useful write-host color coded output for console output 
+    (vs use of the native write-error write-warning write-verbose cmdlets that 
+    don't permit you to differentiate types of output, beyond those three niche 
+    standardized formats)
+     
     ### I typically use write-host in the following way:
     
     1. I configure a $logfile variable centrally in the host script/function, pointed at a suitable output file. 
@@ -66,10 +74,24 @@ function Write-Log {
     ```
     ### Hn Levels
     
-    The H1..H5 Levels are intended to "somewhat" emulate Markdown's Heading Levels (#,##,###...#####) for output. No it's not native Markdown, but it does provide another layer of visible output demarcation for scanning dense blocks of text from process & analysis code.
+    The H1..H5 Levels are intended to "somewhat" emulate Markdown's Heading Levels 
+    (#,##,###...#####) for output. No it's not native Markdown, but it does provide 
+    another layer of visible output demarcation for scanning dense blocks of text 
+    from process & analysis code. 
    
-    Note: Psv2 ISE fundementally mangles and fails to shows these colors properly (you can clearly see it running get-Colornames() from verb-io). 
-    It appears to just not like writing mixed fg & bg color combos quickly. Works fine for writing and logging to file, just don't be surprised when the ISE console output looks like technicolor vomit.
+    ### Indent support
+
+    Now includes -indent parameter support ported over from my verb-io:write-hostIndent cmdlet
+    Native indent support relies on setting the $env:HostIndentSpaces to target indent. 
+    Also leverages following verb-io funcs: (life cycle: (init indent); (mod indent); (clear indent e-vari))
+    (reset-HostIndent), (push-HostIndent,pop-HostIndent,set-HostIndent), (clear-HostIndent),
+    
+    Note: Psv2 ISE fundementally mangles and fails to shows these colors properly 
+    (you can clearly see it running get-Colornames() from verb-io)
+
+    It appears to just not like writing mixed fg & bg color combos quickly.
+    Works fine for writing and logging to file, just don't be surprised 
+    when the ISE console output looks like technicolor vomit. 
     
     .PARAMETER Message  
     Message is the content that you wish to add to the log file.
@@ -349,7 +371,6 @@ the output strings. No newline is added after the last output string.")]
             $pltPrompt=@{foregroundcolor='DarkMagenta';backgroundcolor='darkyellow'};
             $pltSuccess=@{foregroundcolor='Blue';backgroundcolor='green'};
         } else {
-            $pltWH = @{} ;
             <#
             if($buseCC){$pltErr=get-colorcombo 60 -verbose:$false} else { $pltErr=@{foregroundcolor='yellow';backgroundcolor='red'};};
             if($buseCC){$pltWarn=get-colorcombo 52 -verbose:$false} else { $pltWarn=@{foregroundcolor='yellow';backgroundcolor='red'};};
@@ -545,6 +566,5 @@ the output strings. No newline is added after the last output string.")]
 
     }  ; # PROC-E
     End {}  ;
-}
-
+} ; 
 #*------^ Write-Log.ps1 ^------
