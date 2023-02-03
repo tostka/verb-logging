@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.2.1.0
+  Version     : 1.3.0.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -32,7 +32,7 @@
   * 8:57 PM 11/25/2018 Write-Log:shifted copy to verb-transcript, added defer to scope $script versions
   * 8:13 AM 10/2/2018 Cleanup():make it defer to existing script-copy, ren'd $bdebug -> $showdebug
   * 2:37 PM 9/19/2018 fixed a filename invocation bug in Start-IseTranscript ; added CleanUp() example (with archivevelog disabled), formalized notes block, w demo load
-  * 11:29 AM 11.2.1017 initial version
+  * 11:29 AM 11.3.0017 initial version
   .DESCRIPTION
   verb-logging - Logging-related generic functions
   .LINK
@@ -74,7 +74,7 @@ function Archive-Log {
     # 2:49 PM 4/23/2015 recast $ArchPath as $archPath script scope
     # 9:39 AM 4/13/2015 tightened up formatting, crushed lines ; update-RetiringConfRmWindows-prod-tests-20150413-0917AM.ps1 version
     # 7:30 AM 1/28/2015 in use in LineURI script
-    # 10:37 AM 1/21/2015 moved out of the if\else
+    # 10:37 AM 1/21.3.05 moved out of the if\else
     # 1:44 PM 1/16/2015 repurposed from Stop-TranscriptLog, focused this on just moving to archive location
     # 1:18 PM 1/14/2015 added Lync fs rpt share support ; added Lync FS support ; added lab support (lynms650d\d$)
     # 10:48 AM 1/14/2015 adde lab support for archpath ; tshot Archive-Log archmove, for existing file clashes
@@ -238,7 +238,7 @@ function Cleanup {
         # STATIC transcript paths
         #$Logname= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + (get-date -uformat "%Y%m%d-%H%M" ) + "-ISEtrans.log")) ;
         #$Logname= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + $timeStampNow + "-ISEtrans.log")) ;
-        # 2:02 PM 9/21/2018 missing $timestampnow, hardcode
+        # 2:02 PM 9/21.3.08 missing $timestampnow, hardcode
         #$Logname=(join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + (get-date -format 'yyyyMMdd-HHmmtt') + "-ISEtrans.log")) ;
         # RENAME and use the pre-generated transcript
         $Logname=$transcript.replace('-trans-log.txt','-ISEtrans-log.txt') ; 
@@ -259,9 +259,9 @@ function Cleanup {
     # Clear-item doesn't seem to work as a variable release
     # 3:18 PM 2/13/2019 Cleanup: add in the smtp mailer and Change/Error report mailing code from maintain-exombxretentionpolicies.ps1
     # 8:15 AM 10/2/2018 Cleanup:make it defer to $script:cleanup() (needs to be preloaded before verb-transcript call in script), added missing semis, replaced all $bDebug -> $showDebug
-    # 2:02 PM 9/21/2018 missing $timestampnow, hardcode
+    # 2:02 PM 9/21.3.08 missing $timestampnow, hardcode
     # 8:45 AM 10/13/2015 reset $DebugPreference to default SilentlyContinue, if on
-    # # 8:46 AM 3/11/2015 at some time from then to 1:06 PM 3/26/2015 added ISE Transcript
+    # # 8:46 AM 3/11.3.05 at some time from then to 1:06 PM 3/26/2015 added ISE Transcript
     # 8:39 AM 12/10/2014 shifted to stop-transcriptLog function
     # 7:43 AM 1/24/2014 always stop the running transcript before exiting
     [CmdletBinding()]
@@ -310,7 +310,7 @@ function Cleanup {
     #Load as an attachment into the body text:
     #$body = (Get-Content "path-to-file\file.html" ) | converto-html ;
     #$SmtpBody += ("Pass Completed "+ [System.DateTime]::Now + "`nResults Attached: " +$transcript) ;
-    # 4:07 PM 10/11/2018 giant transcript, no send
+    # 4:07 PM 10/11.3.08 giant transcript, no send
     #$SmtpBody += "Pass Completed $([System.DateTime]::Now)`nResults Attached:($transcript)" ;
     $SmtpBody += "Pass Completed $([System.DateTime]::Now)`nTranscript:($transcript)" ;
     # 12:55 PM 2/13/2019 append the $PassStatus in for reference
@@ -375,7 +375,7 @@ function get-ArchivePath {
     # 2:49 PM 4/23/2015 recast $ArchPath as $archPath script scope
     # 9:39 AM 4/13/2015 tightened up formatting, crushed lines ; update-RetiringConfRmWindows-prod-tests-20150413-0917AM.ps1 version
     # 7:30 AM 1/28/2015 in use in LineURI script
-    # 10:37 AM 1/21/2015 moved out of the if\else
+    # 10:37 AM 1/21.3.05 moved out of the if\else
     # 1:44 PM 1/16/2015 repurposed from Stop-TranscriptLog, focused this on just moving to archive location
     # 1:18 PM 1/14/2015 added Lync fs rpt share support ; adde Lync FS support ; added lab support ; added lab support for archpath
     # 10:11 AM 12/10/2014 tshot get-ArchivePath archmove, for existing file clashes ; shifted more into the try block
@@ -1124,7 +1124,7 @@ Function Start-IseTranscript {
     * 10:11 AM 12/2/2022 CBH expl update (-ISEtrans-log.txt)
     * 8:38 AM 7/29/2022 updated CBH example, to preclear consolet text, ahead of use (at the normal start-transcript loc); also added example code to defer to new start-transcript support on ISE for Psv5+ 
     * 12:05 PM 3/1/2020 rewrote header to loosely emulate most of psv5.1 stock transcirpt header
-    * 8:40 AM 3/11/2015 revised to support PSv3's break of the $psise.CurrentPowerShellTab.consolePane.text object
+    * 8:40 AM 3/11.3.05 revised to support PSv3's break of the $psise.CurrentPowerShellTab.consolePane.text object
         and replacement with the new...
             $psise.CurrentPowerShellTab.consolePane.text
         (L13 FEs are PSv4, lyn650 is PSv2)
@@ -1282,7 +1282,7 @@ Transcript started. Output file is $Logname
         $TranscriptHeader | out-file $Logname -append
 
         #$psISE.CurrentPowerShellTab.Output.Text >> $Logname
-        <# 8:37 AM 3/11/2015 PSv3 broke/hid the above object, new object is
+        <# 8:37 AM 3/11.3.05 PSv3 broke/hid the above object, new object is
         $psISE.CurrentPowerShellTab.ConsolePane.text
         Note, it's reportedly not realtime, as the Psv2 .type param was
         #>
@@ -1964,6 +1964,12 @@ function Write-Log {
     AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
     AddedTwitter:	@wasserja
     REVISIONS
+    * 12:07 PM 2/3/2023 updated CBH, spliced over param help for write-hostindent params prev ported over ; 
+        added demo of use of flatten and necessity of |out-string).trim() on formattedobject outputs, prior to using as $object with -Indent ; 
+        roughed in attempt at -useHostBackgroundmoved, parked ; 
+        added pipeline detect write-verbose ; 
+        moved split/flatten into process block (should run per inbound string); added pipeline detect w-v
+        fixed bug in pltColors add (check keys contains before trying to add, assign if preexisting)
     * 5:54 PM 2/2/2023 add -flatten, to strip empty lines from -indent auto-splits ; fix pltColors key add clash err; cbh updates, expanded info on new -indent support, added -indent demo
     * 4:20 PM 2/1/2023 added full -indent support; updated CBH w related demos; flipped $Object to [System.Object]$Object (was coercing multiline into single text string); 
         ren $Message -> $Object (aliased prior) splice over from w-hi, and is the param used natively by w-h; refactored/simplified logic prep for w-hi support. Working now with the refactor.
@@ -2039,8 +2045,8 @@ function Write-Log {
     Works fine for writing and logging to file, just don't be surprised 
     when the ISE console output looks like technicolor vomit. 
     
-    .PARAMETER Message  
-    Message is the content that you wish to add to the log file.
+    .PARAMETER Object <System.Object>
+    Objects to display in the host.
     .PARAMETER Path  
     The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.
     .PARAMETER Level  
@@ -2051,6 +2057,25 @@ function Write-Log {
     Switch to suppress console echos (e.g log to file only [-NoEcho]
     .PARAMETER NoClobber  
     Use NoClobber if you do not wish to overwrite an existing file.
+    .PARAMETER BackgroundColor
+    Specifies the background color. There is no default. The acceptable values for this parameter are:
+    (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)
+    .PARAMETER ForegroundColor <System.ConsoleColor>
+    Specifies the text color. There is no default. The acceptable values for this parameter are:
+    (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)
+    .PARAMETER NoNewline <System.Management.Automation.SwitchParameter>
+    The string representations of the input objects are concatenated to form the output. No spaces or newlines are inserted between
+    the output strings. No newline is added after the last output string.
+    .PARAMETER Separator <System.Object>
+    Specifies a separator string to insert between objects displayed by the host.
+    .PARAMETER PadChar
+    Character to use for padding (defaults to a space).[-PadChar '-']
+    .PARAMETER usePID
+    Switch to use the `$PID in the `$env:HostIndentSpaces name (Env:HostIndentSpaces`$PID)[-usePID]
+    .PARAMETER Indent
+    Switch to use write-HostIndent-type code for console echos(see get-help write-HostIndent)[-Indent]
+    .PARAMETER Flatten
+    Switch to strip empty lines when using -Indent (which auto-splits multiline Objects)[-Flatten]
     .PARAMETER ShowDebug
     Parameter to display Debugging messages [-ShowDebug switch]
     .PARAMETER demo
@@ -2197,6 +2222,21 @@ function Write-Log {
             $env:HostIndentSpaces:
 
         Demo broad process for use of verb-HostIndent funcs and write-log with -indent parameter.
+        .EXAMPLE
+        PS>  write-host "`n`n" ; 
+        PS>  $smsg = "`n`n==ALL Grouped Status.errorCode :`n$(($EVTS.status.errorCode | group| sort count -des | format-table -auto count,name|out-string).trim())" ;
+        PS>  $colors = (get-colorcombo -random) ;
+        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info -Indent @colors -flatten } 
+        PS>  else{ write-host @colors  "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        PS>  PS>  write-host "`n`n" ; 
+        
+        When using -Indent with group'd or other cmd-multiline output, you will want to:
+        1. use the... 
+            $smsg = $(([results]|out-string).trim())"
+            ...structure to pre-clean & convert from [FormatEntryData] to [string] 
+            (avoids errors, due to formatteddata *not* having split mehtod)
+        2. Use -flatten to avoid empty _colored_ lines between each entry in the output (and sprinkle write-host "`n`n"'s pre/post for separation). 
+        These issues only occur under -Indent use, due to the need to `$Object.split to get each line of indented object properly collored and indented.
         .LINK
         https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0  ;
     #>    
@@ -2218,7 +2258,6 @@ function Write-Log {
         [Parameter(
             HelpMessage = "Switch to use write-host rather than write-[verbose|warn|error] [-useHost]")]
             [switch] $useHost,
-        # params to supportr explicit color control in the call.
         [Parameter(
             HelpMessage="Specifies the background color. There is no default. The acceptable values for this parameter are:
     (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)")]
@@ -2233,7 +2272,7 @@ the output strings. No newline is added after the last output string.")]
             [System.Management.Automation.SwitchParameter]$NoNewline,
         # params to support write-HostInden w/in w-l
         [Parameter(
-            HelpMessage = "Switch to use write-HostIndent-type code for console echos(see get-help write-HostIndent)[-useHost]")]
+            HelpMessage = "Switch to use write-HostIndent-type code for console echos(see get-help write-HostIndent)[-Indent]")]
             [Alias('in')]
             [switch] $Indent,
         [Parameter(
@@ -2296,27 +2335,43 @@ the output strings. No newline is added after the last output string.")]
             } ; 
             write-verbose "$($CmdletName): Discovered `$env:HostIndentSpaces:$($CurrIndent)" ; 
 
-            # if $object has multiple lines, split it:
-            #$Object = $Object.Split([Environment]::NewLine) ; 
-            # have to coerce the system.object to string array, to get access to a .split method (raw object doese't have it)
-            # and you have to recast the type to string array (can't assign a string[] to [system.object] type vari
-            if($Flatten){
-                if($object.gettype().name -eq 'FormatEntryData'){
-                    # this converts tostring() as the string: Microsoft.PowerShell.Commands.Internal.Format.FormatEntryData
-                    # issue is (group |  ft -a count,name)'s  that aren't put through $((|out-string).trim())
-                    write-verbose "skip split/flatten on these (should be pre-out-string'd before write-logging)" ; 
-                } else { 
-                    [string[]]$Object = [string[]]$Object.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries) ;
-                } ; 
-            } else { 
-                [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine) 
-            } ; 
-
         } ; 
 
         if(get-command get-colorcombo -ErrorAction SilentlyContinue){$buseCC=$true} else {$buseCC=$false} ;
+        <# attempt at implementing color-match to host bg: nope ISE colors I use aren't standard sys colors
 
-        if($host.Name -eq 'Windows PowerShell ISE Host' -AND $host.version.major -lt 3){
+        .PARAMETER useHostBackground
+        Switch to use host's detected background color [-useHostBackground]
+        [Parameter(
+            HelpMessage = "Switch to use host's detected background color [-useHostBackground]")]
+            [switch] $useHostBackground,
+
+        If($useHostBackground){
+            $hostsettings = get-host ;
+            if ($hostsettings.name -eq 'Windows PowerShell ISE Host') {
+                #$bgcolordefault = "Black" ;
+                #$fgcolordefault = "gray" ;
+                # Getting from ISE rgb color to syscolor:
+                # sys color has a fromARGB(), but my colors *aren't system colors*, so this is a DOA concept. 
+                # [System.Drawing.Color]::FromArgb($psise.Options.ConsolePaneForegroundColor.R,$psise.Options.ConsolePaneForegroundColor.G,$psise.Options.ConsolePaneForegroundColor.B)
+                # R             : 245
+                # G             : 245
+                # B             : 245
+                # A             : 255
+                # IsKnownColor  : False <==
+                # IsEmpty       : False
+                # IsNamedColor  : False <==
+                # IsSystemColor : False <==
+                # Name          : fff5f5f5
+                
+            }
+            else {
+                $bgcolordefault = $hostsettings.ui.rawui.BackgroundColor ;
+                $fgcolordefault = $hostsettings.ui.rawui.ForegroundColor ;
+            } ; 
+        } elseif($host.Name -eq 'Windows PowerShell ISE Host' -AND $host.version.major -lt 3){
+        #>
+        if ($host.Name -eq 'Windows PowerShell ISE Host' -AND $host.version.major -lt 3){
             #write-verbose "(low-contrast/visibility ISE 2 detected: using alt colors)" ; # too NOISEY!
             $pltError=@{foregroundcolor='yellow';backgroundcolor='darkred'};
             $pltWarn=@{foregroundcolor='DarkMagenta';backgroundcolor='yellow'};
@@ -2354,6 +2409,13 @@ the output strings. No newline is added after the last output string.")]
             $pltVerbose=@{foregroundcolor='darkgray';backgroundcolor='black'};
             $pltPrompt=@{foregroundcolor='DarkMagenta';backgroundcolor='darkyellow'};
             $pltSuccess=@{foregroundcolor='Blue';backgroundcolor='green'};
+        } ; 
+
+        if ($PSCmdlet.MyInvocation.ExpectingInput) {
+            write-verbose "Data received from pipeline input: '$($InputObject)'" ; 
+        } else {
+            #write-verbose "Data received from parameter input: '$($InputObject)'" ; 
+            write-verbose "(non-pipeline - param - input)" ; 
         } ; 
     }  ;
     PROCESS {
@@ -2399,6 +2461,23 @@ the output strings. No newline is added after the last output string.")]
             remove-item -path $tmpfile ; 
             
         } else {
+            
+            # move split/flatten into per-object level (was up in BEGIN):
+            # if $object has multiple lines, split it:
+            #$Object = $Object.Split([Environment]::NewLine) ; 
+            # have to coerce the system.object to string array, to get access to a .split method (raw object doese't have it)
+            # and you have to recast the type to string array (can't assign a string[] to [system.object] type vari
+            if($Flatten){
+                if($object.gettype().name -eq 'FormatEntryData'){
+                    # this converts tostring() as the string: Microsoft.PowerShell.Commands.Internal.Format.FormatEntryData
+                    # issue is (group |  ft -a count,name)'s  that aren't put through $((|out-string).trim())
+                    write-verbose "skip split/flatten on these (should be pre-out-string'd before write-logging)" ; 
+                } else { 
+                    [string[]]$Object = [string[]]$Object.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries) ;
+                } ; 
+            } else { 
+                [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine) 
+            } ; 
 
             # If the file already exists and NoClobber was specified, do not write to the log.
             if ((Test-Path $Path) -AND $NoClobber) {
@@ -2554,8 +2633,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUT839CLaj7daIRNIU9MXfGjJE
-# DvmgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUWBy/ws9Vn3zph968wY0xJduu
+# dLagggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -2570,9 +2649,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTF1yDo
-# oJSzAZPhaOVb7eG1lPk2cjANBgkqhkiG9w0BAQEFAASBgAbRf17VAE7CxmB/dr4K
-# 6G5BQZ698rSdSH3PIUde9aIhffkT0wj4QexYXX9xNwjj5JG3TuVh3TkPm+BbxPN9
-# //c4xU+kIPDzYIiXrn7cyfhZMyZzDLTRoM8jMl9mosJ94S4jLfAY3xn96TZ+/oFz
-# f4lO2Au0RDZ7QSADfSSXU6zs
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQLrElx
+# MvBWRq0rjMy8fP+DlCj+TTANBgkqhkiG9w0BAQEFAASBgAVX9A96c9MRyZFczWX0
+# k3VHlBWe5TRobjYPbLEEqf4c2yFDQXE4tCkl8ysxWgY3b27W6sjACiEOGccON7vh
+# 9VISQd3scP2lfnzJn+O8iv1yXi6wPDHWziiRNVVrtvai2qR2ynQNgEmWjKQFCCqK
+# wmdkKI51dr+3DBOu6RWay8cp
 # SIG # End signature block

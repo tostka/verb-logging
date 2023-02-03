@@ -429,7 +429,6 @@ Write-Log:ForegroundColor
 Write-Log:NoNewline
 Write-Log:Indent
 Write-Log:in
-Write-Log:Flatten
 Write-Log:Separator
 Write-Log:PadChar
 Write-Log:PadIncrment
