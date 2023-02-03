@@ -18,7 +18,9 @@ function Write-Log {
     AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
     AddedTwitter:	@wasserja
     REVISIONS
-    * 12:07 PM 2/3/2023 updated CBH, spliced over param help for write-hostindent params prev ported over ; 
+    * 2:26 PM 2/3/2023 combo'd the pair of aliases; added if$indent) around the flatten and split block in PROC (was lost in last move) ; 
+        added |out-string).trim to multiline non-indent text coming through, to ensure it's [string] when it gets written.
+         updated CBH, spliced over param help for write-hostindent params prev ported over ; 
         added demo of use of flatten and necessity of |out-string).trim() on formattedobject outputs, prior to using as $object with -Indent ; 
         roughed in attempt at -useHostBackgroundmoved, parked ; 
         added pipeline detect write-verbose ; 
@@ -298,8 +300,8 @@ function Write-Log {
     Param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, 
             HelpMessage = "Message is the content that you wish to add to the log file")]
-            [ValidateNotNullOrEmpty()][Alias("LogContent")]
-            [Alias('Message')] # splice over from w-hi, and is the param used natively by w-h
+            [ValidateNotNullOrEmpty()]
+            [Alias("LogContent",'Message')]
             [System.Object]$Object,
         [Parameter(Mandatory = $false, 
             HelpMessage = "The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.")]
@@ -516,21 +518,23 @@ the output strings. No newline is added after the last output string.")]
             
         } else {
             
-            # move split/flatten into per-object level (was up in BEGIN):
-            # if $object has multiple lines, split it:
-            #$Object = $Object.Split([Environment]::NewLine) ; 
-            # have to coerce the system.object to string array, to get access to a .split method (raw object doese't have it)
-            # and you have to recast the type to string array (can't assign a string[] to [system.object] type vari
-            if($Flatten){
-                if($object.gettype().name -eq 'FormatEntryData'){
-                    # this converts tostring() as the string: Microsoft.PowerShell.Commands.Internal.Format.FormatEntryData
-                    # issue is (group |  ft -a count,name)'s  that aren't put through $((|out-string).trim())
-                    write-verbose "skip split/flatten on these (should be pre-out-string'd before write-logging)" ; 
+            if($Indent){
+                # move split/flatten into per-object level (was up in BEGIN):
+                # if $object has multiple lines, split it:
+                #$Object = $Object.Split([Environment]::NewLine) ; 
+                # have to coerce the system.object to string array, to get access to a .split method (raw object doese't have it)
+                # and you have to recast the type to string array (can't assign a string[] to [system.object] type vari
+                if($Flatten){
+                    if($object.gettype().name -eq 'FormatEntryData'){
+                        # this converts tostring() as the string: Microsoft.PowerShell.Commands.Internal.Format.FormatEntryData
+                        # issue is (group |  ft -a count,name)'s  that aren't put through $((|out-string).trim())
+                        write-verbose "skip split/flatten on these (should be pre-out-string'd before write-logging)" ; 
+                    } else { 
+                        [string[]]$Object = [string[]]$Object.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries) ;
+                    } ; 
                 } else { 
-                    [string[]]$Object = [string[]]$Object.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries) ;
+                    [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine) 
                 } ; 
-            } else { 
-                [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine) 
             } ; 
 
             # If the file already exists and NoClobber was specified, do not write to the log.
@@ -629,12 +633,20 @@ the output strings. No newline is added after the last output string.")]
             if ($useHost) {
                 if(-not $Indent){
                     if($Level -match '(Debug|Verbose)' ){
-                        #$pltWH.Object += ($LevelText + '(' + $Object + ')') ; 
-                        $pltWH.Object += "$($LevelText) ($($Object))" ;
-                    } else { 
-                        #$pltWH.Object += $LevelText + $Object ;
-                        $pltWH.Object += "$($LevelText) $($Object)" ;
-                    } ; 
+                        if(($Object|  measure).count -gt 1){
+                            $pltWH.Object += "$($LevelText) ($(($Object|out-string).trim()))" ;
+                        } else {
+                            #$pltWH.Object += ($LevelText + '(' + $Object + ')') ;
+                            $pltWH.Object += "$($LevelText) ($($Object))" ;
+                        } ; 
+                    } else {
+                        if(($Object|  measure).count -gt 1){
+                            $pltWH.Object += "$($LevelText) $(($Object|out-string).trim())" ;
+                        } else {
+                            #$pltWH.Object += $LevelText + $Object ;
+                            $pltWH.Object += "$($LevelText) $($Object)" ;
+                        } ; 
+                    } ;
                     $smsg = "write-host w`n$(($pltWH|out-string).trim())" ; 
                     write-verbose $smsg ; 
                     #write-host @pltErr $smsg ; 
