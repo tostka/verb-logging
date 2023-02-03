@@ -12,7 +12,7 @@
 RootModule = 'verb-logging.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.1.4'
+ModuleVersion = '1.2.1'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -148,6 +148,8 @@ PrivateData = @{
 # 6JWxpEGMP6CAsFq1fjY+jwyiTPc8aZiKgSvkdeH7ElCveVBnqvuOqhuqWkZB5HzH
 # INHq2ILUipcuqMrgsTmAIHr3
 # SIG # End signature block
+
+
 
 
 

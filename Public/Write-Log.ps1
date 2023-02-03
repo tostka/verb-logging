@@ -18,7 +18,13 @@ function Write-Log {
     AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
     AddedTwitter:	@wasserja
     REVISIONS
-    * 2:17 PM 2/2/2023 cbh updates, expanded info on new -indent support, added -indent demo
+    * 12:07 PM 2/3/2023 updated CBH, spliced over param help for write-hostindent params prev ported over ; 
+        added demo of use of flatten and necessity of |out-string).trim() on formattedobject outputs, prior to using as $object with -Indent ; 
+        roughed in attempt at -useHostBackgroundmoved, parked ; 
+        added pipeline detect write-verbose ; 
+        moved split/flatten into process block (should run per inbound string); added pipeline detect w-v
+        fixed bug in pltColors add (check keys contains before trying to add, assign if preexisting)
+    * 5:54 PM 2/2/2023 add -flatten, to strip empty lines from -indent auto-splits ; fix pltColors key add clash err; cbh updates, expanded info on new -indent support, added -indent demo
     * 4:20 PM 2/1/2023 added full -indent support; updated CBH w related demos; flipped $Object to [System.Object]$Object (was coercing multiline into single text string); 
         ren $Message -> $Object (aliased prior) splice over from w-hi, and is the param used natively by w-h; refactored/simplified logic prep for w-hi support. Working now with the refactor.
     * 4:47 PM 1/30/2023 tweaked color schemes, renamed splat varis to exactly match levels; added -demo; added Level 'H4','H5', and Success (rounds out the set of banrs I setup in psBnr)
@@ -93,8 +99,8 @@ function Write-Log {
     Works fine for writing and logging to file, just don't be surprised 
     when the ISE console output looks like technicolor vomit. 
     
-    .PARAMETER Message  
-    Message is the content that you wish to add to the log file.
+    .PARAMETER Object <System.Object>
+    Objects to display in the host.
     .PARAMETER Path  
     The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.
     .PARAMETER Level  
@@ -105,6 +111,25 @@ function Write-Log {
     Switch to suppress console echos (e.g log to file only [-NoEcho]
     .PARAMETER NoClobber  
     Use NoClobber if you do not wish to overwrite an existing file.
+    .PARAMETER BackgroundColor
+    Specifies the background color. There is no default. The acceptable values for this parameter are:
+    (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)
+    .PARAMETER ForegroundColor <System.ConsoleColor>
+    Specifies the text color. There is no default. The acceptable values for this parameter are:
+    (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)
+    .PARAMETER NoNewline <System.Management.Automation.SwitchParameter>
+    The string representations of the input objects are concatenated to form the output. No spaces or newlines are inserted between
+    the output strings. No newline is added after the last output string.
+    .PARAMETER Separator <System.Object>
+    Specifies a separator string to insert between objects displayed by the host.
+    .PARAMETER PadChar
+    Character to use for padding (defaults to a space).[-PadChar '-']
+    .PARAMETER usePID
+    Switch to use the `$PID in the `$env:HostIndentSpaces name (Env:HostIndentSpaces`$PID)[-usePID]
+    .PARAMETER Indent
+    Switch to use write-HostIndent-type code for console echos(see get-help write-HostIndent)[-Indent]
+    .PARAMETER Flatten
+    Switch to strip empty lines when using -Indent (which auto-splits multiline Objects)[-Flatten]
     .PARAMETER ShowDebug
     Parameter to display Debugging messages [-ShowDebug switch]
     .PARAMETER demo
@@ -251,6 +276,21 @@ function Write-Log {
             $env:HostIndentSpaces:
 
         Demo broad process for use of verb-HostIndent funcs and write-log with -indent parameter.
+        .EXAMPLE
+        PS>  write-host "`n`n" ; 
+        PS>  $smsg = "`n`n==ALL Grouped Status.errorCode :`n$(($EVTS.status.errorCode | group| sort count -des | format-table -auto count,name|out-string).trim())" ;
+        PS>  $colors = (get-colorcombo -random) ;
+        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info -Indent @colors -flatten } 
+        PS>  else{ write-host @colors  "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        PS>  PS>  write-host "`n`n" ; 
+        
+        When using -Indent with group'd or other cmd-multiline output, you will want to:
+        1. use the... 
+            $smsg = $(([results]|out-string).trim())"
+            ...structure to pre-clean & convert from [FormatEntryData] to [string] 
+            (avoids errors, due to formatteddata *not* having split mehtod)
+        2. Use -flatten to avoid empty _colored_ lines between each entry in the output (and sprinkle write-host "`n`n"'s pre/post for separation). 
+        These issues only occur under -Indent use, due to the need to `$Object.split to get each line of indented object properly collored and indented.
         .LINK
         https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0  ;
     #>    
@@ -272,7 +312,6 @@ function Write-Log {
         [Parameter(
             HelpMessage = "Switch to use write-host rather than write-[verbose|warn|error] [-useHost]")]
             [switch] $useHost,
-        # params to supportr explicit color control in the call.
         [Parameter(
             HelpMessage="Specifies the background color. There is no default. The acceptable values for this parameter are:
     (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)")]
@@ -287,9 +326,13 @@ the output strings. No newline is added after the last output string.")]
             [System.Management.Automation.SwitchParameter]$NoNewline,
         # params to support write-HostInden w/in w-l
         [Parameter(
-            HelpMessage = "Switch to use write-HostIndent-type code for console echos(see get-help write-HostIndent)[-useHost]")]
+            HelpMessage = "Switch to use write-HostIndent-type code for console echos(see get-help write-HostIndent)[-Indent]")]
             [Alias('in')]
             [switch] $Indent,
+        [Parameter(
+            HelpMessage = "Switch to strip empty lines when using -Indent (which auto-splits multiline Objects)[-Flatten]")]
+            #[Alias('flat')]
+            [switch] $Flatten,
         [Parameter(
             HelpMessage="Specifies a separator string to insert between objects displayed by the host.")]
         [System.Object]$Separator,
@@ -346,17 +389,43 @@ the output strings. No newline is added after the last output string.")]
             } ; 
             write-verbose "$($CmdletName): Discovered `$env:HostIndentSpaces:$($CurrIndent)" ; 
 
-            # if $object has multiple lines, split it:
-            #$Object = $Object.Split([Environment]::NewLine) ; 
-            # have to coerce the system.object to string array, to get access to a .split method (raw object doese't have it)
-            # and you have to recast the type to string array (can't assign a string[] to [system.object] type vari
-            [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine) 
-
         } ; 
 
         if(get-command get-colorcombo -ErrorAction SilentlyContinue){$buseCC=$true} else {$buseCC=$false} ;
+        <# attempt at implementing color-match to host bg: nope ISE colors I use aren't standard sys colors
 
-        if($host.Name -eq 'Windows PowerShell ISE Host' -AND $host.version.major -lt 3){
+        .PARAMETER useHostBackground
+        Switch to use host's detected background color [-useHostBackground]
+        [Parameter(
+            HelpMessage = "Switch to use host's detected background color [-useHostBackground]")]
+            [switch] $useHostBackground,
+
+        If($useHostBackground){
+            $hostsettings = get-host ;
+            if ($hostsettings.name -eq 'Windows PowerShell ISE Host') {
+                #$bgcolordefault = "Black" ;
+                #$fgcolordefault = "gray" ;
+                # Getting from ISE rgb color to syscolor:
+                # sys color has a fromARGB(), but my colors *aren't system colors*, so this is a DOA concept. 
+                # [System.Drawing.Color]::FromArgb($psise.Options.ConsolePaneForegroundColor.R,$psise.Options.ConsolePaneForegroundColor.G,$psise.Options.ConsolePaneForegroundColor.B)
+                # R             : 245
+                # G             : 245
+                # B             : 245
+                # A             : 255
+                # IsKnownColor  : False <==
+                # IsEmpty       : False
+                # IsNamedColor  : False <==
+                # IsSystemColor : False <==
+                # Name          : fff5f5f5
+                
+            }
+            else {
+                $bgcolordefault = $hostsettings.ui.rawui.BackgroundColor ;
+                $fgcolordefault = $hostsettings.ui.rawui.ForegroundColor ;
+            } ; 
+        } elseif($host.Name -eq 'Windows PowerShell ISE Host' -AND $host.version.major -lt 3){
+        #>
+        if ($host.Name -eq 'Windows PowerShell ISE Host' -AND $host.version.major -lt 3){
             #write-verbose "(low-contrast/visibility ISE 2 detected: using alt colors)" ; # too NOISEY!
             $pltError=@{foregroundcolor='yellow';backgroundcolor='darkred'};
             $pltWarn=@{foregroundcolor='DarkMagenta';backgroundcolor='yellow'};
@@ -394,6 +463,13 @@ the output strings. No newline is added after the last output string.")]
             $pltVerbose=@{foregroundcolor='darkgray';backgroundcolor='black'};
             $pltPrompt=@{foregroundcolor='DarkMagenta';backgroundcolor='darkyellow'};
             $pltSuccess=@{foregroundcolor='Blue';backgroundcolor='green'};
+        } ; 
+
+        if ($PSCmdlet.MyInvocation.ExpectingInput) {
+            write-verbose "Data received from pipeline input: '$($InputObject)'" ; 
+        } else {
+            #write-verbose "Data received from parameter input: '$($InputObject)'" ; 
+            write-verbose "(non-pipeline - param - input)" ; 
         } ; 
     }  ;
     PROCESS {
@@ -439,6 +515,23 @@ the output strings. No newline is added after the last output string.")]
             remove-item -path $tmpfile ; 
             
         } else {
+            
+            # move split/flatten into per-object level (was up in BEGIN):
+            # if $object has multiple lines, split it:
+            #$Object = $Object.Split([Environment]::NewLine) ; 
+            # have to coerce the system.object to string array, to get access to a .split method (raw object doese't have it)
+            # and you have to recast the type to string array (can't assign a string[] to [system.object] type vari
+            if($Flatten){
+                if($object.gettype().name -eq 'FormatEntryData'){
+                    # this converts tostring() as the string: Microsoft.PowerShell.Commands.Internal.Format.FormatEntryData
+                    # issue is (group |  ft -a count,name)'s  that aren't put through $((|out-string).trim())
+                    write-verbose "skip split/flatten on these (should be pre-out-string'd before write-logging)" ; 
+                } else { 
+                    [string[]]$Object = [string[]]$Object.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries) ;
+                } ; 
+            } else { 
+                [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine) 
+            } ; 
 
             # If the file already exists and NoClobber was specified, do not write to the log.
             if ((Test-Path $Path) -AND $NoClobber) {
@@ -518,8 +611,21 @@ the output strings. No newline is added after the last output string.")]
             # build msg string down here, once, v in ea above
             #$smsg = $EchoTime ;
             # always defer to explicit cmdline colors
-            if(-not ($pltWH.foregroundcolor) -AND $pltColors.foregroundcolor){$pltWH.add('foregroundcolor',$pltColors.foregroundcolor) } ; 
-            if(-not ($pltWH.backgroundcolor) -AND $pltColors.backgroundcolor){$pltWH.add('backgroundcolor',$pltColors.backgroundcolor) } ; 
+            if($pltColors.foregroundcolor){
+                if(-not ($pltWH.keys -contains 'foregroundcolor')){
+                    $pltWH.add('foregroundcolor',$pltColors.foregroundcolor) ; 
+                } elseif($pltWH.foregroundcolor -eq $null){
+                    $pltWH.foregroundcolor = $pltColors.foregroundcolor ; 
+                } ; 
+            } ; 
+            if($pltColors.backgroundcolor){
+                if(-not ($pltWH.keys -contains 'backgroundcolor')){
+                    $pltWH.add('backgroundcolor',$pltColors.backgroundcolor) ; 
+                } elseif($pltWH.backgroundcolor -eq $null){
+                    $pltWH.backgroundcolor = $pltColors.backgroundcolor ; 
+                } ; 
+            } ; 
+ 
             if ($useHost) {
                 if(-not $Indent){
                     if($Level -match '(Debug|Verbose)' ){

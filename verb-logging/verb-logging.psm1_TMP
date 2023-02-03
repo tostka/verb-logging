@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.1.4.0
+  Version     : 1.2.1.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -32,7 +32,7 @@
   * 8:57 PM 11/25/2018 Write-Log:shifted copy to verb-transcript, added defer to scope $script versions
   * 8:13 AM 10/2/2018 Cleanup():make it defer to existing script-copy, ren'd $bdebug -> $showdebug
   * 2:37 PM 9/19/2018 fixed a filename invocation bug in Start-IseTranscript ; added CleanUp() example (with archivevelog disabled), formalized notes block, w demo load
-  * 11:29 AM 11.1.4017 initial version
+  * 11:29 AM 11.2.1017 initial version
   .DESCRIPTION
   verb-logging - Logging-related generic functions
   .LINK
@@ -1964,6 +1964,7 @@ function Write-Log {
     AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
     AddedTwitter:	@wasserja
     REVISIONS
+    * 5:54 PM 2/2/2023 add -flatten, to strip empty lines from -indent auto-splits ; fix pltColors key add clash err; cbh updates, expanded info on new -indent support, added -indent demo
     * 4:20 PM 2/1/2023 added full -indent support; updated CBH w related demos; flipped $Object to [System.Object]$Object (was coercing multiline into single text string); 
         ren $Message -> $Object (aliased prior) splice over from w-hi, and is the param used natively by w-h; refactored/simplified logic prep for w-hi support. Working now with the refactor.
     * 4:47 PM 1/30/2023 tweaked color schemes, renamed splat varis to exactly match levels; added -demo; added Level 'H4','H5', and Success (rounds out the set of banrs I setup in psBnr)
@@ -1995,8 +1996,15 @@ function Write-Log {
     
     ... of course as is typical that link was subsequently broken by MS over time... [facealm]
     
-    But since that time I have substantially reimplemented jason's code from scratch to implement my evolving concept for the function. My variant now includes a wide range of Levels, a -useHost parameter that implements a more useful write-host color coded output for console output (vs use of the native write-error write-warning write-verbose cmdlets that don't permit you to differentiate types of output, beyond those three niche standardized formats). 
-    
+    But since that time I have substantially reimplemented jason's code from 
+    scratch to implement my evolving concept for the function
+
+    My variant now includes a wide range of Levels, a -useHost parameter 
+    that implements a more useful write-host color coded output for console output 
+    (vs use of the native write-error write-warning write-verbose cmdlets that 
+    don't permit you to differentiate types of output, beyond those three niche 
+    standardized formats)
+     
     ### I typically use write-host in the following way:
     
     1. I configure a $logfile variable centrally in the host script/function, pointed at a suitable output file. 
@@ -2012,10 +2020,24 @@ function Write-Log {
     ```
     ### Hn Levels
     
-    The H1..H5 Levels are intended to "somewhat" emulate Markdown's Heading Levels (#,##,###...#####) for output. No it's not native Markdown, but it does provide another layer of visible output demarcation for scanning dense blocks of text from process & analysis code.
+    The H1..H5 Levels are intended to "somewhat" emulate Markdown's Heading Levels 
+    (#,##,###...#####) for output. No it's not native Markdown, but it does provide 
+    another layer of visible output demarcation for scanning dense blocks of text 
+    from process & analysis code. 
    
-    Note: Psv2 ISE fundementally mangles and fails to shows these colors properly (you can clearly see it running get-Colornames() from verb-io). 
-    It appears to just not like writing mixed fg & bg color combos quickly. Works fine for writing and logging to file, just don't be surprised when the ISE console output looks like technicolor vomit.
+    ### Indent support
+
+    Now includes -indent parameter support ported over from my verb-io:write-hostIndent cmdlet
+    Native indent support relies on setting the $env:HostIndentSpaces to target indent. 
+    Also leverages following verb-io funcs: (life cycle: (init indent); (mod indent); (clear indent e-vari))
+    (reset-HostIndent), (push-HostIndent,pop-HostIndent,set-HostIndent), (clear-HostIndent),
+    
+    Note: Psv2 ISE fundementally mangles and fails to shows these colors properly 
+    (you can clearly see it running get-Colornames() from verb-io)
+
+    It appears to just not like writing mixed fg & bg color combos quickly.
+    Works fine for writing and logging to file, just don't be surprised 
+    when the ISE console output looks like technicolor vomit. 
     
     .PARAMETER Message  
     Message is the content that you wish to add to the log file.
@@ -2215,6 +2237,10 @@ the output strings. No newline is added after the last output string.")]
             [Alias('in')]
             [switch] $Indent,
         [Parameter(
+            HelpMessage = "Switch to strip empty lines when using -Indent (which auto-splits multiline Objects)[-Flatten]")]
+            #[Alias('flat')]
+            [switch] $Flatten,
+        [Parameter(
             HelpMessage="Specifies a separator string to insert between objects displayed by the host.")]
         [System.Object]$Separator,
         [Parameter(
@@ -2274,7 +2300,17 @@ the output strings. No newline is added after the last output string.")]
             #$Object = $Object.Split([Environment]::NewLine) ; 
             # have to coerce the system.object to string array, to get access to a .split method (raw object doese't have it)
             # and you have to recast the type to string array (can't assign a string[] to [system.object] type vari
-            [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine) 
+            if($Flatten){
+                if($object.gettype().name -eq 'FormatEntryData'){
+                    # this converts tostring() as the string: Microsoft.PowerShell.Commands.Internal.Format.FormatEntryData
+                    # issue is (group |  ft -a count,name)'s  that aren't put through $((|out-string).trim())
+                    write-verbose "skip split/flatten on these (should be pre-out-string'd before write-logging)" ; 
+                } else { 
+                    [string[]]$Object = [string[]]$Object.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries) ;
+                } ; 
+            } else { 
+                [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine) 
+            } ; 
 
         } ; 
 
@@ -2295,7 +2331,6 @@ the output strings. No newline is added after the last output string.")]
             $pltPrompt=@{foregroundcolor='DarkMagenta';backgroundcolor='darkyellow'};
             $pltSuccess=@{foregroundcolor='Blue';backgroundcolor='green'};
         } else {
-            $pltWH = @{} ;
             <#
             if($buseCC){$pltErr=get-colorcombo 60 -verbose:$false} else { $pltErr=@{foregroundcolor='yellow';backgroundcolor='red'};};
             if($buseCC){$pltWarn=get-colorcombo 52 -verbose:$false} else { $pltWarn=@{foregroundcolor='yellow';backgroundcolor='red'};};
@@ -2443,8 +2478,21 @@ the output strings. No newline is added after the last output string.")]
             # build msg string down here, once, v in ea above
             #$smsg = $EchoTime ;
             # always defer to explicit cmdline colors
-            if(-not ($pltWH.foregroundcolor) -AND $pltColors.foregroundcolor){$pltWH.add('foregroundcolor',$pltColors.foregroundcolor) } ; 
-            if(-not ($pltWH.backgroundcolor) -AND $pltColors.backgroundcolor){$pltWH.add('backgroundcolor',$pltColors.backgroundcolor) } ; 
+            if($pltColors.foregroundcolor){
+                if(-not ($pltWH.keys -contains 'foregroundcolor')){
+                    $pltWH.add('foregroundcolor',$pltColors.foregroundcolor) ; 
+                } elseif($pltWH.foregroundcolor -eq $null){
+                    $pltWH.foregroundcolor = $pltColors.foregroundcolor ; 
+                } ; 
+            } ; 
+            if($pltColors.backgroundcolor){
+                if(-not ($pltWH.keys -contains 'backgroundcolor')){
+                    $pltWH.add('backgroundcolor',$pltColors.backgroundcolor) ; 
+                } elseif($pltWH.backgroundcolor -eq $null){
+                    $pltWH.backgroundcolor = $pltColors.backgroundcolor ; 
+                } ; 
+            } ; 
+ 
             if ($useHost) {
                 if(-not $Indent){
                     if($Level -match '(Debug|Verbose)' ){
