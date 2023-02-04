@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.3.0.0
+  Version     : 1.3.1.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -32,7 +32,7 @@
   * 8:57 PM 11/25/2018 Write-Log:shifted copy to verb-transcript, added defer to scope $script versions
   * 8:13 AM 10/2/2018 Cleanup():make it defer to existing script-copy, ren'd $bdebug -> $showdebug
   * 2:37 PM 9/19/2018 fixed a filename invocation bug in Start-IseTranscript ; added CleanUp() example (with archivevelog disabled), formalized notes block, w demo load
-  * 11:29 AM 11.3.0017 initial version
+  * 11:29 AM 11.3.1017 initial version
   .DESCRIPTION
   verb-logging - Logging-related generic functions
   .LINK
@@ -74,7 +74,7 @@ function Archive-Log {
     # 2:49 PM 4/23/2015 recast $ArchPath as $archPath script scope
     # 9:39 AM 4/13/2015 tightened up formatting, crushed lines ; update-RetiringConfRmWindows-prod-tests-20150413-0917AM.ps1 version
     # 7:30 AM 1/28/2015 in use in LineURI script
-    # 10:37 AM 1/21.3.05 moved out of the if\else
+    # 10:37 AM 1/21/2015 moved out of the if\else
     # 1:44 PM 1/16/2015 repurposed from Stop-TranscriptLog, focused this on just moving to archive location
     # 1:18 PM 1/14/2015 added Lync fs rpt share support ; added Lync FS support ; added lab support (lynms650d\d$)
     # 10:48 AM 1/14/2015 adde lab support for archpath ; tshot Archive-Log archmove, for existing file clashes
@@ -238,7 +238,7 @@ function Cleanup {
         # STATIC transcript paths
         #$Logname= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + (get-date -uformat "%Y%m%d-%H%M" ) + "-ISEtrans.log")) ;
         #$Logname= (join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + $timeStampNow + "-ISEtrans.log")) ;
-        # 2:02 PM 9/21.3.08 missing $timestampnow, hardcode
+        # 2:02 PM 9/21/2018 missing $timestampnow, hardcode
         #$Logname=(join-path -path (join-path -path $scriptDir -childpath "logs") -childpath ($scriptNameNoExt + "-" + (get-date -format 'yyyyMMdd-HHmmtt') + "-ISEtrans.log")) ;
         # RENAME and use the pre-generated transcript
         $Logname=$transcript.replace('-trans-log.txt','-ISEtrans-log.txt') ; 
@@ -259,9 +259,9 @@ function Cleanup {
     # Clear-item doesn't seem to work as a variable release
     # 3:18 PM 2/13/2019 Cleanup: add in the smtp mailer and Change/Error report mailing code from maintain-exombxretentionpolicies.ps1
     # 8:15 AM 10/2/2018 Cleanup:make it defer to $script:cleanup() (needs to be preloaded before verb-transcript call in script), added missing semis, replaced all $bDebug -> $showDebug
-    # 2:02 PM 9/21.3.08 missing $timestampnow, hardcode
+    # 2:02 PM 9/21/2018 missing $timestampnow, hardcode
     # 8:45 AM 10/13/2015 reset $DebugPreference to default SilentlyContinue, if on
-    # # 8:46 AM 3/11.3.05 at some time from then to 1:06 PM 3/26/2015 added ISE Transcript
+    # # 8:46 AM 3/11/2015 at some time from then to 1:06 PM 3/26/2015 added ISE Transcript
     # 8:39 AM 12/10/2014 shifted to stop-transcriptLog function
     # 7:43 AM 1/24/2014 always stop the running transcript before exiting
     [CmdletBinding()]
@@ -310,7 +310,7 @@ function Cleanup {
     #Load as an attachment into the body text:
     #$body = (Get-Content "path-to-file\file.html" ) | converto-html ;
     #$SmtpBody += ("Pass Completed "+ [System.DateTime]::Now + "`nResults Attached: " +$transcript) ;
-    # 4:07 PM 10/11.3.08 giant transcript, no send
+    # 4:07 PM 10/11/2018 giant transcript, no send
     #$SmtpBody += "Pass Completed $([System.DateTime]::Now)`nResults Attached:($transcript)" ;
     $SmtpBody += "Pass Completed $([System.DateTime]::Now)`nTranscript:($transcript)" ;
     # 12:55 PM 2/13/2019 append the $PassStatus in for reference
@@ -375,7 +375,7 @@ function get-ArchivePath {
     # 2:49 PM 4/23/2015 recast $ArchPath as $archPath script scope
     # 9:39 AM 4/13/2015 tightened up formatting, crushed lines ; update-RetiringConfRmWindows-prod-tests-20150413-0917AM.ps1 version
     # 7:30 AM 1/28/2015 in use in LineURI script
-    # 10:37 AM 1/21.3.05 moved out of the if\else
+    # 10:37 AM 1/21/2015 moved out of the if\else
     # 1:44 PM 1/16/2015 repurposed from Stop-TranscriptLog, focused this on just moving to archive location
     # 1:18 PM 1/14/2015 added Lync fs rpt share support ; adde Lync FS support ; added lab support ; added lab support for archpath
     # 10:11 AM 12/10/2014 tshot get-ArchivePath archmove, for existing file clashes ; shifted more into the try block
@@ -1124,7 +1124,7 @@ Function Start-IseTranscript {
     * 10:11 AM 12/2/2022 CBH expl update (-ISEtrans-log.txt)
     * 8:38 AM 7/29/2022 updated CBH example, to preclear consolet text, ahead of use (at the normal start-transcript loc); also added example code to defer to new start-transcript support on ISE for Psv5+ 
     * 12:05 PM 3/1/2020 rewrote header to loosely emulate most of psv5.1 stock transcirpt header
-    * 8:40 AM 3/11.3.05 revised to support PSv3's break of the $psise.CurrentPowerShellTab.consolePane.text object
+    * 8:40 AM 3/11/2015 revised to support PSv3's break of the $psise.CurrentPowerShellTab.consolePane.text object
         and replacement with the new...
             $psise.CurrentPowerShellTab.consolePane.text
         (L13 FEs are PSv4, lyn650 is PSv2)
@@ -1282,7 +1282,7 @@ Transcript started. Output file is $Logname
         $TranscriptHeader | out-file $Logname -append
 
         #$psISE.CurrentPowerShellTab.Output.Text >> $Logname
-        <# 8:37 AM 3/11.3.05 PSv3 broke/hid the above object, new object is
+        <# 8:37 AM 3/11/2015 PSv3 broke/hid the above object, new object is
         $psISE.CurrentPowerShellTab.ConsolePane.text
         Note, it's reportedly not realtime, as the Psv2 .type param was
         #>
@@ -1964,7 +1964,9 @@ function Write-Log {
     AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
     AddedTwitter:	@wasserja
     REVISIONS
-    * 12:07 PM 2/3/2023 updated CBH, spliced over param help for write-hostindent params prev ported over ; 
+    * 2:26 PM 2/3/2023 combo'd the pair of aliases; added if$indent) around the flatten and split block in PROC (was lost in last move) ; 
+        added |out-string).trim to multiline non-indent text coming through, to ensure it's [string] when it gets written.
+         updated CBH, spliced over param help for write-hostindent params prev ported over ; 
         added demo of use of flatten and necessity of |out-string).trim() on formattedobject outputs, prior to using as $object with -Indent ; 
         roughed in attempt at -useHostBackgroundmoved, parked ; 
         added pipeline detect write-verbose ; 
@@ -2244,8 +2246,8 @@ function Write-Log {
     Param (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, 
             HelpMessage = "Message is the content that you wish to add to the log file")]
-            [ValidateNotNullOrEmpty()][Alias("LogContent")]
-            [Alias('Message')] # splice over from w-hi, and is the param used natively by w-h
+            [ValidateNotNullOrEmpty()]
+            [Alias("LogContent",'Message')]
             [System.Object]$Object,
         [Parameter(Mandatory = $false, 
             HelpMessage = "The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.")]
@@ -2462,21 +2464,23 @@ the output strings. No newline is added after the last output string.")]
             
         } else {
             
-            # move split/flatten into per-object level (was up in BEGIN):
-            # if $object has multiple lines, split it:
-            #$Object = $Object.Split([Environment]::NewLine) ; 
-            # have to coerce the system.object to string array, to get access to a .split method (raw object doese't have it)
-            # and you have to recast the type to string array (can't assign a string[] to [system.object] type vari
-            if($Flatten){
-                if($object.gettype().name -eq 'FormatEntryData'){
-                    # this converts tostring() as the string: Microsoft.PowerShell.Commands.Internal.Format.FormatEntryData
-                    # issue is (group |  ft -a count,name)'s  that aren't put through $((|out-string).trim())
-                    write-verbose "skip split/flatten on these (should be pre-out-string'd before write-logging)" ; 
+            if($Indent){
+                # move split/flatten into per-object level (was up in BEGIN):
+                # if $object has multiple lines, split it:
+                #$Object = $Object.Split([Environment]::NewLine) ; 
+                # have to coerce the system.object to string array, to get access to a .split method (raw object doese't have it)
+                # and you have to recast the type to string array (can't assign a string[] to [system.object] type vari
+                if($Flatten){
+                    if($object.gettype().name -eq 'FormatEntryData'){
+                        # this converts tostring() as the string: Microsoft.PowerShell.Commands.Internal.Format.FormatEntryData
+                        # issue is (group |  ft -a count,name)'s  that aren't put through $((|out-string).trim())
+                        write-verbose "skip split/flatten on these (should be pre-out-string'd before write-logging)" ; 
+                    } else { 
+                        [string[]]$Object = [string[]]$Object.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries) ;
+                    } ; 
                 } else { 
-                    [string[]]$Object = [string[]]$Object.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries) ;
+                    [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine) 
                 } ; 
-            } else { 
-                [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine) 
             } ; 
 
             # If the file already exists and NoClobber was specified, do not write to the log.
@@ -2575,12 +2579,20 @@ the output strings. No newline is added after the last output string.")]
             if ($useHost) {
                 if(-not $Indent){
                     if($Level -match '(Debug|Verbose)' ){
-                        #$pltWH.Object += ($LevelText + '(' + $Object + ')') ; 
-                        $pltWH.Object += "$($LevelText) ($($Object))" ;
-                    } else { 
-                        #$pltWH.Object += $LevelText + $Object ;
-                        $pltWH.Object += "$($LevelText) $($Object)" ;
-                    } ; 
+                        if(($Object|  measure).count -gt 1){
+                            $pltWH.Object += "$($LevelText) ($(($Object|out-string).trim()))" ;
+                        } else {
+                            #$pltWH.Object += ($LevelText + '(' + $Object + ')') ;
+                            $pltWH.Object += "$($LevelText) ($($Object))" ;
+                        } ; 
+                    } else {
+                        if(($Object|  measure).count -gt 1){
+                            $pltWH.Object += "$($LevelText) $(($Object|out-string).trim())" ;
+                        } else {
+                            #$pltWH.Object += $LevelText + $Object ;
+                            $pltWH.Object += "$($LevelText) $($Object)" ;
+                        } ; 
+                    } ;
                     $smsg = "write-host w`n$(($pltWH|out-string).trim())" ; 
                     write-verbose $smsg ; 
                     #write-host @pltErr $smsg ; 
@@ -2633,8 +2645,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUWBy/ws9Vn3zph968wY0xJduu
-# dLagggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUbtIu0na9pfMALIRxu+oBK7Xp
+# OFigggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -2649,9 +2661,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQLrElx
-# MvBWRq0rjMy8fP+DlCj+TTANBgkqhkiG9w0BAQEFAASBgAVX9A96c9MRyZFczWX0
-# k3VHlBWe5TRobjYPbLEEqf4c2yFDQXE4tCkl8ysxWgY3b27W6sjACiEOGccON7vh
-# 9VISQd3scP2lfnzJn+O8iv1yXi6wPDHWziiRNVVrtvai2qR2ynQNgEmWjKQFCCqK
-# wmdkKI51dr+3DBOu6RWay8cp
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQgrc8j
+# c2y+417gUbvwL9M65BuywjANBgkqhkiG9w0BAQEFAASBgGMFWhkEtbJOzCGEB05B
+# /aLIhbbor2iKwzRD8P6BRld7ao/56iu9Bfi0gnqQooRmi5xARrShfAICJ7jONLIG
+# OGUBzVbcSbrpI4NgxNNeGwbrg/qhZHpPssy12ZZ73Ged+x+UVCHTiRKxPOuBWIx+
+# ecGx/Q1F7JdjN3THfVM/CV1q
 # SIG # End signature block
