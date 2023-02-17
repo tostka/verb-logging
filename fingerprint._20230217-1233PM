@@ -418,8 +418,8 @@ Test-TranscriptionSupported:ob
 Test-TranscriptionSupported:PipelineVariable
 Test-TranscriptionSupported:pv
 Write-Log:Object
-Write-Log:LogContent
 Write-Log:Message
+Write-Log:LogContent
 Write-Log:Path
 Write-Log:LogPath
 Write-Log:Level
