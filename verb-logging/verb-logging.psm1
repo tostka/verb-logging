@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.3.2.0
+  Version     : 1.3.3.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -32,7 +32,7 @@
   * 8:57 PM 11/25/2018 Write-Log:shifted copy to verb-transcript, added defer to scope $script versions
   * 8:13 AM 10/2/2018 Cleanup():make it defer to existing script-copy, ren'd $bdebug -> $showdebug
   * 2:37 PM 9/19/2018 fixed a filename invocation bug in Start-IseTranscript ; added CleanUp() example (with archivevelog disabled), formalized notes block, w demo load
-  * 11:29 AM 11.3.2017 initial version
+  * 11:29 AM 11.3.3017 initial version
   .DESCRIPTION
   verb-logging - Logging-related generic functions
   .LINK
@@ -2279,6 +2279,9 @@ function Write-Log {
                 [Alias('in')]
                 [switch] $Indent,
             [Parameter(
+                HelpMessage="Switch to use the `$PID in the `$env:HostIndentSpaces name (Env:HostIndentSpaces`$PID)[-usePID]")]
+                [switch]$usePID,
+            [Parameter(
                 HelpMessage = "Switch to strip empty lines when using -Indent (which auto-splits multiline Objects)[-Flatten]")]
                 #[Alias('flat')]
                 [switch] $Flatten,
@@ -2292,7 +2295,7 @@ function Write-Log {
                 HelpMessage="Number of spaces to pad by default (defaults to 4).[-PadIncrment 8]")]
             [int]$PadIncrment = 4,
             [Parameter(
-                    HelpMessage = "Switch to suppress console echos (e.g log to file only [-NoEcho]")]
+                HelpMessage = "Switch to suppress console echos (e.g log to file only [-NoEcho]")]
                 [switch] $NoEcho,
             [Parameter(Mandatory = $false,
                 HelpMessage = "Use NoClobber if you do not wish to overwrite an existing file.")]
@@ -2333,10 +2336,24 @@ function Write-Log {
                 $pltWH.add('Separator',$Separator) ;
             } ;
             write-verbose "$($CmdletName): Using `$PadChar:`'$($PadChar)`'" ;
-            if (-not ([int]$CurrIndent = (Get-Item -Path Env:HostIndentSpaces -erroraction SilentlyContinue).Value ) ){
+            
+            #if we want to tune this to a $PID-specific variant, use:
+            if($usePID){
+                $smsg = "-usePID specified: `$Env:HostIndentSpaces will be suffixed with this process' `$PID value!" ;
+                if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info }
+                else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+                $HISName = "Env:HostIndentSpaces$($PID)" ;
+            } else {
+                $HISName = "Env:HostIndentSpaces" ;
+            } ;
+            if(($smsg = Get-Item -Path "Env:HostIndentSpaces$($PID)" -erroraction SilentlyContinue).value){
+                write-verbose $smsg ;
+            } ;
+            if (-not ([int]$CurrIndent = (Get-Item -Path $HISName -erroraction SilentlyContinue).Value ) ){
                 [int]$CurrIndent = 0 ;
             } ;
-            write-verbose "$($CmdletName): Discovered `$env:HostIndentSpaces:$($CurrIndent)" ;
+            write-verbose "$($CmdletName): Discovered `$$($HISName):$($CurrIndent)" ;
+            
         } ;
         if(get-command get-colorcombo -ErrorAction SilentlyContinue){$buseCC=$true} else {$buseCC=$false} ;
         <# attempt at implementing color-match to host bg: nope ISE colors I use aren't standard sys colors
@@ -2632,8 +2649,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUmV2yHdXuOiTWOMr8S2VR1h3G
-# nmagggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU9dwRqClQjUcLwc/BHxkgIhtE
+# 1sygggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -2648,9 +2665,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQ9U5YX
-# sTBUImnWzZmu5d1M6qiCFDANBgkqhkiG9w0BAQEFAASBgBfm2XPXW6L/ODDGFQFd
-# ieMeNtyEn8K/ItE0W3cpY4bIgqbuT+FG8YOzo2OBdXWfxGRfO+xDujIkTxG68XPU
-# xi6TIR8frBgD7Ub72JXvlCRAd+YVJD6d6206Pj4u3QDhNo6wrLIR0CRRzOHNQ+Pa
-# jvCX1sg3SshSKAmDsotMgIOz
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSnxnnY
+# q6w24zUyIN88TchNAILZOzANBgkqhkiG9w0BAQEFAASBgF4rDKuolIzfgUWJI7wJ
+# 0Ds4HzwCHBJ+txDzZnryvR4GG59DeJllN6mvy5ksATRwUvC5ysir95vLNHyZqOQd
+# W/czHSHu47SKnfmrVL6EwrZEBtxGnse8g2jwBtc4HumftYPEa4c9a+exzUXdttBW
+# 4an3K0siIeTb/5HBjljqbw7G
 # SIG # End signature block
