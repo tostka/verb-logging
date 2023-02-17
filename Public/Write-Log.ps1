@@ -18,6 +18,8 @@ function Write-Log {
     AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
     AddedTwitter:	@wasserja
     REVISIONS
+    * 10:59 AM 2/17/2023 #529:added workaround for rando 'The variable cannot be validated because the value System.String[] is not a valid value for the Object variable.' err (try catch and strip to text w diff method) suddently seeing NUL char interleave on outputs (C:\usr\work\ps\scripts\logs\monitor-ExecPol-LOG-BATCH-EXEC-log.txt, utf-16/bigendianunicode?), forcing out-file -encoding UTF8
+    * 2:11 PM 2/15/2023 buffered over debugs from psv2 ISE color bizaareness. Completely refactored the psise & psv2 color block - have to use wildly inappaprop colors to get anything functional. 
     * 2:26 PM 2/3/2023 combo'd the pair of aliases; added if$indent) around the flatten and split block in PROC (was lost in last move) ; 
         added |out-string).trim to multiline non-indent text coming through, to ensure it's [string] when it gets written.
          updated CBH, spliced over param help for write-hostindent params prev ported over ; 
@@ -298,101 +300,115 @@ function Write-Log {
     #>    
     [CmdletBinding()]
     Param (
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, 
-            HelpMessage = "Message is the content that you wish to add to the log file")]
-            [ValidateNotNullOrEmpty()]
-            [Alias("LogContent",'Message')]
-            [System.Object]$Object,
-        [Parameter(Mandatory = $false, 
-            HelpMessage = "The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.")]
-            [Alias('LogPath')]
-            [string]$Path = 'C:\Logs\PowerShellLog.log',
-        [Parameter(Mandatory = $false, 
-            HelpMessage = "Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success)[-level Info]")]
-            [ValidateSet('Error','Warn','Info','H1','H2','H3','H4','H5','Debug','Verbose','Prompt','Success')]
-            [string]$Level = "Info",
-        [Parameter(
-            HelpMessage = "Switch to use write-host rather than write-[verbose|warn|error] [-useHost]")]
-            [switch] $useHost,
-        [Parameter(
-            HelpMessage="Specifies the background color. There is no default. The acceptable values for this parameter are:
+            [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true,
+                HelpMessage = "Message is the content that you wish to add to the log file")]
+                [ValidateNotNullOrEmpty()]
+                [Alias("LogContent",'Message')]
+                [System.Object]$Object,
+            [Parameter(Mandatory = $false,
+                HelpMessage = "The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.")]
+                [Alias('LogPath')]
+                [string]$Path = 'C:\Logs\PowerShellLog.log',
+            [Parameter(Mandatory = $false,
+                HelpMessage = "Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success)[-level Info]")]
+                [ValidateSet('Error','Warn','Info','H1','H2','H3','H4','H5','Debug','Verbose','Prompt','Success')]
+                [string]$Level = "Info",
+            [Parameter(
+                HelpMessage = "Switch to use write-host rather than write-[verbose|warn|error] [-useHost]")]
+                [switch] $useHost,
+            [Parameter(
+                HelpMessage="Specifies the background color. There is no default. The acceptable values for this parameter are:
+        (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)")]
+                [System.ConsoleColor]$BackgroundColor,
+            [Parameter(
+                HelpMessage="Specifies the text color. There is no default. The acceptable values for this parameter are:
     (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)")]
-            [System.ConsoleColor]$BackgroundColor,
-        [Parameter(
-            HelpMessage="Specifies the text color. There is no default. The acceptable values for this parameter are:
-(Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)")]
-            [System.ConsoleColor]$ForegroundColor,
-        [Parameter(
-            HelpMessage="The string representations of the input objects are concatenated to form the output. No spaces or newlines are inserted between
-the output strings. No newline is added after the last output string.")]
-            [System.Management.Automation.SwitchParameter]$NoNewline,
-        # params to support write-HostInden w/in w-l
-        [Parameter(
-            HelpMessage = "Switch to use write-HostIndent-type code for console echos(see get-help write-HostIndent)[-Indent]")]
-            [Alias('in')]
-            [switch] $Indent,
-        [Parameter(
-            HelpMessage = "Switch to strip empty lines when using -Indent (which auto-splits multiline Objects)[-Flatten]")]
-            #[Alias('flat')]
-            [switch] $Flatten,
-        [Parameter(
-            HelpMessage="Specifies a separator string to insert between objects displayed by the host.")]
-        [System.Object]$Separator,
-        [Parameter(
-            HelpMessage="Character to use for padding (defaults to a space).[-PadChar '-']")]
-        [string]$PadChar = ' ',
-        [Parameter(
-            HelpMessage="Number of spaces to pad by default (defaults to 4).[-PadIncrment 8]")]
-        [int]$PadIncrment = 4,
-        [Parameter(
+                [System.ConsoleColor]$ForegroundColor,
+            [Parameter(
+                HelpMessage="The string representations of the input objects are concatenated to form the output. No spaces or newlines are inserted between
+    the output strings. No newline is added after the last output string.")]
+                [System.Management.Automation.SwitchParameter]$NoNewline,
+            [Parameter(
+                HelpMessage = "Switch to use write-HostIndent-type code for console echos(see get-help write-HostIndent)[-Indent]")]
+                [Alias('in')]
+                [switch] $Indent,
+            [Parameter(
+                HelpMessage="Switch to use the `$PID in the `$env:HostIndentSpaces name (Env:HostIndentSpaces`$PID)[-usePID]")]
+                [switch]$usePID,
+            [Parameter(
+                HelpMessage = "Switch to strip empty lines when using -Indent (which auto-splits multiline Objects)[-Flatten]")]
+                #[Alias('flat')]
+                [switch] $Flatten,
+            [Parameter(
+                HelpMessage="Specifies a separator string to insert between objects displayed by the host.")]
+            [System.Object]$Separator,
+            [Parameter(
+                HelpMessage="Character to use for padding (defaults to a space).[-PadChar '-']")]
+            [string]$PadChar = ' ',
+            [Parameter(
+                HelpMessage="Number of spaces to pad by default (defaults to 4).[-PadIncrment 8]")]
+            [int]$PadIncrment = 4,
+            [Parameter(
                 HelpMessage = "Switch to suppress console echos (e.g log to file only [-NoEcho]")]
-            [switch] $NoEcho,
-        [Parameter(Mandatory = $false, 
-            HelpMessage = "Use NoClobber if you do not wish to overwrite an existing file.")]
-            [switch]$NoClobber,
-        [Parameter(
-            HelpMessage = "Debugging Flag [-showDebug]")]
-            [switch] $showDebug,
-        [Parameter(
-            HelpMessage = "Switch to output a demo display of each Level, and it's configured color scheme (requires specification of a 'dummy' message string to avoid an error).[-Demo]")]
-            [switch] $demo
-    )  ;
+                [switch] $NoEcho,
+            [Parameter(Mandatory = $false,
+                HelpMessage = "Use NoClobber if you do not wish to overwrite an existing file.")]
+                [switch]$NoClobber,
+            [Parameter(
+                HelpMessage = "Debugging Flag [-showDebug]")]
+                [switch] $showDebug,
+            [Parameter(
+                HelpMessage = "Switch to output a demo display of each Level, and it's configured color scheme (requires specification of a 'dummy' message string to avoid an error).[-Demo]")]
+                [switch] $demo
+        )  ;
     BEGIN {
         #region CONSTANTS-AND-ENVIRO #*======v CONSTANTS-AND-ENVIRO v======
         # function self-name (equiv to script's: $MyInvocation.MyCommand.Path) ;
         ${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name ;
-        $PSParameters = New-Object -TypeName PSObject -Property $PSBoundParameters ;
-        write-verbose "$($CmdletName): `$PSBoundParameters:`n$(($PSBoundParameters|out-string).trim())" ;
+        if(($PSBoundParameters.keys).count -ne 0){
+            $PSParameters = New-Object -TypeName PSObject -Property $PSBoundParameters ;
+            write-verbose "$($CmdletName): `$PSBoundParameters:`n$(($PSBoundParameters|out-string).trim())" ;
+        } ; 
         $Verbose = ($VerbosePreference -eq 'Continue') ;     
         #$VerbosePreference = "SilentlyContinue" ;
         #endregion CONSTANTS-AND-ENVIRO #*======^ END CONSTANTS-AND-ENVIRO ^======
 
         $pltWH = @{
-            Object = $null ; 
-        } ; 
+                Object = $null ;
+        } ;
         if ($PSBoundParameters.ContainsKey('BackgroundColor')) {
-            $pltWH.add('BackgroundColor',$BackgroundColor) ; 
+            $pltWH.add('BackgroundColor',$BackgroundColor) ;
         } ;
         if ($PSBoundParameters.ContainsKey('ForegroundColor')) {
-            $pltWH.add('ForegroundColor',$ForegroundColor) ; 
+            $pltWH.add('ForegroundColor',$ForegroundColor) ;
         } ;
         if ($PSBoundParameters.ContainsKey('NoNewline')) {
-            $pltWH.add('NoNewline',$NoNewline) ; 
+            $pltWH.add('NoNewline',$NoNewline) ;
         } ;
-        
         if($Indent){
-        
             if ($PSBoundParameters.ContainsKey('Separator')) {
-                $pltWH.add('Separator',$Separator) ; 
+                $pltWH.add('Separator',$Separator) ;
             } ;
-            write-verbose "$($CmdletName): Using `$PadChar:`'$($PadChar)`'" ; 
-            if (-not ([int]$CurrIndent = (Get-Item -Path Env:HostIndentSpaces -erroraction SilentlyContinue).Value ) ){
-                [int]$CurrIndent = 0 ; 
-            } ; 
-            write-verbose "$($CmdletName): Discovered `$env:HostIndentSpaces:$($CurrIndent)" ; 
-
-        } ; 
-
+            write-verbose "$($CmdletName): Using `$PadChar:`'$($PadChar)`'" ;
+            
+            #if we want to tune this to a $PID-specific variant, use:
+            if($usePID){
+                $smsg = "-usePID specified: `$Env:HostIndentSpaces will be suffixed with this process' `$PID value!" ;
+                if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info }
+                else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+                $HISName = "Env:HostIndentSpaces$($PID)" ;
+            } else {
+                $HISName = "Env:HostIndentSpaces" ;
+            } ;
+            if(($smsg = Get-Item -Path "Env:HostIndentSpaces$($PID)" -erroraction SilentlyContinue).value){
+                write-verbose $smsg ;
+            } ;
+            if (-not ([int]$CurrIndent = (Get-Item -Path $HISName -erroraction SilentlyContinue).Value ) ){
+                [int]$CurrIndent = 0 ;
+            } ;
+            write-verbose "$($CmdletName): Discovered `$$($HISName):$($CurrIndent)" ;
+            
+        } ;
         if(get-command get-colorcombo -ErrorAction SilentlyContinue){$buseCC=$true} else {$buseCC=$false} ;
         <# attempt at implementing color-match to host bg: nope ISE colors I use aren't standard sys colors
 
@@ -428,19 +444,19 @@ the output strings. No newline is added after the last output string.")]
         } elseif($host.Name -eq 'Windows PowerShell ISE Host' -AND $host.version.major -lt 3){
         #>
         if ($host.Name -eq 'Windows PowerShell ISE Host' -AND $host.version.major -lt 3){
-            #write-verbose "(low-contrast/visibility ISE 2 detected: using alt colors)" ; # too NOISEY!
-            $pltError=@{foregroundcolor='yellow';backgroundcolor='darkred'};
-            $pltWarn=@{foregroundcolor='DarkMagenta';backgroundcolor='yellow'};
-            $pltInfo=@{foregroundcolor='gray';backgroundcolor='darkblue'};
-            $pltH1=@{foregroundcolor='black';backgroundcolor='darkyellow'};
-            $pltH2=@{foregroundcolor='darkblue';backgroundcolor='gray'};
-            $pltH3=@{foregroundcolor='black';backgroundcolor='darkgray'};
-            $pltH4=@{foregroundcolor='gray';backgroundcolor='DarkCyan'};
-            $pltH5=@{foregroundcolor='cyan';backgroundcolor='DarkGreen'};
-            $pltDebug=@{foregroundcolor='red';backgroundcolor='black'};
-            $pltVerbose=@{foregroundcolor='darkgray';backgroundcolor='black'};
-            $pltPrompt=@{foregroundcolor='DarkMagenta';backgroundcolor='darkyellow'};
-            $pltSuccess=@{foregroundcolor='Blue';backgroundcolor='green'};
+                write-verbose "PSISE under psV2 has wacky inconsistent colors - only *some* even display, others default to white`nso we choose fundementally wrong colors, to approximate the target colors" ;
+                $pltError=@{foregroundcolor='DarkYellow';backgroundcolor='Red'};
+                $pltWarn=@{foregroundcolor='DarkMagenta';backgroundcolor='DarkCyan'};
+                $pltInfo=@{foregroundcolor='Blue';backgroundcolor='darkGreen'};
+                $pltH1=@{foregroundcolor='black';backgroundcolor='darkyellow'};
+                $pltH2=@{foregroundcolor='darkblue';backgroundcolor='cyan'};
+                $pltH3=@{foregroundcolor='black';backgroundcolor='cyan'};
+                $pltH4=@{foregroundcolor='black';backgroundcolor='DarkMagenta'};
+                $pltH5=@{foregroundcolor='cyan';backgroundcolor='Green'};
+                $pltDebug=@{foregroundcolor='red';backgroundcolor='black'};
+                $pltVerbose=@{foregroundcolor='darkgray';backgroundcolor='darkred'};
+                $pltPrompt=@{foregroundcolor='White';backgroundcolor='DarkBlue'};
+                $pltSuccess=@{foregroundcolor='DarkGray';backgroundcolor='green'};
         } else {
             <#
             if($buseCC){$pltErr=get-colorcombo 60 -verbose:$false} else { $pltErr=@{foregroundcolor='yellow';backgroundcolor='red'};};
@@ -477,64 +493,66 @@ the output strings. No newline is added after the last output string.")]
     PROCESS {
 
         if($Demo){
-            write-host "Running demo of current settings..." @pltH1 
-            $combos = "h1m;H1","h2m;H2","h3m;H3","h4m;H4","h5m;H5",
-                "whm;INFO","whp;PROMPT","whs;SUCCESS","whw;WARN","wem;ERROR","whv;VERBOSE" ; 
-            $h1m =" #*======v STATUSMSG: SBNR v======" ; 
-            $h2m = "`n#*------v PROCESSING : sBnrS v------" ; 
-            $h3m ="`n#*~~~~~~v SUB-PROCESSING : sBnr3 v~~~~~~" ;
-            $h4m="`n#*``````v DETAIL : sBnr4 v``````" ; 
-            $h5m="`n#*______v FOCUS : sBnr5 v______" ; 
-            $whm = "This is typical output" ; 
-            $whp = "What is your quest?" ;
-            $whs = "Successful execution!" ;
-            $whw = "THIS DIDN'T GO AS PLANNED" ; 
-            $wem = "UTTER FAILURE!" ; 
-            $whv = "internal comment executed" ; 
-            $tmpfile = [System.IO.Path]::GetTempFileName().replace('.tmp','.txt') ; 
-            foreach($cmbo in $combos){
-                $txt,$name = $cmbo.split(';') ; 
-                $Level = $name ; 
-                if($Level -eq 'H5'){
-                    write-host "Gotcha!"; 
-                } ; 
-                $whplt = (gv "plt$($name)").value ; 
-                $text = (gv $txt).value ; 
-                #$smsg="`$plt$($name):($($whplt.foregroundcolor):$($whplt.backgroundcolor)):`n`n$($text)`n`n" ;
-                $whsmsg="`$plt$($name):($($whplt.foregroundcolor):$($whplt.backgroundcolor)):`n`n" ; 
-                $pltWL=@{
-                    message= $text ;
-                    Level=$Level ;
-                    Path=$tmpfile  ;
-                    useHost=$true;
+                write-host "Running demo of current settings..." @pltH1
+                $combos = "h1m;H1","h2m;H2","h3m;H3","h4m;H4","h5m;H5",
+                    "whm;INFO","whp;PROMPT","whs;SUCCESS","whw;WARN","wem;ERROR","whv;VERBOSE" ;
+                $h1m =" #*======v STATUSMSG: SBNR v======" ;
+                $h2m = "`n#*------v PROCESSING : sBnrS v------" ;
+                $h3m ="`n#*~~~~~~v SUB-PROCESSING : sBnr3 v~~~~~~" ;
+                $h4m="`n#*``````v DETAIL : sBnr4 v``````" ;
+                $h5m="`n#*______v FOCUS : sBnr5 v______" ;
+                $whm = "This is typical output" ;
+                $whp = "What is your quest?" ;
+                $whs = "Successful execution!" ;
+                $whw = "THIS DIDN'T GO AS PLANNED" ;
+                $wem = "UTTER FAILURE!" ;
+                $whv = "internal comment executed" ;
+                $tmpfile = [System.IO.Path]::GetTempFileName().replace('.tmp','.txt') ;
+                foreach($cmbo in $combos){
+                    $txt,$name = $cmbo.split(';') ;
+                    $Level = $name ;
+                    if($Level -eq 'H5'){
+                        write-host "Gotcha!";
+                    } ;
+                    $whplt = (gv "plt$($name)").value ;
+                    $text = (gv $txt).value ;
+                    #$smsg="`$plt$($name):($($whplt.foregroundcolor):$($whplt.backgroundcolor)):`n`n$($text)`n`n" ;
+                    $whsmsg="`$plt$($name):($($whplt.foregroundcolor):$($whplt.backgroundcolor)):`n`n" ;
+                    $pltWL=@{
+                        message= $text ;
+                        Level=$Level ;
+                        Path=$tmpfile  ;
+                        useHost=$true;
+                    } ;
+                    if($Indent){$PltWL.add('Indent',$true)} ;
+                    $whsmsg += "write-log w`n$(($pltWL|out-string).trim())`n" ;
+                    write-host $whsmsg ;
+                    write-log @pltWL ;
                 } ;
-                if($Indent){$PltWL.add('Indent',$true)} ; 
-
-                $whsmsg += "write-log w`n$(($pltWL|out-string).trim())`n" ; 
-                write-host $whsmsg ; 
-                write-log @pltWL ; 
-            } ; 
-            remove-item -path $tmpfile ; 
-            
+                remove-item -path $tmpfile ;
         } else {
             
             if($Indent){
                 # move split/flatten into per-object level (was up in BEGIN):
                 # if $object has multiple lines, split it:
-                #$Object = $Object.Split([Environment]::NewLine) ; 
                 # have to coerce the system.object to string array, to get access to a .split method (raw object doese't have it)
                 # and you have to recast the type to string array (can't assign a string[] to [system.object] type vari
                 if($Flatten){
-                    if($object.gettype().name -eq 'FormatEntryData'){
-                        # this converts tostring() as the string: Microsoft.PowerShell.Commands.Internal.Format.FormatEntryData
-                        # issue is (group |  ft -a count,name)'s  that aren't put through $((|out-string).trim())
-                        write-verbose "skip split/flatten on these (should be pre-out-string'd before write-logging)" ; 
-                    } else { 
-                        [string[]]$Object = [string[]]$Object.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries) ;
-                    } ; 
-                } else { 
-                    [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine) 
-                } ; 
+                        if($object.gettype().name -eq 'FormatEntryData'){
+                            # this converts tostring() as the string: Microsoft.PowerShell.Commands.Internal.Format.FormatEntryData
+                            # issue is (group |  ft -a count,name)'s  that aren't put through $((|out-string).trim())
+                            write-verbose "skip split/flatten on these (should be pre-out-string'd before write-logging)" ;
+                        } else {
+                            TRY{
+                                [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine) ; 
+                            } CATCH{
+                                write-verbose "Workaround err: The variable cannot be validated because the value System.String[] is not a valid value for the Object variable." ; 
+                                [string[]]$Object = ($Object|out-string).trim().Split([Environment]::NewLine) ; 
+                            } ; 
+                        } ;
+                } else {
+                    [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine)
+                } ;
             } ; 
 
             # If the file already exists and NoClobber was specified, do not write to the log.
@@ -542,7 +560,6 @@ the output strings. No newline is added after the last output string.")]
                 Write-Error "Log file $Path already exists, and you specified NoClobber. Either delete the file or specify a different name."  ;
                 Return  ;
             } elseif (!(Test-Path $Path)) {
-                # create the file including the path when missing.
                 Write-Verbose "Creating $Path."  ;
                 $NewLogFile = New-Item $Path -Force -ItemType File  ;
             } else {
@@ -551,84 +568,80 @@ the output strings. No newline is added after the last output string.")]
 
             $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"  ;
             $EchoTime = "$((get-date).ToString('HH:mm:ss')): " ;
-            <#
-            $pltWH
-            #>
-        
+            
             $pltWH.Object = $EchoTime ; 
             $pltColors = @{} ; 
             # Write message to error, warning, or verbose pipeline and specify $LevelText
             switch ($Level) {
                 'Error' {
-                    $LevelText = 'ERROR: ' ; 
-                    $pltColors = $pltErr ; 
+                    $LevelText = 'ERROR: ' ;
+                    $pltColors = $pltError ;
                     if ($useHost) {} else {if (!$NoEcho) { Write-Error ($smsg + $Object) } } ;
                 }
                 'Warn' {
-                    $LevelText = 'WARNING: ' ; 
-                    $pltColors = $pltWarn ; 
+                    $LevelText = 'WARNING: ' ;
+                    $pltColors = $pltWarn ;
                     if ($useHost) {} else {if (!$NoEcho) { Write-Warning ($smsg + $Object) } } ;
                 }
                 'Info' {
-                    $LevelText = 'INFO: ' ; 
-                    $pltColors = $pltInfo ; 
+                    $LevelText = 'INFO: ' ;
+                    $pltColors = $pltInfo ;
                 }
                 'H1' {
-                    $LevelText = '# ' ; 
-                    $pltColors = $pltH1 ; 
+                    $LevelText = '# ' ;
+                    $pltColors = $pltH1 ;
                 }
                 'H2' {
-                    $LevelText = '## ' ; 
-                    $pltColors = $pltH2 ; 
+                    $LevelText = '## ' ;
+                    $pltColors = $pltH2 ;
                 }
                 'H3' {
-                    $LevelText = '### ' ; 
-                    $pltColors = $pltH3 ; 
+                    $LevelText = '### ' ;
+                    $pltColors = $pltH3 ;
                 }
                 'H4' {
-                    $LevelText = '#### ' ; 
-                    $pltColors = $pltH4 ; 
+                    $LevelText = '#### ' ;
+                    $pltColors = $pltH4 ;
                 }
                 'H5' {
-                    $LevelText = '##### ' ; 
-                    $pltColors = $pltH5 ; 
+                    $LevelText = '##### ' ;
+                    $pltColors = $pltH5 ;
                 }
                 'Debug' {
-                    $LevelText = 'DEBUG: ' ; 
-                    $pltColors = $pltDebug ; 
-                    if ($useHost) {} else {if (!$NoEcho) { Write-Degug $smsg } }  ;                
+                    $LevelText = 'DEBUG: ' ;
+                    $pltColors = $pltDebug ;
+                    if ($useHost) {} else {if (!$NoEcho) { Write-Degug $smsg } }  ;
                 }
                 'Verbose' {
-                    $LevelText = 'VERBOSE: ' ; 
-                    $pltColors = $pltVerbose ; 
-                    if ($useHost) {}else {if (!$NoEcho) { Write-Verbose ($smsg) } } ;          
+                    $LevelText = 'VERBOSE: ' ;
+                    $pltColors = $pltVerbose ;
+                    if ($useHost) {}else {if (!$NoEcho) { Write-Verbose ($smsg) } } ;
                 }
                 'Prompt' {
-                    $LevelText = 'PROMPT: ' ; 
-                    $pltColors = $pltPrompt ; 
+                    $LevelText = 'PROMPT: ' ;
+                    $pltColors = $pltPrompt ;
                 }
                 'Success' {
-                    $LevelText = 'SUCCESS: ' ; 
-                    $pltColors = $pltSuccess ; 
+                    $LevelText = 'SUCCESS: ' ;
+                    $pltColors = $pltSuccess ;
                 }
             } ;
             # build msg string down here, once, v in ea above
-            #$smsg = $EchoTime ;
             # always defer to explicit cmdline colors
             if($pltColors.foregroundcolor){
                 if(-not ($pltWH.keys -contains 'foregroundcolor')){
-                    $pltWH.add('foregroundcolor',$pltColors.foregroundcolor) ; 
+                    $pltWH.add('foregroundcolor',$pltColors.foregroundcolor) ;
                 } elseif($pltWH.foregroundcolor -eq $null){
-                    $pltWH.foregroundcolor = $pltColors.foregroundcolor ; 
-                } ; 
-            } ; 
+                    $pltWH.foregroundcolor = $pltColors.foregroundcolor ;
+                } ;
+            } ;
             if($pltColors.backgroundcolor){
                 if(-not ($pltWH.keys -contains 'backgroundcolor')){
-                    $pltWH.add('backgroundcolor',$pltColors.backgroundcolor) ; 
+                    $pltWH.add('backgroundcolor',$pltColors.backgroundcolor) ;
                 } elseif($pltWH.backgroundcolor -eq $null){
-                    $pltWH.backgroundcolor = $pltColors.backgroundcolor ; 
-                } ; 
-            } ; 
+                    $pltWH.backgroundcolor = $pltColors.backgroundcolor ;
+                } ;
+            } ;
  
             if ($useHost) {
                 if(-not $Indent){
@@ -638,50 +651,41 @@ the output strings. No newline is added after the last output string.")]
                         } else {
                             #$pltWH.Object += ($LevelText + '(' + $Object + ')') ;
                             $pltWH.Object += "$($LevelText) ($($Object))" ;
-                        } ; 
+                        } ;
                     } else {
                         if(($Object|  measure).count -gt 1){
                             $pltWH.Object += "$($LevelText) $(($Object|out-string).trim())" ;
                         } else {
                             #$pltWH.Object += $LevelText + $Object ;
                             $pltWH.Object += "$($LevelText) $($Object)" ;
-                        } ; 
+                        } ;
                     } ;
-                    $smsg = "write-host w`n$(($pltWH|out-string).trim())" ; 
-                    write-verbose $smsg ; 
-                    #write-host @pltErr $smsg ; 
-                    write-host @pltwh ; 
-                } else { 
-                    # indent support
+                    $smsg = "write-host w`n$(($pltWH|out-string).trim())" ;
+                    write-verbose $smsg ;
+                    #write-host @pltErr $smsg ;
+                    write-host @pltwh ;
+                } else {
                     foreach ($obj in $object){
-                        # here we're looping the object, so completely do the object build in here:
-                        $pltWH.Object = $EchoTime ; 
-                        # issue: empty lines/elements with the above are gen'ing: 15:31:44: VERBOSE:  ()
+                        $pltWH.Object = $EchoTime ;
                         if($Level -match '(Debug|Verbose)' ){
                             if($obj.length -gt 0){
                                 $pltWH.Object += "$($LevelText) ($($obj))" ;
-                            } else { 
+                            } else {
                                 $pltWH.Object += "$($LevelText)" ;
-                            } ; 
-                        } else { 
+                            } ;
+                        } else {
                             $pltWH.Object += "$($LevelText) $($obj)" ;
-                        } ; 
-                        $smsg = "write-host w`n$(($pltWH|out-string).trim())" ; 
-                        write-verbose $smsg ; 
-                        # write the indent, then writhe the styled obj/msg
-                        Write-Host -NoNewline $($PadChar * $CurrIndent)  ; 
-                        #write-host @pltWH -object $obj ; 
-                        write-host @pltwh ; 
-                    } ; 
-
-
-                } ; 
-            } 
+                        } ;
+                        $smsg = "write-host w`n$(($pltWH|out-string).trim())" ;
+                        write-verbose $smsg ;
+                        Write-Host -NoNewline $($PadChar * $CurrIndent)  ;
+                        write-host @pltwh ;
+                    } ;
+                } ;
+            }
             # Write log entry to $Path
-            "$FormattedDate $LevelText : $Object" | Out-File -FilePath $Path -Append  ;
-
+            "$FormattedDate $LevelText : $Object" | Out-File -FilePath $Path -Append -encoding UTF8 ;
         } ;  # if-E -Demo ; 
-
     }  ; # PROC-E
     End {}  ;
 } ; 
