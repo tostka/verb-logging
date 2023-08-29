@@ -47,6 +47,5 @@ function Test-TranscriptionSupported {
             $true | Write-Output
         } catch {$false | Write-Output} 
     } ; 
-}
-
+} ;
 #*------^ Test-TranscriptionSupported.ps1 ^------
