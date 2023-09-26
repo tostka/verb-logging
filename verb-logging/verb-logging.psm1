@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.3.3.0
+  Version     : 1.4.0.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -32,7 +32,7 @@
   * 8:57 PM 11/25/2018 Write-Log:shifted copy to verb-transcript, added defer to scope $script versions
   * 8:13 AM 10/2/2018 Cleanup():make it defer to existing script-copy, ren'd $bdebug -> $showdebug
   * 2:37 PM 9/19/2018 fixed a filename invocation bug in Start-IseTranscript ; added CleanUp() example (with archivevelog disabled), formalized notes block, w demo load
-  * 11:29 AM 11.3.3017 initial version
+  * 11:29 AM 11.4.0017 initial version
   .DESCRIPTION
   verb-logging - Logging-related generic functions
   .LINK
@@ -2649,8 +2649,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU9dwRqClQjUcLwc/BHxkgIhtE
-# 1sygggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUg42H3VKtljHQDTeEKEX9/lk3
+# HkegggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -2665,9 +2665,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSnxnnY
-# q6w24zUyIN88TchNAILZOzANBgkqhkiG9w0BAQEFAASBgF4rDKuolIzfgUWJI7wJ
-# 0Ds4HzwCHBJ+txDzZnryvR4GG59DeJllN6mvy5ksATRwUvC5ysir95vLNHyZqOQd
-# W/czHSHu47SKnfmrVL6EwrZEBtxGnse8g2jwBtc4HumftYPEa4c9a+exzUXdttBW
-# 4an3K0siIeTb/5HBjljqbw7G
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTdHgzo
+# LmLJ0ZRFcZZURI7gu/S3ozANBgkqhkiG9w0BAQEFAASBgBPD4wtFgZqHVefXkobv
+# zSU0B9KJVrpi/hHj35HVz0kcd8Ih4BV/ZX9FFFE7vgyc9Kw7CojaDB8v3ffCneRS
+# wymIjbOJelu1N3UtLWu97DOLv0sQF6o433MwaVxpILYtDuCLfVUQ600blHBA3iac
+# zTuZLnrzaP2eCpQhDgZwh+O8
 # SIG # End signature block
