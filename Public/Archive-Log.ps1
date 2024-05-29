@@ -15,6 +15,7 @@ function Archive-Log {
     Github      : https://github.com/tostka/verb-logging
     Tags        : Powershell, logging
     REVISIONS
+    * 5:11 PM 5/24/2024 throwing Archive-Log : Parameter set cannot be resolved using the specified named parameters.; set: DefaultParameterSetName='Overwrite' to force a choice
     * 4:17 PM 3/29/2021 set move/remove fails to non-terminating echo err, but don't exit
     * 4:00 PM 12/2/2020 updated and streamlined added -overwrite to force overwrite on clash, and -UniqueClash to append a GUID chunk to filename, to force unique file at dest, where pre-existing conflict exists
     # 3:04 PM 10/8/2020 add force, to overwrite on conflict
@@ -67,7 +68,7 @@ function Archive-Log {
     https://github.com/tostka/verb-logging
     #>
     
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='Overwrite')]
     PARAM(
         [parameter(Mandatory=$true,HelpMessage="Array of paths to log files to be archived[-FilePath 'c:\pathto\file1.txt','c:\pathto\file2.txt']")] 
         #[ValidateScript({Test-Path $_})]
