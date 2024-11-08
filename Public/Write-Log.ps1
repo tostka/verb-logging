@@ -18,6 +18,7 @@ function Write-Log {
     AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
     AddedTwitter:	@wasserja
     REVISIONS
+    * 1:42 PM 11/8/2024 CBH expl fixes
     * 10:59 AM 2/17/2023 #529:added workaround for rando 'The variable cannot be validated because the value System.String[] is not a valid value for the Object variable.' err (try catch and strip to text w diff method) suddently seeing NUL char interleave on outputs (C:\usr\work\ps\scripts\logs\monitor-ExecPol-LOG-BATCH-EXEC-log.txt, utf-16/bigendianunicode?), forcing out-file -encoding UTF8
     * 2:11 PM 2/15/2023 buffered over debugs from psv2 ISE color bizaareness. Completely refactored the psise & psv2 color block - have to use wildly inappaprop colors to get anything functional. 
     * 2:26 PM 2/3/2023 combo'd the pair of aliases; added if$indent) around the flatten and split block in PROC (was lost in last move) ; 
@@ -139,164 +140,192 @@ function Write-Log {
     .PARAMETER demo
 	Switch to output a demo display of each Level, and it's configured color scheme (requires specification of a 'dummy' message string to avoid an error).[-Demo]
     .EXAMPLE
-        PS>  Write-Log -Message 'Log message'   ;
-        Writes the message to default log loc (c:\Logs\PowerShellLog.log, -level defaults to Info).
-        .EXAMPLE
-        PS> Write-Log -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log ;
-        Writes the content to the specified log file and creates the path and file specified.
-        .EXAMPLE
-        PS> write-log -level warn "some information" -Path c:\tmp\tmp.txt
-        WARNING: 10:17:59: some information
-        Demo default use of the native write-warning cmdlet (default behavior when -useHost is not used)
-        .EXAMPLE
-        write-log -level warn "some information" -Path c:\tmp\tmp.txt -usehost
+    PS>  Write-Log -Message 'Log message'   ;
+    Writes the message to default log loc (c:\Logs\PowerShellLog.log, -level defaults to Info).
+    .EXAMPLE
+    PS> Write-Log -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log ;
+    Writes the content to the specified log file and creates the path and file specified.
+    .EXAMPLE
+    PS> write-log -level warn "some information" -Path c:\tmp\tmp.txt
+    WARNING: 10:17:59: some information
+    Demo default use of the native write-warning cmdlet (default behavior when -useHost is not used)
+    .EXAMPLE
+    PS> write-log -level warn "some information" -Path c:\tmp\tmp.txt -usehost
+    
         10:19:14: WARNING: some information
-        Demo use of the "warning" color scheme write-host cmdlet (behavior when -useHost *IS* used)
-        .EXAMPLE
-        PS> Write-Log -level Prompt -Message "Enter Text:" -Path c:\tmp\tmp.txt -usehost  ; 
-        PS> invoke-soundcue -type question ; 
-        PS> $enteredText = read-host ;
-        Echo's a distinctive Prompt color scheme for the message (vs using read-host native non-color-differentiating -prompt parameter), 
-        and writes a 'Prompt'-level entry to the log, uses my verb-io:invoke-soundCue to play a the system question sound; then uses promptless read-host to take typed input. 
-        PS> Write-Log -level Prompt -Message "Enter Password:" -Path c:\tmp\tmp.txt -usehost  ; 
-        PS> invoke-soundcue -type question ; 
-        PS> $SecurePW = read-host -AsSecureString ;        
-        Variant that demos collection of a secure password using read-host's native -AsSecureString param.
-        .EXAMPLE
-        PS>  $smsg = "ENTER CERTIFICATE PFX Password: (use 'dummy' for UserName)" ;
-        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level PROMPT } 
-        PS>  else{ write-host -foregroundcolor Blue -backgroundcolor White "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-        PS>  $pfxcred=(Get-Credential -credential dummy) ;
-        PS>  Export-PfxCertificate -Password $pfxcred.password -Cert= $certpath -FilePath c:\path-to\output.pfx;
-        Demo use of write-log -level prompt, leveraging the get-credential popup GUI to collect a secure password (without use of username)
-        .EXAMPLE
-        PS>  # init content in script context ($MyInvocation is blank in function scope)
-        PS>  $logfile = join-path -path $ofile -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-LOG.txt"  ;
-        PS>  $logging = $True ;
-        PS>  $sBnr="#*======v `$tmbx:($($Procd)/$($ttl)):$($tmbx) v======" ;
-        PS>  $smsg="$($sBnr)" ;
-        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug|H1|H2|H3 
-        PS>  else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-        PS>  Example with conditional write-log (with -useHost switch, to trigger native write-host use), else failthru to write-host output
-        PS>  .EXAMPLE
-        PS>  $transcript = join-path -path (Split-Path -parent $MyInvocation.MyCommand.Definition) -ChildPath "logs" ;
-        PS>  if(!(test-path -path $transcript)){ "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
-        PS>  $transcript=join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))"  ;
-        PS>  $transcript+= "-Transcript-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-trans-log.txt"  ;
-        PS>  # add log file variant as target of Write-Log:
-        PS>  $logfile=$transcript.replace("-Transcript","-LOG").replace("-trans-log","-log")
-        PS>  if($whatif){
-        PS>      $logfile=$logfile.replace("-BATCH","-BATCH-WHATIF") ;
-        PS>      $transcript=$transcript.replace("-BATCH","-BATCH-WHATIF") ;
-        PS>  } else {
-        PS>      $logfile=$logfile.replace("-BATCH","-BATCH-EXEC") ;
-        PS>      $transcript=$transcript.replace("-BATCH","-BATCH-EXEC") ;
-        PS>  } ;
-        PS>  if($Ticket){
-        PS>      $logfile=$logfile.replace("-BATCH","-$($Ticket)") ;
-        PS>      $transcript=$transcript.replace("-BATCH","-$($Ticket)") ;
-        PS>  } else {
-        PS>      $logfile=$logfile.replace("-BATCH","-nnnnnn") ;
-        PS>      $transcript=$transcript.replace("-BATCH","-nnnnnn") ;
-        PS>  } ;
-        PS>  $logging = $True ;
-        PS>  $sBnr="#*======v START PASS:$($ScriptBaseName) v======" ;
-        PS>  $smsg= "$($sBnr)" ;
-        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } ; #Error|Warn
-        More complete boilerplate including $whatif & $ticket
-        .EXAMPLE
-        PS>  $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
-        PS>  $pltSL.Tag = "$(split-path -path $CSVPath -leaf)"; # build tag from a variable
-        PS>  # construct log name on calling script/function fullname
-        PS>  if($PSCommandPath){ $logspec = start-Log -Path $PSCommandPath @pltSL }
-        PS>  else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL } ;
-        PS>  if($logspec){
-        PS>      $logging=$logspec.logging ;
-        PS>      $logfile=$logspec.logfile ;
-        PS>      $transcript=$logspec.transcript ;
-        PS>      $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
-        PS>      start-Transcript -path $transcript ;
-        PS>  } else {throw "Unable to configure logging!" } ;
-        PS>  $sBnr="#*======v $(${CmdletName}): v======" ;
-        PS>  $smsg = $sBnr ;
-        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
-        PS>  else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-        Example leveraging splatted start-log(), and either $PSCommandPath or $MyInvocation (support varies by host/psversion) to build the log name. 
-        .EXAMPLE
-        PS> write-log -demo -message 'Dummy' ; 
-        Demo (using required dummy error-suppressing messasge) of sample outputs/color combos for each Level configured).
-        .EXAMPLE
-        PS>  $smsg = "`n`n===TESTIPAddress: was *validated* as covered by the recursed ipv4 specification:" ; 
-        PS>  $smsg += "`n" ; 
-        PS>  $smsg += "`n---> This host *should be able to* send email on behalf of the configured SPF domain (at least in terms of SPF checks)" ; 
-        PS>  $env:hostindentspaces = 8 ; 
-        PS>  $lvl = 'Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success'.split('|') ; 
-        PS>  foreach ($l in $lvl){Write-Log -LogContent $smsg -Path $tmpfile -Level $l -useHost -Indent} ; 
-        Demo indent function across range of Levels (alt to native -Demo which also supports -indent). 
-        .EXAMPLE
-        PS>  write-verbose 'set to baseline' ; 
-        PS>  reset-HostIndent ; 
-        PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
-        PS>  write-verbose 'write an H1 banner'
-        PS>  $sBnr="#*======v  H1 Banner: v======" ;
-        PS>  $smsg = $sBnr ;
-        PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level H1;
-        PS>  write-verbose 'push indent level+1' ; 
-        PS>  push-HostIndent ; 
-        PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
-        PS>  write-verbose 'write an INFO entry with -Indent specified' ; 
-        PS>  $smsg = "This is information (indented)" ; 
-        PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info -Indent:$true ;
-        PS>  write-verbose 'push indent level+2' ; 
-        PS>  push-HostIndent ; 
-        PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
-        PS>  write-verbose 'write a PROMPT entry with -Indent specified' ; 
-        PS>  $smsg = "This is a subset of information (indented)" ; 
-        PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level Prompt -Indent:$true ;
-        PS>  write-verbose 'pop indent level out one -1' ; 
-        PS>  pop-HostIndent ; 
-        PS>  write-verbose 'write a Success entry with -Indent specified' ; 
-        PS>  $smsg = "This is a Successful information (indented)" ; 
-        PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level Success -Indent:$true ;
-        PS>  write-verbose 'reset to baseline for trailing banner'
-        PS>  reset-HostIndent ; 
-        PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
-        PS>  write-verbose 'write the trailing H1 banner'
-        PS>  $smsg = "$($sBnr.replace('=v','=^').replace('v=','^='))" ;
-        PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level H1;
-        PS>  write-verbose 'clear indent `$env:HostIndentSpaces' ; 
-        PS>  clear-HostIndent ; 
-        PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
         
-            $env:HostIndentSpaces:0
-            16:16:17: #  #*======v  H1 Banner: v======
-            $env:HostIndentSpaces:4
-                16:16:17: INFO:  This is information (indented)
-            $env:HostIndentSpaces:8
-                    16:16:17: PROMPT:  This is a subset of information (indented)
-                16:16:17: SUCCESS:  This is a Successful information (indented)
-            $env:HostIndentSpaces:0
-            16:16:17: #  #*======^  H1 Banner: ^======
-            $env:HostIndentSpaces:
+    Demo use of the "warning" color scheme write-host cmdlet (behavior when -useHost *IS* used)
+    .EXAMPLE
+    PS> Write-Log -level Prompt -Message "Enter Text:" -Path c:\tmp\tmp.txt -usehost  ; 
+    PS> invoke-soundcue -type question ; 
+    PS> $enteredText = read-host ;
+    Echo's a distinctive Prompt color scheme for the message (vs using read-host native non-color-differentiating -prompt parameter), and writes a 'Prompt'-level entry to the log, uses my verb-io:invoke-soundCue to play a the system question sound; then uses promptless read-host to take typed input. 
+    PS> Write-Log -level Prompt -Message "Enter Password:" -Path c:\tmp\tmp.txt -usehost  ; 
+    PS> invoke-soundcue -type question ; 
+    PS> $SecurePW = read-host -AsSecureString ;        
+    Variant that demos collection of a secure password using read-host's native -AsSecureString param.
+    
+    .EXAMPLE
+    PS>  $smsg = "ENTER CERTIFICATE PFX Password: (use 'dummy' for UserName)" ;
+    PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level PROMPT } 
+    PS>  else{ write-host -foregroundcolor Blue -backgroundcolor White "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+    PS>  $pfxcred=(Get-Credential -credential dummy) ;
+    PS>  Export-PfxCertificate -Password $pfxcred.password -Cert= $certpath -FilePath c:\path-to\output.pfx;
+    Demo use of write-log -level prompt, leveraging the get-credential popup GUI to collect a secure password (without use of username)
+    
+    .EXAMPLE
+    PS>  # init content in script context ($MyInvocation is blank in function scope)
+    PS>  $logfile = join-path -path $ofile -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-LOG.txt"  ;
+    PS>  $logging = $True ;
+    PS>  $sBnr="#*======v `$tmbx:($($Procd)/$($ttl)):$($tmbx) v======" ;
+    PS>  $smsg="$($sBnr)" ;
+    PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug|H1|H2|H3 
+    PS>  else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+    Demo with conditional write-log (with -useHost switch, to trigger native write-host use), else failthru to write-host output
+    PS>  .EXAMPLE
+    PS>  $transcript = join-path -path (Split-Path -parent $MyInvocation.MyCommand.Definition) -ChildPath "logs" ;
+    PS>  if(!(test-path -path $transcript)){ "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
+    PS>  $transcript=join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))"  ;
+    PS>  $transcript+= "-Transcript-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-trans-log.txt"  ;
+    PS>  # add log file variant as target of Write-Log:
+    PS>  $logfile=$transcript.replace("-Transcript","-LOG").replace("-trans-log","-log")
+    PS>  if($whatif){
+    PS>      $logfile=$logfile.replace("-BATCH","-BATCH-WHATIF") ;
+    PS>      $transcript=$transcript.replace("-BATCH","-BATCH-WHATIF") ;
+    PS>  } else {
+    PS>      $logfile=$logfile.replace("-BATCH","-BATCH-EXEC") ;
+    PS>      $transcript=$transcript.replace("-BATCH","-BATCH-EXEC") ;
+    PS>  } ;
+    PS>  if($Ticket){
+    PS>      $logfile=$logfile.replace("-BATCH","-$($Ticket)") ;
+    PS>      $transcript=$transcript.replace("-BATCH","-$($Ticket)") ;
+    PS>  } else {
+    PS>      $logfile=$logfile.replace("-BATCH","-nnnnnn") ;
+    PS>      $transcript=$transcript.replace("-BATCH","-nnnnnn") ;
+    PS>  } ;
+    PS>  $logging = $True ;
+    PS>  $sBnr="#*======v START PASS:$($ScriptBaseName) v======" ;
+    PS>  $smsg= "$($sBnr)" ;
+    PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } ; #Error|Warn
+    More complete boilerplate including $whatif & $ticket
+    
+    .EXAMPLE
+    PS>  $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
+    PS>  $pltSL.Tag = "$(split-path -path $CSVPath -leaf)"; # build tag from a variable
+    PS>  # construct log name on calling script/function fullname
+    PS>  if($PSCommandPath){ $logspec = start-Log -Path $PSCommandPath @pltSL }
+    PS>  else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL } ;
+    PS>  if($logspec){
+    PS>      $logging=$logspec.logging ;
+    PS>      $logfile=$logspec.logfile ;
+    PS>      $transcript=$logspec.transcript ;
+    PS>      $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
+    PS>      start-Transcript -path $transcript ;
+    PS>  } else {throw "Unable to configure logging!" } ;
+    PS>  $sBnr="#*======v $(${CmdletName}): v======" ;
+    PS>  $smsg = $sBnr ;
+    PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
+    PS>  else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+    Demo leveraging splatted start-log(), and either $PSCommandPath or $MyInvocation (support varies by host/psversion) to build the log name. 
+    
+    .EXAMPLE
+    PS> write-log -demo -message 'Dummy' ; 
+    Demo (using required dummy error-suppressing messasge) of sample outputs/color combos for each Level configured).
+    
+    .EXAMPLE
+    PS>  $smsg = "`n`n===TESTIPAddress: was *validated* as covered by the recursed ipv4 specification:" ; 
+    PS>  $smsg += "`n" ; 
+    PS>  $smsg += "`n---> This host *should be able to* send email on behalf of the configured SPF domain (at least in terms of SPF checks)" ; 
+    PS>  $env:hostindentspaces = 8 ; 
+    PS>  $lvl = 'Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success'.split('|') ; 
+    PS>  foreach ($l in $lvl){Write-Log -LogContent $smsg -Path $tmpfile -Level $l -useHost -Indent} ; 
+    Demo indent function across range of Levels (alt to native -Demo which also supports -indent). 
+    
+    .EXAMPLE
+    PS>  write-verbose 'set to baseline' ; 
+    PS>  reset-HostIndent ; 
+    PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
+    PS>  write-verbose 'write an H1 banner'
+    PS>  $sBnr="#*======v  H1 Banner: v======" ;
+    PS>  $smsg = $sBnr ;
+    PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level H1;
+    PS>  write-verbose 'push indent level+1' ; 
+    PS>  push-HostIndent ; 
+    PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
+    PS>  write-verbose 'write an INFO entry with -Indent specified' ; 
+    PS>  $smsg = "This is information (indented)" ; 
+    PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info -Indent:$true ;
+    PS>  write-verbose 'push indent level+2' ; 
+    PS>  push-HostIndent ; 
+    PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
+    PS>  write-verbose 'write a PROMPT entry with -Indent specified' ; 
+    PS>  $smsg = "This is a subset of information (indented)" ; 
+    PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level Prompt -Indent:$true ;
+    PS>  write-verbose 'pop indent level out one -1' ; 
+    PS>  pop-HostIndent ; 
+    PS>  write-verbose 'write a Success entry with -Indent specified' ; 
+    PS>  $smsg = "This is a Successful information (indented)" ; 
+    PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level Success -Indent:$true ;
+    PS>  write-verbose 'reset to baseline for trailing banner'
+    PS>  reset-HostIndent ; 
+    PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
+    PS>  write-verbose 'write the trailing H1 banner'
+    PS>  $smsg = "$($sBnr.replace('=v','=^').replace('v=','^='))" ;
+    PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level H1;
+    PS>  write-verbose 'clear indent `$env:HostIndentSpaces' ; 
+    PS>  clear-HostIndent ; 
+    PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
+    
+        $env:HostIndentSpaces:0
+        16:16:17: #  #*======v  H1 Banner: v======
+        $env:HostIndentSpaces:4
+            16:16:17: INFO:  This is information (indented)
+        $env:HostIndentSpaces:8
+                16:16:17: PROMPT:  This is a subset of information (indented)
+            16:16:17: SUCCESS:  This is a Successful information (indented)
+        $env:HostIndentSpaces:0
+        16:16:17: #  #*======^  H1 Banner: ^======
+        $env:HostIndentSpaces:
 
-        Demo broad process for use of verb-HostIndent funcs and write-log with -indent parameter.
-        .EXAMPLE
-        PS>  write-host "`n`n" ; 
-        PS>  $smsg = "`n`n==ALL Grouped Status.errorCode :`n$(($EVTS.status.errorCode | group| sort count -des | format-table -auto count,name|out-string).trim())" ;
-        PS>  $colors = (get-colorcombo -random) ;
-        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info -Indent @colors -flatten } 
-        PS>  else{ write-host @colors  "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-        PS>  PS>  write-host "`n`n" ; 
-        
-        When using -Indent with group'd or other cmd-multiline output, you will want to:
-        1. use the... 
-            $smsg = $(([results]|out-string).trim())"
-            ...structure to pre-clean & convert from [FormatEntryData] to [string] 
-            (avoids errors, due to formatteddata *not* having split mehtod)
-        2. Use -flatten to avoid empty _colored_ lines between each entry in the output (and sprinkle write-host "`n`n"'s pre/post for separation). 
-        These issues only occur under -Indent use, due to the need to `$Object.split to get each line of indented object properly collored and indented.
-        .LINK
-        https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0  ;
+    Demo broad process for use of verb-HostIndent funcs and write-log with -indent parameter.
+    
+    .EXAMPLE
+    PS>  write-host "`n`n" ; 
+    PS>  $smsg = "`n`n==ALL Grouped Status.errorCode :`n$(($EVTS.status.errorCode | group| sort count -des | format-table -auto count,name|out-string).trim())" ;
+    PS>  $colors = (get-colorcombo -random) ;
+    PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info -Indent @colors -flatten } 
+    PS>  else{ write-host @colors  "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+    PS>  PS>  write-host "`n`n" ; 
+    
+    When using -Indent with group'd or other cmd-multiline output, you will want to:
+    1. use the... 
+        $smsg = $(([results]|out-string).trim())"
+        ...structure to pre-clean & convert from [FormatEntryData] to [string] 
+        (avoids errors, due to formatteddata *not* having split mehtod)
+    2. Use -flatten to avoid empty _colored_ lines between each entry in the output (and sprinkle write-host "`n`n"'s pre/post for separation). 
+    These issues only occur under -Indent use, due to the need to `$Object.split to get each line of indented object properly collored and indented.
+    .EXAMPLE
+    PS> $pltH1=@{foregroundcolor='black';backgroundcolor='darkyellow'};
+    PS> write-host "Running demo of current settings..." @pltH1
+    PS> $combos = "H1; #*======v STATUSMSG: SBNR v======","H2;`n#*------v PROCESSING : sBnrS v------","H3;`n#*~~~~~~v SUB-PROCESSING : sBnr3 v~~~~~~","H4;`n#*``````v DETAIL : sBnr4 v``````","H5;`n#*______v FOCUS : sBnr5 v______","INFO;This is typical output","PROMPT;What is your quest?","SUCCESS;Successful execution!","WARN;THIS DIDN'T GO AS PLANNED","ERROR;UTTER FAILURE!","VERBOSE;internal comment executed"
+    PS> $tmpfile = [System.IO.Path]::GetTempFileName().replace('.tmp','.txt') ;
+    PS> foreach($cmbo in $combos){
+    PS>     $level,$text = $cmbo.split(';') ;
+    PS>     $pltWL=@{
+    PS>         message= $text ;
+    PS>         Level=$Level ;
+    PS>         Path=$tmpfile  ;
+    PS>         useHost=$true;
+    PS>     } ;
+    PS>     if($Indent){$PltWL.add('Indent',$true)} ;
+    PS>     $whsmsg = "write-log w`n$(($pltWL|out-string).trim())`n" ;
+    PS>     write-host $whsmsg ;
+    PS>     write-logNoDep @pltWL ;
+    PS> } ;
+    PS> remove-item -path $tmpfile ;
+    Demo code adapted from the -demo param, for manual passes.
+    .LINK
+    https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0  ;
     #>    
     [CmdletBinding()]
     Param (
