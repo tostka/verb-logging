@@ -47,7 +47,6 @@ Cleanup:OutBuffer
 Cleanup:ob
 Cleanup:PipelineVariable
 Cleanup:pv
-get-ArchivePath:TenOrg
 get-ArchivePath:Verbose
 get-ArchivePath:vb
 get-ArchivePath:Debug
