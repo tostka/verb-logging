@@ -1,4 +1,6 @@
-﻿#*------v Start-Log.ps1 v------
+﻿
+#region START_LOG ; #*------v Start-Log v------
+#if(-not(get-command start-log -ea 0)){
 function Start-Log {
     <#
     .SYNOPSIS
@@ -14,6 +16,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+   * 9:07 AM 4/30/2025 make Tag cleanup conditional on avail of the target vtxt\funcs
     * 11:57 AM 1/17/2023 updated output object to be psv2 compat (OrderedDictionary object under v2)
     * 3:46 PM 11/16/2022 added catch blog around start-trans, that traps 'not compatible' errors, distict from generic catch
     * 2:15 PM 2/24/2022 added -TagFirst param (put the ticket/tag at the start of the filenames)
@@ -264,10 +267,10 @@ function Start-Log {
     if (!(test-path -path $transcript)) { "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
     #$transcript = join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($Path))" ; 
     if($Tag){
-        # clean for fso use
-        $Tag = Remove-StringDiacritic -String $Tag ; # verb-text
-        $Tag = Remove-StringLatinCharacters -String $Tag ; # verb-text
-        $Tag = Remove-InvalidFileNameChars -Name $Tag ; # verb-io, (inbound Path is assumed to be filesystem safe)
+        # clean for fso use, if funcs avail
+        if((gci function:Remove-StringDiacritic -ea 0)){$Tag = Remove-StringDiacritic -String $Tag } else {write-host "(missing:verb-text\Remove-StringDiacritic, skipping)";}  # verb-text ; 
+        if((gci function:Remove-StringLatinCharacters -ea 0)){$Tag = Remove-StringLatinCharacters -String $Tag } else {write-host "(missing:verb-textRemove-StringLatinCharacters, skipping)";} # verb-text
+        if((gci function:Remove-InvalidFileNameChars -ea 0)){$Tag = Remove-InvalidFileNameChars -Name $Tag } else {write-host "(missing:verb-textRemove-InvalidFileNameChars, skipping)";}; # verb-io, (inbound Path is assumed to be filesystem safe)
         if($TagFirst){
             $smsg = "(-TagFirst:Building filenames with leading -Tag value)" ; 
             if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
@@ -321,5 +324,5 @@ function Start-Log {
     } ;
     Write-Output $hshRet ;
 }
-
-#*------^ END Start-Log.ps1 ^------
+#} ; 
+#endregion START_LOG ; #*------^ END start-log ^------
