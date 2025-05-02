@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 1.5.1.0
+  Version     : 2.0.0.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -32,7 +32,7 @@
   * 8:57 PM 11/25/2018 Write-Log:shifted copy to verb-transcript, added defer to scope $script versions
   * 8:13 AM 10/2/2018 Cleanup():make it defer to existing script-copy, ren'd $bdebug -> $showdebug
   * 2:37 PM 9/19/2018 fixed a filename invocation bug in Start-IseTranscript ; added CleanUp() example (with archivevelog disabled), formalized notes block, w demo load
-  * 11:29 AM 11.5.1017 initial version
+  * 11:29 AM 12.0.0017 initial version
   .DESCRIPTION
   verb-logging - Logging-related generic functions
   .LINK
@@ -1336,11 +1336,11 @@ function get-winEventsLoopedIDs {
 
             Name                      #text                                 
             ----                      -----                                 
-            SubjectUserSid            S-1-5-18                              
+            SubjectUserSid            S-2.0.08                              
             SubjectUserName           xxx-9x5xxx3$                          
             SubjectDomainName         DOMAIN                                  
             SubjectLogonId            0x3e7                                 
-            TargetUserSid             S-1-5-18                              
+            TargetUserSid             S-2.0.08                              
             TargetUserName            SYSTEM                                
             TargetDomainName          NT AUTHORITY                          
             TargetLogonId             0x3e7                                 
@@ -1619,6 +1619,7 @@ function Start-Log {
     Copyright   : (c) 2019 Todd Kadrie
     Github      : https://github.com/tostka
     REVISIONS
+   * 9:07 AM 4/30/2025 make Tag cleanup conditional on avail of the target vtxt\funcs
     * 11:57 AM 1/17/2023 updated output object to be psv2 compat (OrderedDictionary object under v2)
     * 3:46 PM 11/16/2022 added catch blog around start-trans, that traps 'not compatible' errors, distict from generic catch
     * 2:15 PM 2/24/2022 added -TagFirst param (put the ticket/tag at the start of the filenames)
@@ -1869,10 +1870,10 @@ function Start-Log {
     if (!(test-path -path $transcript)) { "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
     #$transcript = join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($Path))" ; 
     if($Tag){
-        # clean for fso use
-        $Tag = Remove-StringDiacritic -String $Tag ; # verb-text
-        $Tag = Remove-StringLatinCharacters -String $Tag ; # verb-text
-        $Tag = Remove-InvalidFileNameChars -Name $Tag ; # verb-io, (inbound Path is assumed to be filesystem safe)
+        # clean for fso use, if funcs avail
+        if((gci function:Remove-StringDiacritic -ea 0)){$Tag = Remove-StringDiacritic -String $Tag } else {write-host "(missing:verb-text\Remove-StringDiacritic, skipping)";}  # verb-text ; 
+        if((gci function:Remove-StringLatinCharacters -ea 0)){$Tag = Remove-StringLatinCharacters -String $Tag } else {write-host "(missing:verb-textRemove-StringLatinCharacters, skipping)";} # verb-text
+        if((gci function:Remove-InvalidFileNameChars -ea 0)){$Tag = Remove-InvalidFileNameChars -Name $Tag } else {write-host "(missing:verb-textRemove-InvalidFileNameChars, skipping)";}; # verb-io, (inbound Path is assumed to be filesystem safe)
         if($TagFirst){
             $smsg = "(-TagFirst:Building filenames with leading -Tag value)" ; 
             if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
@@ -2982,8 +2983,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUeN4bbSKZgIvfKu1vk+YZ2hsq
-# paygggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUQwjcYYygFct+FuUVO8JJG6Pl
+# 4VOgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -2998,9 +2999,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBRDLnDZ
-# PmQSq1prnx3D83RnB6EL9jANBgkqhkiG9w0BAQEFAASBgKzR1QQahHE+KDetD4Wc
-# 59WB9KoE6OTmbsd21kl4Y3JzK1t0aCYSsMq5oEHUd0xiR37L9pFQ1/AePP1apzXD
-# ftdeDF8jKNUIypHdHbtMQn+68lwNGVhPkp1UnhGYUtJZJQnP7OPxqpygn09a00ac
-# 24usewVR/RZpq+CUBHPKGUII
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBRqMnT/
+# U4+CDWojA/8uSXxtvaFNbzANBgkqhkiG9w0BAQEFAASBgCpgb2aZd3/JLsc7WH+1
+# 2bqFoyzA+K4S7zMfKm6e7QkJEkHZ4YLhaA77vYFrU8uc5MkCZj+2hc3h7krkurMN
+# IU209A/N1NpPkL2jDBH2X67rTN/7Uoa8tbBfBJ2aEcSMbVHnXUWCLPUip+YH01tw
+# OrvrENr26mOpHDh2FBnYCh1Z
 # SIG # End signature block

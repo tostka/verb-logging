@@ -224,6 +224,7 @@ get-lastwake:ob
 get-lastwake:PipelineVariable
 get-lastwake:pv
 get-winEventsLoopedIDs:MaxEvents
+get-winEventsLoopedIDs:FinalEvents
 get-winEventsLoopedIDs:Filter
 get-winEventsLoopedIDs:Verbose
 get-winEventsLoopedIDs:vb
