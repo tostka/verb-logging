@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 2.0.0.0
+  Version     : 2.0.1.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -32,7 +32,7 @@
   * 8:57 PM 11/25/2018 Write-Log:shifted copy to verb-transcript, added defer to scope $script versions
   * 8:13 AM 10/2/2018 Cleanup():make it defer to existing script-copy, ren'd $bdebug -> $showdebug
   * 2:37 PM 9/19/2018 fixed a filename invocation bug in Start-IseTranscript ; added CleanUp() example (with archivevelog disabled), formalized notes block, w demo load
-  * 11:29 AM 12.0.0017 initial version
+  * 11:29 AM 12.0.1017 initial version
   .DESCRIPTION
   verb-logging - Logging-related generic functions
   .LINK
@@ -1336,11 +1336,11 @@ function get-winEventsLoopedIDs {
 
             Name                      #text                                 
             ----                      -----                                 
-            SubjectUserSid            S-2.0.08                              
+            SubjectUserSid            S-1-5-18                              
             SubjectUserName           xxx-9x5xxx3$                          
             SubjectDomainName         DOMAIN                                  
             SubjectLogonId            0x3e7                                 
-            TargetUserSid             S-2.0.08                              
+            TargetUserSid             S-1-5-18                              
             TargetUserName            SYSTEM                                
             TargetDomainName          NT AUTHORITY                          
             TargetLogonId             0x3e7                                 
@@ -1605,207 +1605,148 @@ Transcript started. Output file is $Logname
 
 #*------v Start-Log.ps1 v------
 function Start-Log {
-    <#
-    .SYNOPSIS
-    Start-Log.ps1 - Configure base settings for use of write-Log() logging
-    .NOTES
-    Version     : 1.0.0
-    Author      : Todd Kadrie
-    Website     :	http://www.toddomation.com
-    Twitter     :	@tostka / http://twitter.com/tostka
-    CreatedDate : 12/29/2019
-    FileName    : Start-Log.ps1
-    License     : MIT License
-    Copyright   : (c) 2019 Todd Kadrie
-    Github      : https://github.com/tostka
-    REVISIONS
-   * 9:07 AM 4/30/2025 make Tag cleanup conditional on avail of the target vtxt\funcs
-    * 11:57 AM 1/17/2023 updated output object to be psv2 compat (OrderedDictionary object under v2)
-    * 3:46 PM 11/16/2022 added catch blog around start-trans, that traps 'not compatible' errors, distict from generic catch
-    * 2:15 PM 2/24/2022 added -TagFirst param (put the ticket/tag at the start of the filenames)
-    * 4:23 PM 1/24/2022 added capture of start-trans - or it echos into pipeline
-    * 10:46 AM 12/3/2021 added Tag cleanup: Remove-StringDiacritic,  Remove-StringLatinCharacters, Remove-IllegalFileNameChars (adds verb-io & verb-text deps); added requires for the usuals.
-    * 9/27/2021 Example3, updated to latest diverting rev
-    * 5:06 PM 9/21/2021 rewrote Example3 to handle CurrentUser profile installs (along with AllUsers etc).
-    * 8:45 AM 6/16/2021 updated example for redir, to latest/fully-expanded concept code (defers to profile constants); added tricked out example for looping UPN/Ticket combo
-    * 2:23 PM 5/6/2021 disabled $Path test, no bene, and AllUsers redir doesn't need a real file, just a path ; add example for detecting & redirecting logging, when psCommandPath points to Allusers profile (installed module function)
-    * 2:05 PM 3/30/2021 added example demo'ing detect/divert off of AllUsers-scoped installed scripts
-    * 1:46 PM 12/21/2020 added example that builds logfile off of passed in .txt (rather than .ps1 path or pscommandpath)
-    * 11:39 AM 11/24/2020 updated examples again
-    * 9:18 AM 11/23/2020 updated 2nd example to use splatting
-    * 12:35 PM 5/5/2020 added -NotTimeStamp param, and supporting code to return non-timestamped filenames
-    * 12:44 PM 4/23/2020 shift $path validation to parent folder - with AllUsers scoped scripts, we need to find paths, and *fake* a path to ensure logs aren't added to AllUsers %progfiles%\wps\scripts\(logs). So the path may not exist, but the parent dir should
-    * 3:56 PM 2/18/2020 Start-Log: added $Tag param, to support descriptive string for building $transcript name
-    * 11:16 AM 12/29/2019 init version
-    .DESCRIPTION
-    Start-Log.ps1 - Configure base settings for use of write-Log() logging
-    
-    Note: To use -TagFirst: set both -TagFirst & -Ticket; the ticket spec will prefix all generated filenames
-    
-    Usage:
-    #-=-=-=-=-=-=-=-=
-    $backInclDir = "c:\usr\work\exch\scripts\" ;
-    #*======v FUNCTIONS v======
-    $tModFile = "verb-logging.ps1" ; $sLoad = (join-path -path $LocalInclDir -childpath $tModFile) ; if (Test-Path $sLoad) {     Write-Verbose -verbose ((Get-Date).ToString("HH:mm:ss") + "LOADING:" + $sLoad) ; . $sLoad ; if ($showdebug -OR $verbose) { Write-Verbose -verbose "Post $sLoad" }; } else {     $sLoad = (join-path -path $backInclDir -childpath $tModFile) ; if (Test-Path $sLoad) {         Write-Verbose -verbose ((Get-Date).ToString("HH:mm:ss") + "LOADING:" + $sLoad) ; . $sLoad ; if ($showdebug -OR $verbose) { Write-Verbose -verbose "Post $sLoad" };     }     else { Write-Warning ((Get-Date).ToString("HH:mm:ss") + ":MISSING:" + $sLoad + " EXITING...") ; exit; } ; } ;
-    #*======^ END FUNCTIONS ^======
-    #*======v SUB MAIN v======
-    [array]$reqMods = $null ; # force array, otherwise single first makes it a [string]
-    $reqMods += "Write-Log;Start-Log".split(";") ;
-    $reqMods = $reqMods | Select-Object -Unique ;
-    if ( !(check-ReqMods $reqMods) ) { write-error "$((get-date).ToString("yyyyMMdd HH:mm:ss")):Missing function. EXITING." ; throw "FAILURE" ; }  ;
-    $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) -showdebug:$($showdebug) -whatif:$($whatif) ;
-    if($logspec){
-        $logging=$logspec.logging ;
-        $logfile=$logspec.logfile ;
-        $transcript=$logspec.transcript ;
-    } else {throw "Unable to configure logging!" } ;
-    #-=-=-=-=-=-=-=-=
-    .PARAMETER  Path
-    Path to target script (defaults to $PSCommandPath)
-    .PARAMETER Tag
-    Tag string to be used with -Path filename spec, to construct log file name [-tag 'ticket-123456]
-    .PARAMETER NoTimeStamp
-    Flag that suppresses the trailing timestamp value from the generated filenames[-NoTimestamp]
-    .PARAMETER TagFirst
-    Flag that leads the returned filename with the Tag parameter value[-TagFirst]
-    .PARAMETER ShowDebug
-    Switch to display Debugging messages [-ShowDebug]
-    .PARAMETER whatIf
-    Whatif Flag [-whatIf]
-    .EXAMPLE
-    $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
-    if($PSCommandPath){   $logspec = start-Log -Path $PSCommandPath @pltSL ; 
-    } else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL ; } ; 
-    if($logspec){
-        $logging=$logspec.logging ;
-        $logfile=$logspec.logfile ;
-        $transcript=$logspec.transcript ;
-        if(Test-TranscriptionSupported){
-            $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
-            $startResults = start-transcript -Path $transcript ;
-        } ;
-    } else {throw "Unable to configure logging!" } ;
-    Configure default logging from parent script name
-    .EXAMPLE
-    $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) -NoTimeStamp ;
-    if($logspec){
-        $logging=$logspec.logging ;
-        $logfile=$logspec.logfile ;
-        $transcript=$logspec.transcript ;
-        $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
-        $startResults = start-Transcript -path $transcript ; 
-    } else {throw "Unable to configure logging!" } ;
-    
-    Configure default logging from parent script name, with no Timestamp
-    .EXAMPLE
-    ${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name ;
-    if(!(get-variable LogPathDrives -ea 0)){$LogPathDrives = 'd','c' };
-    foreach($budrv in $LogPathDrives){if(test-path -path "$($budrv):\scripts" -ea 0 ){break} } ;
-    if(!(get-variable rgxPSAllUsersScope -ea 0)){
-        $rgxPSAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps(((d|m))*)1|dll)$" ;
-    } ;
-    if(!(get-variable rgxPSCurrUserScope -ea 0)){
-        $rgxPSCurrUserScope="^$([regex]::escape([Environment]::GetFolderPath('MyDocuments')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps((d|m)*)1|dll)$" ;
-    } ;
-    $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
-    $pltSL.Tag = $ModuleName ; 
-    # variant Ticket/TagFirst Tagging:
-    # $pltSL.Tag = $Ticket ;
-    # $pltSL.TagFirst = $true ;
-    if($script:PSCommandPath){
-        if(($script:PSCommandPath -match $rgxPSAllUsersScope) -OR ($script:PSCommandPath -match $rgxPSCurrUserScope)){
-            $bDivertLog = $true ; 
-            switch -regex ($script:PSCommandPath){
-                $rgxPSAllUsersScope{$smsg = "AllUsers"} 
-                $rgxPSCurrUserScope{$smsg = "CurrentUser"}
-            } ;
-            $smsg += " context script/module, divert logging into [$budrv]:\scripts" 
-            write-verbose $smsg  ;
-            if($bDivertLog){
-                if((split-path $script:PSCommandPath -leaf) -ne $cmdletname){
-                    # function in a module/script installed to allusers|cu - defer name to Cmdlet/Function name
-                    $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
-                } else {
-                    # installed allusers|CU script, use the hosting script name
-                    $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
-                }
-            } ;
-        } else {
-            $pltSL.Path = $script:PSCommandPath ;
-        } ;
-    } else {
-        if(($MyInvocation.MyCommand.Definition -match $rgxPSAllUsersScope) -OR ($MyInvocation.MyCommand.Definition -match $rgxPSCurrUserScope) ){
-             $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
-        } elseif(test-path $MyInvocation.MyCommand.Definition) {
-            $pltSL.Path = $MyInvocation.MyCommand.Definition ;
-        } elseif($cmdletname){
-            $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
-        } else {
-            $smsg = "UNABLE TO RESOLVE A FUNCTIONAL `$CMDLETNAME, FROM WHICH TO BUILD A START-LOG.PATH!" ; 
-            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Warn } #Error|Warn|Debug 
-            else{ write-WARNING "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-            BREAK ;
-        } ; 
-    } ;
-    write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
-    $logspec = start-Log @pltSL ;
-    $error.clear() ;
-    TRY {
+        <#
+        .SYNOPSIS
+        Start-Log.ps1 - Configure base settings for use of write-Log() logging
+        .NOTES
+        Version     : 1.0.0
+        Author      : Todd Kadrie
+        Website     :	http://www.toddomation.com
+        Twitter     :	@tostka / http://twitter.com/tostka
+        CreatedDate : 12/29/2019
+        FileName    : Start-Log.ps1
+        License     : MIT License
+        Copyright   : (c) 2019 Todd Kadrie
+        Github      : https://github.com/tostka
+        REVISIONS
+        * 4:03 PM 5/15/2025 removed rem's
+        * 9:07 AM 4/30/2025 make Tag cleanup conditional on avail of the target vtxt\funcs
+        * 11:57 AM 1/17/2023 updated output object to be psv2 compat (OrderedDictionary object under v2)
+        * 3:46 PM 11/16/2022 added catch blog around start-trans, that traps 'not compatible' errors, distict from generic catch
+        * 2:15 PM 2/24/2022 added -TagFirst param (put the ticket/tag at the start of the filenames)
+        * 4:23 PM 1/24/2022 added capture of start-trans - or it echos into pipeline
+        * 10:46 AM 12/3/2021 added Tag cleanup: Remove-StringDiacritic,  Remove-StringLatinCharacters, Remove-IllegalFileNameChars (adds verb-io & verb-text deps); added requires for the usuals.
+        * 9/27/2021 Example3, updated to latest diverting rev
+        * 5:06 PM 9/21/2021 rewrote Example3 to handle CurrentUser profile installs (along with AllUsers etc).
+        * 8:45 AM 6/16/2021 updated example for redir, to latest/fully-expanded concept code (defers to profile constants); added tricked out example for looping UPN/Ticket combo
+        * 2:23 PM 5/6/2021 disabled $Path test, no bene, and AllUsers redir doesn't need a real file, just a path ; add example for detecting & redirecting logging, when psCommandPath points to Allusers profile (installed module function)
+        * 2:05 PM 3/30/2021 added example demo'ing detect/divert off of AllUsers-scoped installed scripts
+        * 1:46 PM 12/21/2020 added example that builds logfile off of passed in .txt (rather than .ps1 path or pscommandpath)
+        * 11:39 AM 11/24/2020 updated examples again
+        * 9:18 AM 11/23/2020 updated 2nd example to use splatting
+        * 12:35 PM 5/5/2020 added -NotTimeStamp param, and supporting code to return non-timestamped filenames
+        * 12:44 PM 4/23/2020 shift $path validation to parent folder - with AllUsers scoped scripts, we need to find paths, and *fake* a path to ensure logs aren't added to AllUsers %progfiles%\wps\scripts\(logs). So the path may not exist, but the parent dir should
+        * 3:56 PM 2/18/2020 Start-Log: added $Tag param, to support descriptive string for building $transcript name
+        * 11:16 AM 12/29/2019 init version
+        .DESCRIPTION
+        Start-Log.ps1 - Configure base settings for use of write-Log() logging
+        
+        Note: To use -TagFirst: set both -TagFirst & -Ticket; the ticket spec will prefix all generated filenames
+        
+        Usage:
+        #-=-=-=-=-=-=-=-=
+        $backInclDir = "c:\usr\work\exch\scripts\" ;
+        #*======v FUNCTIONS v======
+        $tModFile = "verb-logging.ps1" ; $sLoad = (join-path -path $LocalInclDir -childpath $tModFile) ; if (Test-Path $sLoad) {     Write-Verbose -verbose ((Get-Date).ToString("HH:mm:ss") + "LOADING:" + $sLoad) ; . $sLoad ; if ($showdebug -OR $verbose) { Write-Verbose -verbose "Post $sLoad" }; } else {     $sLoad = (join-path -path $backInclDir -childpath $tModFile) ; if (Test-Path $sLoad) {         Write-Verbose -verbose ((Get-Date).ToString("HH:mm:ss") + "LOADING:" + $sLoad) ; . $sLoad ; if ($showdebug -OR $verbose) { Write-Verbose -verbose "Post $sLoad" };     }     else { Write-Warning ((Get-Date).ToString("HH:mm:ss") + ":MISSING:" + $sLoad + " EXITING...") ; exit; } ; } ;
+        #*======^ END FUNCTIONS ^======
+        #*======v SUB MAIN v======
+        [array]$reqMods = $null ; # force array, otherwise single first makes it a [string]
+        $reqMods += "Write-Log;Start-Log".split(";") ;
+        $reqMods = $reqMods | Select-Object -Unique ;
+        if ( !(check-ReqMods $reqMods) ) { write-error "$((get-date).ToString("yyyyMMdd HH:mm:ss")):Missing function. EXITING." ; throw "FAILURE" ; }  ;
+        $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) -showdebug:$($showdebug) -whatif:$($whatif) ;
         if($logspec){
             $logging=$logspec.logging ;
             $logfile=$logspec.logfile ;
             $transcript=$logspec.transcript ;
-            $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
-            $startResults = start-Transcript -path $transcript ;
         } else {throw "Unable to configure logging!" } ;
-    } CATCH [System.Management.Automation.PSNotSupportedException]{
-        if($host.name -eq 'Windows PowerShell ISE Host'){
-            $smsg = "This version of $($host.name):$($host.version) does *not* support native (start-)transcription" ; 
-        } else { 
-            $smsg = "This host does *not* support native (start-)transcription" ; 
-        } ; 
-        write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
-    } CATCH {
-        $ErrTrapd=$Error[0] ;
-        $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
-        write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
-    } ;
-    
-    Single log for script/function example that accomodates detect/redirect from AllUsers scope'd installed code, and hunts a series of drive letters to find an alternate logging dir (defers to profile variables)
-    .EXAMPLE
-    $iProcd=0 ; $ttl = ($UPNs | Measure-Object).count ; $tickNum = ($tickets | Measure-Object).count
-    if ($ttl -ne $tickNum ) {
-        write-host -foregroundcolor RED "$((get-date).ToString('HH:mm:ss')):ERROR!:You have specified $($ttl) UPNs but only $($tickNum) tickets.`nPlease specified a matching number of both objects." ;
-        Break ;
-    } ;
-    foreach($UPN in $UPNs){
-        $iProcd++ ;
+        #-=-=-=-=-=-=-=-=
+        .PARAMETER  Path
+        Path to target script (defaults to $PSCommandPath)
+        .PARAMETER Tag
+        Tag string to be used with -Path filename spec, to construct log file name [-tag 'ticket-123456]
+        .PARAMETER NoTimeStamp
+        Flag that suppresses the trailing timestamp value from the generated filenames[-NoTimestamp]
+        .PARAMETER TagFirst
+        Flag that leads the returned filename with the Tag parameter value[-TagFirst]
+        .PARAMETER ShowDebug
+        Switch to display Debugging messages [-ShowDebug]
+        .PARAMETER whatIf
+        Whatif Flag [-whatIf]
+        .EXAMPLE
+        $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
+        if($PSCommandPath){   $logspec = start-Log -Path $PSCommandPath @pltSL ; 
+        } else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL ; } ; 
+        if($logspec){
+            $logging=$logspec.logging ;
+            $logfile=$logspec.logfile ;
+            $transcript=$logspec.transcript ;
+            if(Test-TranscriptionSupported){
+                $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
+                $startResults = start-transcript -Path $transcript ;
+            } ;
+        } else {throw "Unable to configure logging!" } ;
+        Configure default logging from parent script name
+        .EXAMPLE
+        $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) -NoTimeStamp ;
+        if($logspec){
+            $logging=$logspec.logging ;
+            $logfile=$logspec.logfile ;
+            $transcript=$logspec.transcript ;
+            $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
+            $startResults = start-Transcript -path $transcript ; 
+        } else {throw "Unable to configure logging!" } ;
+        
+        Configure default logging from parent script name, with no Timestamp
+        .EXAMPLE
+        ${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name ;
         if(!(get-variable LogPathDrives -ea 0)){$LogPathDrives = 'd','c' };
         foreach($budrv in $LogPathDrives){if(test-path -path "$($budrv):\scripts" -ea 0 ){break} } ;
         if(!(get-variable rgxPSAllUsersScope -ea 0)){
             $rgxPSAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps(((d|m))*)1|dll)$" ;
         } ;
+        if(!(get-variable rgxPSCurrUserScope -ea 0)){
+            $rgxPSCurrUserScope="^$([regex]::escape([Environment]::GetFolderPath('MyDocuments')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps((d|m)*)1|dll)$" ;
+        } ;
         $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
-        if($tickets[$iProcd-1]){$pltSL.Tag = "$($tickets[$iProcd-1])-$($UPN)"} ;
+        $pltSL.Tag = $ModuleName ; 
+        # variant Ticket/TagFirst Tagging:
+        # $pltSL.Tag = $Ticket ;
+        # $pltSL.TagFirst = $true ;
         if($script:PSCommandPath){
-            if($script:PSCommandPath -match $rgxPSAllUsersScope){
-                write-verbose "AllUsers context script/module, divert logging into [$budrv]:\scripts" ;
-                if((split-path $script:PSCommandPath -leaf) -ne $cmdletname){
-                    # function in a module/script installed to allusers 
-                    $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
-                } else { 
-                    # installed allusers script
-                    $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
-                }
-            }else {
+            if(($script:PSCommandPath -match $rgxPSAllUsersScope) -OR ($script:PSCommandPath -match $rgxPSCurrUserScope)){
+                $bDivertLog = $true ; 
+                switch -regex ($script:PSCommandPath){
+                    $rgxPSAllUsersScope{$smsg = "AllUsers"} 
+                    $rgxPSCurrUserScope{$smsg = "CurrentUser"}
+                } ;
+                $smsg += " context script/module, divert logging into [$budrv]:\scripts" 
+                write-verbose $smsg  ;
+                if($bDivertLog){
+                    if((split-path $script:PSCommandPath -leaf) -ne $cmdletname){
+                        # function in a module/script installed to allusers|cu - defer name to Cmdlet/Function name
+                        $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
+                    } else {
+                        # installed allusers|CU script, use the hosting script name
+                        $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
+                    }
+                } ;
+            } else {
                 $pltSL.Path = $script:PSCommandPath ;
             } ;
         } else {
-            if($MyInvocation.MyCommand.Definition -match $rgxPSAllUsersScope){
+            if(($MyInvocation.MyCommand.Definition -match $rgxPSAllUsersScope) -OR ($MyInvocation.MyCommand.Definition -match $rgxPSCurrUserScope) ){
                  $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
-            } else {
+            } elseif(test-path $MyInvocation.MyCommand.Definition) {
                 $pltSL.Path = $MyInvocation.MyCommand.Definition ;
-            } ;
+            } elseif($cmdletname){
+                $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
+            } else {
+                $smsg = "UNABLE TO RESOLVE A FUNCTIONAL `$CMDLETNAME, FROM WHICH TO BUILD A START-LOG.PATH!" ; 
+                if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Warn } #Error|Warn|Debug 
+                else{ write-WARNING "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+                BREAK ;
+            } ; 
         } ;
         write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
         $logspec = start-Log @pltSL ;
@@ -1828,105 +1769,153 @@ function Start-Log {
         } CATCH {
             $ErrTrapd=$Error[0] ;
             $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
-            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
-            else{ write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+            write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
         } ;
-     }  # loop-E $UPN
-     
-     Looping per-pass Logging (uses $UPN & $Ticket array, in this example). 
-    .EXAMPLE
-    $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
-    if($forceall){$pltSL.Tag = "-ForceAll" }
-    else {$pltSL.Tag = "-LASTPASS" } ;
-    write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
-    $logspec = start-Log -Path c:\scripts\test-script.txt @pltSL ;
-    
-    Path is normally to the executing .ps1, but *does not have to be*. Anything with a valid path can be specified, including a .txt file. The above generates logging/transcript paths off of specifying a non-existant text file path.
-    .LINK
-    https://github.com/tostka/verb-logging
-    #>
-    #Requires -Modules verb-IO, verb-Text
-    [CmdletBinding()]
-    PARAM(
-        [Parameter(Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,HelpMessage="Path to target script (defaults to `$PSCommandPath) [-Path .\path-to\script.ps1]")]
-        # rem out validation, for module installed in AllUsers etc, we don't want to have to spec a real existing file. No bene to testing
-        #[ValidateScript({Test-Path (split-path $_)})] 
-        $Path,
-        [Parameter(HelpMessage="Tag string to be used with -Path filename spec, to construct log file name [-tag 'ticket-123456]")]
-        [string]$Tag,
-        [Parameter(HelpMessage="Flag that suppresses the trailing timestamp value from the generated filenames[-NoTimestamp]")]
-        [switch] $NoTimeStamp,
-        [Parameter(HelpMessage="Flag that leads the returned filename with the Tag parameter value[-TagFirst]")]
-        [switch] $TagFirst,
-        [Parameter(HelpMessage="Debugging Flag [-showDebug]")]
-        [switch] $showDebug,
-        [Parameter(HelpMessage="Whatif Flag  [-whatIf]")]
-        [switch] $whatIf=$true
-    ) ;
-    #${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name ;
-    #$PSParameters = New-Object -TypeName PSObject -Property $PSBoundParameters ;
-    $Verbose = ($VerbosePreference -eq 'Continue') ; 
-    $transcript = join-path -path (Split-Path -parent $Path) -ChildPath "logs" ;
-    if (!(test-path -path $transcript)) { "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
-    #$transcript = join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($Path))" ; 
-    if($Tag){
-        # clean for fso use, if funcs avail
-        if((gci function:Remove-StringDiacritic -ea 0)){$Tag = Remove-StringDiacritic -String $Tag } else {write-host "(missing:verb-text\Remove-StringDiacritic, skipping)";}  # verb-text ; 
-        if((gci function:Remove-StringLatinCharacters -ea 0)){$Tag = Remove-StringLatinCharacters -String $Tag } else {write-host "(missing:verb-textRemove-StringLatinCharacters, skipping)";} # verb-text
-        if((gci function:Remove-InvalidFileNameChars -ea 0)){$Tag = Remove-InvalidFileNameChars -Name $Tag } else {write-host "(missing:verb-textRemove-InvalidFileNameChars, skipping)";}; # verb-io, (inbound Path is assumed to be filesystem safe)
-        if($TagFirst){
-            $smsg = "(-TagFirst:Building filenames with leading -Tag value)" ; 
-            if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
-            else{ write-verbose "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ; 
-            $transcript = join-path -path $transcript -childpath "$($Tag)-$([system.io.path]::GetFilenameWithoutExtension($Path))" ; 
-            #$transcript = "$($Tag)-$($transcript)" ; 
-        } else { 
+        
+        Single log for script/function example that accomodates detect/redirect from AllUsers scope'd installed code, and hunts a series of drive letters to find an alternate logging dir (defers to profile variables)
+        .EXAMPLE
+        $iProcd=0 ; $ttl = ($UPNs | Measure-Object).count ; $tickNum = ($tickets | Measure-Object).count
+        if ($ttl -ne $tickNum ) {
+            write-host -foregroundcolor RED "$((get-date).ToString('HH:mm:ss')):ERROR!:You have specified $($ttl) UPNs but only $($tickNum) tickets.`nPlease specified a matching number of both objects." ;
+            Break ;
+        } ;
+        foreach($UPN in $UPNs){
+            $iProcd++ ;
+            if(!(get-variable LogPathDrives -ea 0)){$LogPathDrives = 'd','c' };
+            foreach($budrv in $LogPathDrives){if(test-path -path "$($budrv):\scripts" -ea 0 ){break} } ;
+            if(!(get-variable rgxPSAllUsersScope -ea 0)){
+                $rgxPSAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps(((d|m))*)1|dll)$" ;
+            } ;
+            $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
+            if($tickets[$iProcd-1]){$pltSL.Tag = "$($tickets[$iProcd-1])-$($UPN)"} ;
+            if($script:PSCommandPath){
+                if($script:PSCommandPath -match $rgxPSAllUsersScope){
+                    write-verbose "AllUsers context script/module, divert logging into [$budrv]:\scripts" ;
+                    if((split-path $script:PSCommandPath -leaf) -ne $cmdletname){
+                        # function in a module/script installed to allusers 
+                        $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
+                    } else { 
+                        # installed allusers script
+                        $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
+                    }
+                }else {
+                    $pltSL.Path = $script:PSCommandPath ;
+                } ;
+            } else {
+                if($MyInvocation.MyCommand.Definition -match $rgxPSAllUsersScope){
+                     $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
+                } else {
+                    $pltSL.Path = $MyInvocation.MyCommand.Definition ;
+                } ;
+            } ;
+            write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
+            $logspec = start-Log @pltSL ;
+            $error.clear() ;
+            TRY {
+                if($logspec){
+                    $logging=$logspec.logging ;
+                    $logfile=$logspec.logfile ;
+                    $transcript=$logspec.transcript ;
+                    $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
+                    $startResults = start-Transcript -path $transcript ;
+                } else {throw "Unable to configure logging!" } ;
+            } CATCH [System.Management.Automation.PSNotSupportedException]{
+                if($host.name -eq 'Windows PowerShell ISE Host'){
+                    $smsg = "This version of $($host.name):$($host.version) does *not* support native (start-)transcription" ; 
+                } else { 
+                    $smsg = "This host does *not* support native (start-)transcription" ; 
+                } ; 
+                write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
+            } CATCH {
+                $ErrTrapd=$Error[0] ;
+                $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
+                if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
+                else{ write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+            } ;
+         }  # loop-E $UPN
+         
+         Looping per-pass Logging (uses $UPN & $Ticket array, in this example). 
+        .EXAMPLE
+        $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
+        if($forceall){$pltSL.Tag = "-ForceAll" }
+        else {$pltSL.Tag = "-LASTPASS" } ;
+        write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
+        $logspec = start-Log -Path c:\scripts\test-script.txt @pltSL ;
+        
+        Path is normally to the executing .ps1, but *does not have to be*. Anything with a valid path can be specified, including a .txt file. The above generates logging/transcript paths off of specifying a non-existant text file path.
+        .LINK
+        https://github.com/tostka/verb-logging
+        #>
+        #Requires -Modules verb-IO, verb-Text
+        [CmdletBinding()]
+        PARAM(
+            [Parameter(Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,HelpMessage="Path to target script (defaults to `$PSCommandPath) [-Path .\path-to\script.ps1]")]
+            # rem out validation, for module installed in AllUsers etc, we don't want to have to spec a real existing file. No bene to testing
+            #[ValidateScript({Test-Path (split-path $_)})] 
+            $Path,
+            [Parameter(HelpMessage="Tag string to be used with -Path filename spec, to construct log file name [-tag 'ticket-123456]")]
+            [string]$Tag,
+            [Parameter(HelpMessage="Flag that suppresses the trailing timestamp value from the generated filenames[-NoTimestamp]")]
+            [switch] $NoTimeStamp,
+            [Parameter(HelpMessage="Flag that leads the returned filename with the Tag parameter value[-TagFirst]")]
+            [switch] $TagFirst,
+            [Parameter(HelpMessage="Debugging Flag [-showDebug]")]
+            [switch] $showDebug,
+            [Parameter(HelpMessage="Whatif Flag  [-whatIf]")]
+            [switch] $whatIf=$true
+        ) ;
+        $Verbose = ($VerbosePreference -eq 'Continue') ; 
+        $transcript = join-path -path (Split-Path -parent $Path) -ChildPath "logs" ;
+        if (!(test-path -path $transcript)) { "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
+        if($Tag){
+            if((gci function:Remove-StringDiacritic -ea 0)){$Tag = Remove-StringDiacritic -String $Tag } else {write-host "(missing:verb-text\Remove-StringDiacritic, skipping)";}  # verb-text ; 
+            if((gci function:Remove-StringLatinCharacters -ea 0)){$Tag = Remove-StringLatinCharacters -String $Tag } else {write-host "(missing:verb-textRemove-StringLatinCharacters, skipping)";} # verb-text
+            if((gci function:Remove-InvalidFileNameChars -ea 0)){$Tag = Remove-InvalidFileNameChars -Name $Tag } else {write-host "(missing:verb-textRemove-InvalidFileNameChars, skipping)";}; # verb-io, (inbound Path is assumed to be filesystem safe)
+            if($TagFirst){
+                $smsg = "(-TagFirst:Building filenames with leading -Tag value)" ; 
+                if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug 
+                else{ write-verbose "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ; 
+                $transcript = join-path -path $transcript -childpath "$($Tag)-$([system.io.path]::GetFilenameWithoutExtension($Path))" ; 
+                #$transcript = "$($Tag)-$($transcript)" ; 
+            } else { 
+                $transcript = join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($Path))" ; 
+                $transcript += "-$($Tag)" ; 
+            } ;
+        } else {
             $transcript = join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($Path))" ; 
-            $transcript += "-$($Tag)" ; 
+        }; 
+        $transcript += "-Transcript-BATCH"
+        if(!$NoTimeStamp){ $transcript += "-$(get-date -format 'yyyyMMdd-HHmmtt')" } ; 
+        $transcript += "-trans-log.txt"  ;
+        # add log file variant as target of Write-Log:
+        $logfile = $transcript.replace("-Transcript", "-LOG").replace("-trans-log", "-log")
+        if ($whatif) {
+            $logfile = $logfile.replace("-BATCH", "-BATCH-WHATIF") ;
+            $transcript = $transcript.replace("-BATCH", "-BATCH-WHATIF") ;
+        }
+        else {
+            $logfile = $logfile.replace("-BATCH", "-BATCH-EXEC") ;
+            $transcript = $transcript.replace("-BATCH", "-BATCH-EXEC") ;
         } ;
-    } else {
-        $transcript = join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($Path))" ; 
-    }; 
-    $transcript += "-Transcript-BATCH"
-    if(!$NoTimeStamp){ $transcript += "-$(get-date -format 'yyyyMMdd-HHmmtt')" } ; 
-    $transcript += "-trans-log.txt"  ;
-    # add log file variant as target of Write-Log:
-    $logfile = $transcript.replace("-Transcript", "-LOG").replace("-trans-log", "-log")
-    if ($whatif) {
-        $logfile = $logfile.replace("-BATCH", "-BATCH-WHATIF") ;
-        $transcript = $transcript.replace("-BATCH", "-BATCH-WHATIF") ;
-    }
-    else {
-        $logfile = $logfile.replace("-BATCH", "-BATCH-EXEC") ;
-        $transcript = $transcript.replace("-BATCH", "-BATCH-EXEC") ;
-    } ;
-    $logging = $True ;
+        $logging = $True ;
 
-    # [ordered] not psv2 backward compat - use an orderedDict for psv2
-    <#$hshRet= [ordered]@{
-        logging=$logging ;
-        logfile=$logfile ;
-        transcript=$transcript ;
-    } ;
-    #>
-    # refactor back rev support to psv2
-    if($host.version.major -ge 3){
-        $hshRet=[ordered]@{Dummy = $null ; } ;
-    } else {
-        # psv2 Ordered obj (can't use with new-object -properites)
-        $hshRet = New-Object Collections.Specialized.OrderedDictionary ; 
-        # or use an UN-ORDERED psv2 hash: $Hash=@{ Dummy = $null ; } ;
-    } ;
-    If($hshRet.Contains("Dummy")){$hshRet.remove("Dummy")} ; 
-    $hshRet.add('logging',$logging) ;
-    $hshRet.add('logfile',$logfile);
-    $hshRet.add('transcript',$transcript) ;
-    if($showdebug -OR $verbose){
-        # retaining historical $showDebug support, even tho' not generally used now.
-        write-verbose -verbose:$true "$(($hshRet|out-string).trim())" ;  ;
-    } ;
-    Write-Output $hshRet ;
-}
+        if($host.version.major -ge 3){
+            $hshRet=[ordered]@{Dummy = $null ; } ;
+        } else {
+            # psv2 Ordered obj (can't use with new-object -properites)
+            $hshRet = New-Object Collections.Specialized.OrderedDictionary ; 
+            # or use an UN-ORDERED psv2 hash: $Hash=@{ Dummy = $null ; } ;
+        } ;
+        If($hshRet.Contains("Dummy")){$hshRet.remove("Dummy")} ; 
+        $hshRet.add('logging',$logging) ;
+        $hshRet.add('logfile',$logfile);
+        $hshRet.add('transcript',$transcript) ;
+        if($showdebug -OR $verbose){
+            # retaining historical $showDebug support, even tho' not generally used now.
+            write-verbose -verbose:$true "$(($hshRet|out-string).trim())" ;  ;
+        } ;
+        Write-Output $hshRet ;
+    }
 
 #*------^ Start-Log.ps1 ^------
 
@@ -2251,724 +2240,667 @@ function Test-TranscriptionSupported {
 
 #*------v Write-Log.ps1 v------
 function Write-Log {
-    <#
-    .SYNOPSIS
-    Write-Log.ps1 - Write-Log writes a message to a specified log file with the current time stamp, and write-verbose|warn|error's the matching msg.
-    .NOTES
-    Version     : 1.0.0
-    Author      : Todd Kadrie
-    Website     :	http://www.toddomation.com
-    Twitter     :	@tostka / http://twitter.com/tostka
-    CreatedDate : 2021-06-11
-    FileName    : Write-Log.ps1
-    License     : MIT License
-    Copyright   : (c) 2022 Todd Kadrie
-    Github      : https://github.com/tostka/verb-logging
-    Tags        : Powershell,Logging,Output,Echo,Console
-    AddedCredit : Jason Wasser
-    AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
-    AddedTwitter:	@wasserja
-    REVISIONS
-    * 1:42 PM 11/8/2024 CBH expl fixes
-    * 10:59 AM 2/17/2023 #529:added workaround for rando 'The variable cannot be validated because the value System.String[] is not a valid value for the Object variable.' err (try catch and strip to text w diff method) suddently seeing NUL char interleave on outputs (C:\usr\work\ps\scripts\logs\monitor-ExecPol-LOG-BATCH-EXEC-log.txt, utf-16/bigendianunicode?), forcing out-file -encoding UTF8
-    * 2:11 PM 2/15/2023 buffered over debugs from psv2 ISE color bizaareness. Completely refactored the psise & psv2 color block - have to use wildly inappaprop colors to get anything functional. 
-    * 2:26 PM 2/3/2023 combo'd the pair of aliases; added if$indent) around the flatten and split block in PROC (was lost in last move) ; 
-        added |out-string).trim to multiline non-indent text coming through, to ensure it's [string] when it gets written.
-         updated CBH, spliced over param help for write-hostindent params prev ported over ; 
-        added demo of use of flatten and necessity of |out-string).trim() on formattedobject outputs, prior to using as $object with -Indent ; 
-        roughed in attempt at -useHostBackgroundmoved, parked ; 
-        added pipeline detect write-verbose ; 
-        moved split/flatten into process block (should run per inbound string); added pipeline detect w-v
-        fixed bug in pltColors add (check keys contains before trying to add, assign if preexisting)
-    * 5:54 PM 2/2/2023 add -flatten, to strip empty lines from -indent auto-splits ; fix pltColors key add clash err; cbh updates, expanded info on new -indent support, added -indent demo
-    * 4:20 PM 2/1/2023 added full -indent support; updated CBH w related demos; flipped $Object to [System.Object]$Object (was coercing multiline into single text string); 
-        ren $Message -> $Object (aliased prior) splice over from w-hi, and is the param used natively by w-h; refactored/simplified logic prep for w-hi support. Working now with the refactor.
-    * 4:47 PM 1/30/2023 tweaked color schemes, renamed splat varis to exactly match levels; added -demo; added Level 'H4','H5', and Success (rounds out the set of banrs I setup in psBnr)
-    * 11:38 AM 11/16/2022 moved splats to top, added ISE v2 alt-color options (ISE isn't readable on psv2, by default using w-h etc)
-    * 9:07 AM 3/21/2022 added -Level verbose & prompt support, flipped all non-usehost options, but verbose, from w-v -> write-host; added level prefix to console echos
-    * 3:11 PM 8/17/2021 added verbose suppress to the get-colorcombo calls, clutters the heck out of outputs on verbose, no benef.
-    * 10:53 AM 6/16/2021 get-help isn't displaying param details, pulled erroneous semi's from end of CBH definitions
-    * 7:59 AM 6/11/2021 added H1|2|3 md-style #|##|## header tags ; added support for get-colorcombo, and enforced bg colors (legible regardless of local color scheme of console); expanded CBH, revised Author - it's diverged so substantially from JW's original concept, it's now "inspired-by", less than a variant of the original.
-    * 10:54 AM 5/7/2021 pulled weird choice to set: $VerbosePreference = 'Continue' , that'd reset pref everytime called
-    * 8:46 AM 11/23/2020 ext verbose supp
-    * 3:50 PM 3/29/2020 minor tightening layout
-    * 11:34 AM 8/26/2019 fixed missing noecho parameter desig in comment help
-    * 9:31 AM 2/15/2019:Write-Log: added Level:Debug support, and broader init
-        block example with $whatif & $ticket support, added -NoEcho to suppress console
-        echos and just use it for writing logged output
-    * 8:57 PM 11/25/2018 Write-Log:shifted copy to verb-transcript, added defer to scope $script versions
-    * 2:30 PM 10/18/2018 added -useHost to have it issue color-keyed write-host commands vs write-(warn|error|verbose)
-        switched timestamp into the function (as $echotime), rather than redundant code in the $Message contstruction.
-    * 10:18 AM 10/18/2018 cleanedup, added to pshelp, put into OTB fmt, added trailing semis, parame HelpMessages, and -showdebug param
-    * Code simplification and clarification - thanks to @juneb_get_help  ;
-    * Added documentation.
-    * Renamed LogPath parameter to Path to keep it standard - thanks to @JeffHicks  ;
-    * Revised the Force switch to work as it should - thanks to @JeffHicks  ;
-    .DESCRIPTION
-    Write-Log is intended to provide console write-log echos in addition to commiting text to a log file. 
-    
-    It was originally based on a concept by Jason Wasser demoed at...
-    [](https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0)
-    
-    ... of course as is typical that link was subsequently broken by MS over time... [facealm]
-    
-    But since that time I have substantially reimplemented jason's code from 
-    scratch to implement my evolving concept for the function
-
-    My variant now includes a wide range of Levels, a -useHost parameter 
-    that implements a more useful write-host color coded output for console output 
-    (vs use of the native write-error write-warning write-verbose cmdlets that 
-    don't permit you to differentiate types of output, beyond those three niche 
-    standardized formats)
-     
-    ### I typically use write-host in the following way:
-    
-    1. I configure a $logfile variable centrally in the host script/function, pointed at a suitable output file. 
-    2. I set a [boolean]$logging variable to indicate if a log file is present, and should be written to via write-log 
-		or if a simple native output should be used (I also use this for scripts that can use the block below, without access to my hosting verb-io module's copy of write-log).
-	3. I then call write-log from an if/then block to fed the message via an $smsg variable.
-	
-	```powershell
-    $smsg = "" ; 
-	if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } 
-	else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-	#Levels:Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success
-    ```
-    ### Hn Levels
-    
-    The H1..H5 Levels are intended to "somewhat" emulate Markdown's Heading Levels 
-    (#,##,###...#####) for output. No it's not native Markdown, but it does provide 
-    another layer of visible output demarcation for scanning dense blocks of text 
-    from process & analysis code. 
-   
-    ### Indent support
-
-    Now includes -indent parameter support ported over from my verb-io:write-hostIndent cmdlet
-    Native indent support relies on setting the $env:HostIndentSpaces to target indent. 
-    Also leverages following verb-io funcs: (life cycle: (init indent); (mod indent); (clear indent e-vari))
-    (reset-HostIndent), (push-HostIndent,pop-HostIndent,set-HostIndent), (clear-HostIndent),
-    
-    Note: Psv2 ISE fundementally mangles and fails to shows these colors properly 
-    (you can clearly see it running get-Colornames() from verb-io)
-
-    It appears to just not like writing mixed fg & bg color combos quickly.
-    Works fine for writing and logging to file, just don't be surprised 
-    when the ISE console output looks like technicolor vomit. 
-    
-    .PARAMETER Object <System.Object>
-    Objects to display in the host.
-    .PARAMETER Path  
-    The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.
-    .PARAMETER Level  
-    Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success)[-level Info]
-    .PARAMETER useHost  
-    Switch to use write-host rather than write-[verbose|warn|error] (does not apply to H1|H2|H3|DEBUG which alt via uncolored write-host) [-useHost]
-    .PARAMETER NoEcho
-    Switch to suppress console echos (e.g log to file only [-NoEcho]
-    .PARAMETER NoClobber  
-    Use NoClobber if you do not wish to overwrite an existing file.
-    .PARAMETER BackgroundColor
-    Specifies the background color. There is no default. The acceptable values for this parameter are:
-    (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)
-    .PARAMETER ForegroundColor <System.ConsoleColor>
-    Specifies the text color. There is no default. The acceptable values for this parameter are:
-    (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)
-    .PARAMETER NoNewline <System.Management.Automation.SwitchParameter>
-    The string representations of the input objects are concatenated to form the output. No spaces or newlines are inserted between
-    the output strings. No newline is added after the last output string.
-    .PARAMETER Separator <System.Object>
-    Specifies a separator string to insert between objects displayed by the host.
-    .PARAMETER PadChar
-    Character to use for padding (defaults to a space).[-PadChar '-']
-    .PARAMETER usePID
-    Switch to use the `$PID in the `$env:HostIndentSpaces name (Env:HostIndentSpaces`$PID)[-usePID]
-    .PARAMETER Indent
-    Switch to use write-HostIndent-type code for console echos(see get-help write-HostIndent)[-Indent]
-    .PARAMETER Flatten
-    Switch to strip empty lines when using -Indent (which auto-splits multiline Objects)[-Flatten]
-    .PARAMETER ShowDebug
-    Parameter to display Debugging messages [-ShowDebug switch]
-    .PARAMETER demo
-	Switch to output a demo display of each Level, and it's configured color scheme (requires specification of a 'dummy' message string to avoid an error).[-Demo]
-    .EXAMPLE
-    PS>  Write-Log -Message 'Log message'   ;
-    Writes the message to default log loc (c:\Logs\PowerShellLog.log, -level defaults to Info).
-    .EXAMPLE
-    PS> Write-Log -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log ;
-    Writes the content to the specified log file and creates the path and file specified.
-    .EXAMPLE
-    PS> write-log -level warn "some information" -Path c:\tmp\tmp.txt
-    WARNING: 10:17:59: some information
-    Demo default use of the native write-warning cmdlet (default behavior when -useHost is not used)
-    .EXAMPLE
-    PS> write-log -level warn "some information" -Path c:\tmp\tmp.txt -usehost
-    
-        10:19:14: WARNING: some information
+        <#
+        .SYNOPSIS
+        Write-Log.ps1 - Write-Log writes a message to a specified log file with the current time stamp, and write-verbose|warn|error's the matching msg.
+        .NOTES
+        Version     : 1.0.0
+        Author      : Todd Kadrie
+        Website     :	http://www.toddomation.com
+        Twitter     :	@tostka / http://twitter.com/tostka
+        CreatedDate : 2021-06-11
+        FileName    : Write-Log.ps1
+        License     : MIT License
+        Copyright   : (c) 2022 Todd Kadrie
+        Github      : https://github.com/tostka/verb-logging
+        Tags        : Powershell,Logging,Output,Echo,Console
+        AddedCredit : Jason Wasser
+        AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
+        AddedTwitter:	@wasserja
+        REVISIONS
+        * 12:27 PM 5/12/2025 SupportsShouldProcess support: added overrid - -whatif:$false -confirm:$false - to new-item & out-file cmds (otherwise, SSP skips logging outputs)
+        * 1:42 PM 11/8/2024 CBH expl fixes
+        * 10:59 AM 2/17/2023 #529:added workaround for rando 'The variable cannot be validated because the value System.String[] is not a valid value for the Object variable.' err (try catch and strip to text w diff method) suddently seeing NUL char interleave on outputs (C:\usr\work\ps\scripts\logs\monitor-ExecPol-LOG-BATCH-EXEC-log.txt, utf-16/bigendianunicode?), forcing out-file -encoding UTF8
+        * 2:11 PM 2/15/2023 buffered over debugs from psv2 ISE color bizaareness. Completely refactored the psise & psv2 color block - have to use wildly inappaprop colors to get anything functional. 
+        * 2:26 PM 2/3/2023 combo'd the pair of aliases; added if$indent) around the flatten and split block in PROC (was lost in last move) ; 
+            added |out-string).trim to multiline non-indent text coming through, to ensure it's [string] when it gets written.
+             updated CBH, spliced over param help for write-hostindent params prev ported over ; 
+            added demo of use of flatten and necessity of |out-string).trim() on formattedobject outputs, prior to using as $object with -Indent ; 
+            roughed in attempt at -useHostBackgroundmoved, parked ; 
+            added pipeline detect write-verbose ; 
+            moved split/flatten into process block (should run per inbound string); added pipeline detect w-v
+            fixed bug in pltColors add (check keys contains before trying to add, assign if preexisting)
+        * 5:54 PM 2/2/2023 add -flatten, to strip empty lines from -indent auto-splits ; fix pltColors key add clash err; cbh updates, expanded info on new -indent support, added -indent demo
+        * 4:20 PM 2/1/2023 added full -indent support; updated CBH w related demos; flipped $Object to [System.Object]$Object (was coercing multiline into single text string); 
+            ren $Message -> $Object (aliased prior) splice over from w-hi, and is the param used natively by w-h; refactored/simplified logic prep for w-hi support. Working now with the refactor.
+        * 4:47 PM 1/30/2023 tweaked color schemes, renamed splat varis to exactly match levels; added -demo; added Level 'H4','H5', and Success (rounds out the set of banrs I setup in psBnr)
+        * 11:38 AM 11/16/2022 moved splats to top, added ISE v2 alt-color options (ISE isn't readable on psv2, by default using w-h etc)
+        * 9:07 AM 3/21/2022 added -Level verbose & prompt support, flipped all non-usehost options, but verbose, from w-v -> write-host; added level prefix to console echos
+        * 3:11 PM 8/17/2021 added verbose suppress to the get-colorcombo calls, clutters the heck out of outputs on verbose, no benef.
+        * 10:53 AM 6/16/2021 get-help isn't displaying param details, pulled erroneous semi's from end of CBH definitions
+        * 7:59 AM 6/11/2021 added H1|2|3 md-style #|##|## header tags ; added support for get-colorcombo, and enforced bg colors (legible regardless of local color scheme of console); expanded CBH, revised Author - it's diverged so substantially from JW's original concept, it's now "inspired-by", less than a variant of the original.
+        * 10:54 AM 5/7/2021 pulled weird choice to set: $VerbosePreference = 'Continue' , that'd reset pref everytime called
+        * 8:46 AM 11/23/2020 ext verbose supp
+        * 3:50 PM 3/29/2020 minor tightening layout
+        * 11:34 AM 8/26/2019 fixed missing noecho parameter desig in comment help
+        * 9:31 AM 2/15/2019:Write-Log: added Level:Debug support, and broader init
+            block example with $whatif & $ticket support, added -NoEcho to suppress console
+            echos and just use it for writing logged output
+        * 8:57 PM 11/25/2018 Write-Log:shifted copy to verb-transcript, added defer to scope $script versions
+        * 2:30 PM 10/18/2018 added -useHost to have it issue color-keyed write-host commands vs write-(warn|error|verbose)
+            switched timestamp into the function (as $echotime), rather than redundant code in the $Message contstruction.
+        * 10:18 AM 10/18/2018 cleanedup, added to pshelp, put into OTB fmt, added trailing semis, parame HelpMessages, and -showdebug param
+        * Code simplification and clarification - thanks to @juneb_get_help  ;
+        * Added documentation.
+        * Renamed LogPath parameter to Path to keep it standard - thanks to @JeffHicks  ;
+        * Revised the Force switch to work as it should - thanks to @JeffHicks  ;
+        .DESCRIPTION
+        Write-Log is intended to provide console write-log echos in addition to commiting text to a log file. 
         
-    Demo use of the "warning" color scheme write-host cmdlet (behavior when -useHost *IS* used)
-    .EXAMPLE
-    PS> Write-Log -level Prompt -Message "Enter Text:" -Path c:\tmp\tmp.txt -usehost  ; 
-    PS> invoke-soundcue -type question ; 
-    PS> $enteredText = read-host ;
-    Echo's a distinctive Prompt color scheme for the message (vs using read-host native non-color-differentiating -prompt parameter), and writes a 'Prompt'-level entry to the log, uses my verb-io:invoke-soundCue to play a the system question sound; then uses promptless read-host to take typed input. 
-    PS> Write-Log -level Prompt -Message "Enter Password:" -Path c:\tmp\tmp.txt -usehost  ; 
-    PS> invoke-soundcue -type question ; 
-    PS> $SecurePW = read-host -AsSecureString ;        
-    Variant that demos collection of a secure password using read-host's native -AsSecureString param.
-    
-    .EXAMPLE
-    PS>  $smsg = "ENTER CERTIFICATE PFX Password: (use 'dummy' for UserName)" ;
-    PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level PROMPT } 
-    PS>  else{ write-host -foregroundcolor Blue -backgroundcolor White "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-    PS>  $pfxcred=(Get-Credential -credential dummy) ;
-    PS>  Export-PfxCertificate -Password $pfxcred.password -Cert= $certpath -FilePath c:\path-to\output.pfx;
-    Demo use of write-log -level prompt, leveraging the get-credential popup GUI to collect a secure password (without use of username)
-    
-    .EXAMPLE
-    PS>  # init content in script context ($MyInvocation is blank in function scope)
-    PS>  $logfile = join-path -path $ofile -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-LOG.txt"  ;
-    PS>  $logging = $True ;
-    PS>  $sBnr="#*======v `$tmbx:($($Procd)/$($ttl)):$($tmbx) v======" ;
-    PS>  $smsg="$($sBnr)" ;
-    PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug|H1|H2|H3 
-    PS>  else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-    Demo with conditional write-log (with -useHost switch, to trigger native write-host use), else failthru to write-host output
-    PS>  .EXAMPLE
-    PS>  $transcript = join-path -path (Split-Path -parent $MyInvocation.MyCommand.Definition) -ChildPath "logs" ;
-    PS>  if(!(test-path -path $transcript)){ "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
-    PS>  $transcript=join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))"  ;
-    PS>  $transcript+= "-Transcript-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-trans-log.txt"  ;
-    PS>  # add log file variant as target of Write-Log:
-    PS>  $logfile=$transcript.replace("-Transcript","-LOG").replace("-trans-log","-log")
-    PS>  if($whatif){
-    PS>      $logfile=$logfile.replace("-BATCH","-BATCH-WHATIF") ;
-    PS>      $transcript=$transcript.replace("-BATCH","-BATCH-WHATIF") ;
-    PS>  } else {
-    PS>      $logfile=$logfile.replace("-BATCH","-BATCH-EXEC") ;
-    PS>      $transcript=$transcript.replace("-BATCH","-BATCH-EXEC") ;
-    PS>  } ;
-    PS>  if($Ticket){
-    PS>      $logfile=$logfile.replace("-BATCH","-$($Ticket)") ;
-    PS>      $transcript=$transcript.replace("-BATCH","-$($Ticket)") ;
-    PS>  } else {
-    PS>      $logfile=$logfile.replace("-BATCH","-nnnnnn") ;
-    PS>      $transcript=$transcript.replace("-BATCH","-nnnnnn") ;
-    PS>  } ;
-    PS>  $logging = $True ;
-    PS>  $sBnr="#*======v START PASS:$($ScriptBaseName) v======" ;
-    PS>  $smsg= "$($sBnr)" ;
-    PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } ; #Error|Warn
-    More complete boilerplate including $whatif & $ticket
-    
-    .EXAMPLE
-    PS>  $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
-    PS>  $pltSL.Tag = "$(split-path -path $CSVPath -leaf)"; # build tag from a variable
-    PS>  # construct log name on calling script/function fullname
-    PS>  if($PSCommandPath){ $logspec = start-Log -Path $PSCommandPath @pltSL }
-    PS>  else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL } ;
-    PS>  if($logspec){
-    PS>      $logging=$logspec.logging ;
-    PS>      $logfile=$logspec.logfile ;
-    PS>      $transcript=$logspec.transcript ;
-    PS>      $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
-    PS>      start-Transcript -path $transcript ;
-    PS>  } else {throw "Unable to configure logging!" } ;
-    PS>  $sBnr="#*======v $(${CmdletName}): v======" ;
-    PS>  $smsg = $sBnr ;
-    PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
-    PS>  else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-    Demo leveraging splatted start-log(), and either $PSCommandPath or $MyInvocation (support varies by host/psversion) to build the log name. 
-    
-    .EXAMPLE
-    PS> write-log -demo -message 'Dummy' ; 
-    Demo (using required dummy error-suppressing messasge) of sample outputs/color combos for each Level configured).
-    
-    .EXAMPLE
-    PS>  $smsg = "`n`n===TESTIPAddress: was *validated* as covered by the recursed ipv4 specification:" ; 
-    PS>  $smsg += "`n" ; 
-    PS>  $smsg += "`n---> This host *should be able to* send email on behalf of the configured SPF domain (at least in terms of SPF checks)" ; 
-    PS>  $env:hostindentspaces = 8 ; 
-    PS>  $lvl = 'Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success'.split('|') ; 
-    PS>  foreach ($l in $lvl){Write-Log -LogContent $smsg -Path $tmpfile -Level $l -useHost -Indent} ; 
-    Demo indent function across range of Levels (alt to native -Demo which also supports -indent). 
-    
-    .EXAMPLE
-    PS>  write-verbose 'set to baseline' ; 
-    PS>  reset-HostIndent ; 
-    PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
-    PS>  write-verbose 'write an H1 banner'
-    PS>  $sBnr="#*======v  H1 Banner: v======" ;
-    PS>  $smsg = $sBnr ;
-    PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level H1;
-    PS>  write-verbose 'push indent level+1' ; 
-    PS>  push-HostIndent ; 
-    PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
-    PS>  write-verbose 'write an INFO entry with -Indent specified' ; 
-    PS>  $smsg = "This is information (indented)" ; 
-    PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info -Indent:$true ;
-    PS>  write-verbose 'push indent level+2' ; 
-    PS>  push-HostIndent ; 
-    PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
-    PS>  write-verbose 'write a PROMPT entry with -Indent specified' ; 
-    PS>  $smsg = "This is a subset of information (indented)" ; 
-    PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level Prompt -Indent:$true ;
-    PS>  write-verbose 'pop indent level out one -1' ; 
-    PS>  pop-HostIndent ; 
-    PS>  write-verbose 'write a Success entry with -Indent specified' ; 
-    PS>  $smsg = "This is a Successful information (indented)" ; 
-    PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level Success -Indent:$true ;
-    PS>  write-verbose 'reset to baseline for trailing banner'
-    PS>  reset-HostIndent ; 
-    PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
-    PS>  write-verbose 'write the trailing H1 banner'
-    PS>  $smsg = "$($sBnr.replace('=v','=^').replace('v=','^='))" ;
-    PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level H1;
-    PS>  write-verbose 'clear indent `$env:HostIndentSpaces' ; 
-    PS>  clear-HostIndent ; 
-    PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ; 
-    
-        $env:HostIndentSpaces:0
-        16:16:17: #  #*======v  H1 Banner: v======
-        $env:HostIndentSpaces:4
-            16:16:17: INFO:  This is information (indented)
-        $env:HostIndentSpaces:8
-                16:16:17: PROMPT:  This is a subset of information (indented)
-            16:16:17: SUCCESS:  This is a Successful information (indented)
-        $env:HostIndentSpaces:0
-        16:16:17: #  #*======^  H1 Banner: ^======
-        $env:HostIndentSpaces:
+        It was originally based on a concept by Jason Wasser demoed at...
+        [](https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0)
+        
+        ... of course as is typical that link was subsequently broken by MS over time... [facepalm]
+        
+        But since that time I have substantially reimplemented jason's code from 
+        scratch to implement my evolving concept for the function
 
-    Demo broad process for use of verb-HostIndent funcs and write-log with -indent parameter.
-    
-    .EXAMPLE
-    PS>  write-host "`n`n" ; 
-    PS>  $smsg = "`n`n==ALL Grouped Status.errorCode :`n$(($EVTS.status.errorCode | group| sort count -des | format-table -auto count,name|out-string).trim())" ;
-    PS>  $colors = (get-colorcombo -random) ;
-    PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info -Indent @colors -flatten } 
-    PS>  else{ write-host @colors  "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-    PS>  PS>  write-host "`n`n" ; 
-    
-    When using -Indent with group'd or other cmd-multiline output, you will want to:
-    1. use the... 
-        $smsg = $(([results]|out-string).trim())"
-        ...structure to pre-clean & convert from [FormatEntryData] to [string] 
-        (avoids errors, due to formatteddata *not* having split mehtod)
-    2. Use -flatten to avoid empty _colored_ lines between each entry in the output (and sprinkle write-host "`n`n"'s pre/post for separation). 
-    These issues only occur under -Indent use, due to the need to `$Object.split to get each line of indented object properly collored and indented.
-    .EXAMPLE
-    PS> $pltH1=@{foregroundcolor='black';backgroundcolor='darkyellow'};
-    PS> write-host "Running demo of current settings..." @pltH1
-    PS> $combos = "H1; #*======v STATUSMSG: SBNR v======","H2;`n#*------v PROCESSING : sBnrS v------","H3;`n#*~~~~~~v SUB-PROCESSING : sBnr3 v~~~~~~","H4;`n#*``````v DETAIL : sBnr4 v``````","H5;`n#*______v FOCUS : sBnr5 v______","INFO;This is typical output","PROMPT;What is your quest?","SUCCESS;Successful execution!","WARN;THIS DIDN'T GO AS PLANNED","ERROR;UTTER FAILURE!","VERBOSE;internal comment executed"
-    PS> $tmpfile = [System.IO.Path]::GetTempFileName().replace('.tmp','.txt') ;
-    PS> foreach($cmbo in $combos){
-    PS>     $level,$text = $cmbo.split(';') ;
-    PS>     $pltWL=@{
-    PS>         message= $text ;
-    PS>         Level=$Level ;
-    PS>         Path=$tmpfile  ;
-    PS>         useHost=$true;
-    PS>     } ;
-    PS>     if($Indent){$PltWL.add('Indent',$true)} ;
-    PS>     $whsmsg = "write-log w`n$(($pltWL|out-string).trim())`n" ;
-    PS>     write-host $whsmsg ;
-    PS>     write-logNoDep @pltWL ;
-    PS> } ;
-    PS> remove-item -path $tmpfile ;
-    Demo code adapted from the -demo param, for manual passes.
-    .LINK
-    https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0  ;
-    #>    
-    [CmdletBinding()]
-    Param (
-            [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true,
-                HelpMessage = "Message is the content that you wish to add to the log file")]
-                [ValidateNotNullOrEmpty()]
-                [Alias("LogContent",'Message')]
-                [System.Object]$Object,
-            [Parameter(Mandatory = $false,
-                HelpMessage = "The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.")]
-                [Alias('LogPath')]
-                [string]$Path = 'C:\Logs\PowerShellLog.log',
-            [Parameter(Mandatory = $false,
-                HelpMessage = "Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success)[-level Info]")]
-                [ValidateSet('Error','Warn','Info','H1','H2','H3','H4','H5','Debug','Verbose','Prompt','Success')]
-                [string]$Level = "Info",
-            [Parameter(
-                HelpMessage = "Switch to use write-host rather than write-[verbose|warn|error] [-useHost]")]
-                [switch] $useHost,
-            [Parameter(
-                HelpMessage="Specifies the background color. There is no default. The acceptable values for this parameter are:
-        (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)")]
-                [System.ConsoleColor]$BackgroundColor,
-            [Parameter(
-                HelpMessage="Specifies the text color. There is no default. The acceptable values for this parameter are:
-    (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)")]
-                [System.ConsoleColor]$ForegroundColor,
-            [Parameter(
-                HelpMessage="The string representations of the input objects are concatenated to form the output. No spaces or newlines are inserted between
-    the output strings. No newline is added after the last output string.")]
-                [System.Management.Automation.SwitchParameter]$NoNewline,
-            [Parameter(
-                HelpMessage = "Switch to use write-HostIndent-type code for console echos(see get-help write-HostIndent)[-Indent]")]
-                [Alias('in')]
-                [switch] $Indent,
-            [Parameter(
-                HelpMessage="Switch to use the `$PID in the `$env:HostIndentSpaces name (Env:HostIndentSpaces`$PID)[-usePID]")]
-                [switch]$usePID,
-            [Parameter(
-                HelpMessage = "Switch to strip empty lines when using -Indent (which auto-splits multiline Objects)[-Flatten]")]
-                #[Alias('flat')]
-                [switch] $Flatten,
-            [Parameter(
-                HelpMessage="Specifies a separator string to insert between objects displayed by the host.")]
-            [System.Object]$Separator,
-            [Parameter(
-                HelpMessage="Character to use for padding (defaults to a space).[-PadChar '-']")]
-            [string]$PadChar = ' ',
-            [Parameter(
-                HelpMessage="Number of spaces to pad by default (defaults to 4).[-PadIncrment 8]")]
-            [int]$PadIncrment = 4,
-            [Parameter(
-                HelpMessage = "Switch to suppress console echos (e.g log to file only [-NoEcho]")]
-                [switch] $NoEcho,
-            [Parameter(Mandatory = $false,
-                HelpMessage = "Use NoClobber if you do not wish to overwrite an existing file.")]
-                [switch]$NoClobber,
-            [Parameter(
-                HelpMessage = "Debugging Flag [-showDebug]")]
-                [switch] $showDebug,
-            [Parameter(
-                HelpMessage = "Switch to output a demo display of each Level, and it's configured color scheme (requires specification of a 'dummy' message string to avoid an error).[-Demo]")]
-                [switch] $demo
-        )  ;
-    BEGIN {
-        #region CONSTANTS-AND-ENVIRO #*======v CONSTANTS-AND-ENVIRO v======
-        # function self-name (equiv to script's: $MyInvocation.MyCommand.Path) ;
-        ${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name ;
-        if(($PSBoundParameters.keys).count -ne 0){
-            $PSParameters = New-Object -TypeName PSObject -Property $PSBoundParameters ;
-            write-verbose "$($CmdletName): `$PSBoundParameters:`n$(($PSBoundParameters|out-string).trim())" ;
-        } ; 
-        $Verbose = ($VerbosePreference -eq 'Continue') ;     
-        #$VerbosePreference = "SilentlyContinue" ;
-        #endregion CONSTANTS-AND-ENVIRO #*======^ END CONSTANTS-AND-ENVIRO ^======
+        My variant now includes a wide range of Levels, a -useHost parameter 
+        that implements a more useful write-host color coded output for console output 
+        (vs use of the native write-error write-warning write-verbose cmdlets that 
+        don't permit you to differentiate types of output, beyond those three niche 
+        standardized formats)
+         
+        ### I typically use write-host in the following way:
+        
+        1. I configure a $logfile variable centrally in the host script/function, pointed at a suitable output file. 
+        2. I set a [boolean]$logging variable to indicate if a log file is present, and should be written to via write-log 
+        or if a simple native output should be used (I also use this for scripts that can use the block below, without access to my hosting verb-io module's copy of write-log).
+      3. I then call write-log from an if/then block to feed the message via an $smsg variable.
+      
+      ```powershell
+        $smsg = "" ; 
+      if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } 
+      else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+      #Levels:Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success
+        ```
+        ### Hn Levels
+        
+        The H1..H5 Levels are intended to "somewhat" emulate Markdown's Heading Levels 
+        (#,##,###...#####) for output. No it's not native Markdown, but it does provide 
+        another layer of visible output demarcation for scanning dense blocks of text 
+        from process & analysis code. 
+       
+        ### Indent support
 
-        $pltWH = @{
-                Object = $null ;
-        } ;
-        if ($PSBoundParameters.ContainsKey('BackgroundColor')) {
-            $pltWH.add('BackgroundColor',$BackgroundColor) ;
-        } ;
-        if ($PSBoundParameters.ContainsKey('ForegroundColor')) {
-            $pltWH.add('ForegroundColor',$ForegroundColor) ;
-        } ;
-        if ($PSBoundParameters.ContainsKey('NoNewline')) {
-            $pltWH.add('NoNewline',$NoNewline) ;
-        } ;
-        if($Indent){
-            if ($PSBoundParameters.ContainsKey('Separator')) {
-                $pltWH.add('Separator',$Separator) ;
-            } ;
-            write-verbose "$($CmdletName): Using `$PadChar:`'$($PadChar)`'" ;
-            
-            #if we want to tune this to a $PID-specific variant, use:
-            if($usePID){
-                $smsg = "-usePID specified: `$Env:HostIndentSpaces will be suffixed with this process' `$PID value!" ;
-                if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info }
-                else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-                $HISName = "Env:HostIndentSpaces$($PID)" ;
-            } else {
-                $HISName = "Env:HostIndentSpaces" ;
-            } ;
-            if(($smsg = Get-Item -Path "Env:HostIndentSpaces$($PID)" -erroraction SilentlyContinue).value){
-                write-verbose $smsg ;
-            } ;
-            if (-not ([int]$CurrIndent = (Get-Item -Path $HISName -erroraction SilentlyContinue).Value ) ){
-                [int]$CurrIndent = 0 ;
-            } ;
-            write-verbose "$($CmdletName): Discovered `$$($HISName):$($CurrIndent)" ;
-            
-        } ;
-        if(get-command get-colorcombo -ErrorAction SilentlyContinue){$buseCC=$true} else {$buseCC=$false} ;
-        <# attempt at implementing color-match to host bg: nope ISE colors I use aren't standard sys colors
+        Now includes -indent parameter support ported over from my verb-io:write-hostIndent cmdlet
+        Native indent support relies on setting the $env:HostIndentSpaces to target indent. 
+        Also leverages following verb-io funcs: (life cycle: (init indent); (mod indent); (clear indent e-vari))
+        (reset-HostIndent), (push-HostIndent,pop-HostIndent,set-HostIndent), (clear-HostIndent),
+        
+        Note: Psv2 ISE fundementally mangles and fails to shows these colors properly 
+        (you can clearly see it running get-Colornames() from verb-io)
 
-        .PARAMETER useHostBackground
-        Switch to use host's detected background color [-useHostBackground]
-        [Parameter(
-            HelpMessage = "Switch to use host's detected background color [-useHostBackground]")]
-            [switch] $useHostBackground,
-
-        If($useHostBackground){
-            $hostsettings = get-host ;
-            if ($hostsettings.name -eq 'Windows PowerShell ISE Host') {
-                #$bgcolordefault = "Black" ;
-                #$fgcolordefault = "gray" ;
-                # Getting from ISE rgb color to syscolor:
-                # sys color has a fromARGB(), but my colors *aren't system colors*, so this is a DOA concept. 
-                # [System.Drawing.Color]::FromArgb($psise.Options.ConsolePaneForegroundColor.R,$psise.Options.ConsolePaneForegroundColor.G,$psise.Options.ConsolePaneForegroundColor.B)
-                # R             : 245
-                # G             : 245
-                # B             : 245
-                # A             : 255
-                # IsKnownColor  : False <==
-                # IsEmpty       : False
-                # IsNamedColor  : False <==
-                # IsSystemColor : False <==
-                # Name          : fff5f5f5
-                
-            }
-            else {
-                $bgcolordefault = $hostsettings.ui.rawui.BackgroundColor ;
-                $fgcolordefault = $hostsettings.ui.rawui.ForegroundColor ;
-            } ; 
-        } elseif($host.Name -eq 'Windows PowerShell ISE Host' -AND $host.version.major -lt 3){
+        It appears to just not like writing mixed fg & bg color combos quickly.
+        Works fine for writing and logging to file, just don't be surprised 
+        when the ISE console output looks like technicolor vomit. 
+        
+        .PARAMETER Object <System.Object>
+        Objects to display in the host.
+        .PARAMETER Path
+        The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.
+        .PARAMETER Level
+        Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success)[-level Info]
+        .PARAMETER useHost
+        Switch to use write-host rather than write-[verbose|warn|error] (does not apply to H1|H2|H3|DEBUG which alt via uncolored write-host) [-useHost]
+        .PARAMETER NoEcho
+        Switch to suppress console echos (e.g log to file only [-NoEcho]
+        .PARAMETER NoClobber
+        Use NoClobber if you do not wish to overwrite an existing file.
+        .PARAMETER BackgroundColor
+        Specifies the background color. There is no default. The acceptable values for this parameter are:
+        (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)
+        .PARAMETER ForegroundColor <System.ConsoleColor>
+        Specifies the text color. There is no default. The acceptable values for this parameter are:
+        (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)
+        .PARAMETER NoNewline <System.Management.Automation.SwitchParameter>
+        The string representations of the input objects are concatenated to form the output. No spaces or newlines are inserted between
+        the output strings. No newline is added after the last output string.
+        .PARAMETER Separator <System.Object>
+        Specifies a separator string to insert between objects displayed by the host.
+        .PARAMETER PadChar
+        Character to use for padding (defaults to a space).[-PadChar '-']
+        .PARAMETER usePID
+        Switch to use the `$PID in the `$env:HostIndentSpaces name (Env:HostIndentSpaces`$PID)[-usePID]
+        .PARAMETER Indent
+        Switch to use write-HostIndent-type code for console echos(see get-help write-HostIndent)[-Indent]
+        .PARAMETER Flatten
+        Switch to strip empty lines when using -Indent (which auto-splits multiline Objects)[-Flatten]
+        .PARAMETER ShowDebug
+        Parameter to display Debugging messages [-ShowDebug switch]
+        .PARAMETER demo
+        Switch to output a demo display of each Level, and it's configured color scheme (requires specification of a 'dummy' message string to avoid an error).[-Demo]
+        .EXAMPLE
+        PS>  Write-Log -Message 'Log message'   ;
+        Writes the message to default log loc (c:\Logs\PowerShellLog.log, -level defaults to Info).
+        .EXAMPLE
+        PS> Write-Log -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log ;
+        Writes the content to the specified log file and creates the path and file specified.
+        .EXAMPLE
+        PS> write-log -level warn "some information" -Path c:\tmp\tmp.txt
+        WARNING: 10:17:59: some information
+        Demo default use of the native write-warning cmdlet (default behavior when -useHost is not used)
+        .EXAMPLE
+        PS> write-log -level warn "some information" -Path c:\tmp\tmp.txt -usehost
+            10:19:14: WARNING: some information
+        Demo use of the "warning" color scheme write-host cmdlet (behavior when -useHost *IS* used)
+        .EXAMPLE
+        PS> Write-Log -level Prompt -Message "Enter Text:" -Path c:\tmp\tmp.txt -usehost  ;
+        PS> invoke-soundcue -type question ;
+        PS> $enteredText = read-host ;
+        Echo's a distinctive Prompt color scheme for the message (vs using read-host native non-color-differentiating -prompt parameter), and writes a 'Prompt'-level entry to the log, uses my verb-io:invoke-soundCue to play a the system question sound; then uses promptless read-host to take typed input.
+        PS> Write-Log -level Prompt -Message "Enter Password:" -Path c:\tmp\tmp.txt -usehost  ;
+        PS> invoke-soundcue -type question ;
+        PS> $SecurePW = read-host -AsSecureString ;
+        Variant that demos collection of a secure password using read-host's native -AsSecureString param.
+        .EXAMPLE
+        PS>  $smsg = "ENTER CERTIFICATE PFX Password: (use 'dummy' for UserName)" ;
+        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level PROMPT }
+        PS>  else{ write-host -foregroundcolor Blue -backgroundcolor White "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        PS>  $pfxcred=(Get-Credential -credential dummy) ;
+        PS>  Export-PfxCertificate -Password $pfxcred.password -Cert= $certpath -FilePath c:\path-to\output.pfx;
+        Demo use of write-log -level prompt, leveraging the get-credential popup GUI to collect a secure password (without use of username)
+        .EXAMPLE
+        PS>  # init content in script context ($MyInvocation is blank in function scope)
+        PS>  $logfile = join-path -path $ofile -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-LOG.txt"  ;
+        PS>  $logging = $True ;
+        PS>  $sBnr="#*======v `$tmbx:($($Procd)/$($ttl)):$($tmbx) v======" ;
+        PS>  $smsg="$($sBnr)" ;
+        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug|H1|H2|H3
+        PS>  else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        Demo with conditional write-log (with -useHost switch, to trigger native write-host use), else failthru to write-host output
+        PS>  .EXAMPLE
+        PS>  $transcript = join-path -path (Split-Path -parent $MyInvocation.MyCommand.Definition) -ChildPath "logs" ;
+        PS>  if(!(test-path -path $transcript)){ "Creating missing log dir $($transcript)..." ; mkdir $transcript  ; } ;
+        PS>  $transcript=join-path -path $transcript -childpath "$([system.io.path]::GetFilenameWithoutExtension($MyInvocation.InvocationName))"  ;
+        PS>  $transcript+= "-Transcript-BATCH-$(get-date -format 'yyyyMMdd-HHmmtt')-trans-log.txt"  ;
+        PS>  # add log file variant as target of Write-Log:
+        PS>  $logfile=$transcript.replace("-Transcript","-LOG").replace("-trans-log","-log")
+        PS>  if($whatif){
+        PS>      $logfile=$logfile.replace("-BATCH","-BATCH-WHATIF") ;
+        PS>      $transcript=$transcript.replace("-BATCH","-BATCH-WHATIF") ;
+        PS>  } else {
+        PS>      $logfile=$logfile.replace("-BATCH","-BATCH-EXEC") ;
+        PS>      $transcript=$transcript.replace("-BATCH","-BATCH-EXEC") ;
+        PS>  } ;
+        PS>  if($Ticket){
+        PS>      $logfile=$logfile.replace("-BATCH","-$($Ticket)") ;
+        PS>      $transcript=$transcript.replace("-BATCH","-$($Ticket)") ;
+        PS>  } else {
+        PS>      $logfile=$logfile.replace("-BATCH","-nnnnnn") ;
+        PS>      $transcript=$transcript.replace("-BATCH","-nnnnnn") ;
+        PS>  } ;
+        PS>  $logging = $True ;
+        PS>  $sBnr="#*======v START PASS:$($ScriptBaseName) v======" ;
+        PS>  $smsg= "$($sBnr)" ;
+        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } ; #Error|Warn
+        More complete boilerplate including $whatif & $ticket
+        .EXAMPLE
+        PS>  $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
+        PS>  $pltSL.Tag = "$(split-path -path $CSVPath -leaf)"; # build tag from a variable
+        PS>  # construct log name on calling script/function fullname
+        PS>  if($PSCommandPath){ $logspec = start-Log -Path $PSCommandPath @pltSL }
+        PS>  else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL } ;
+        PS>  if($logspec){
+        PS>      $logging=$logspec.logging ;
+        PS>      $logfile=$logspec.logfile ;
+        PS>      $transcript=$logspec.transcript ;
+        PS>      $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
+        PS>      start-Transcript -path $transcript ;
+        PS>  } else {throw "Unable to configure logging!" } ;
+        PS>  $sBnr="#*======v $(${CmdletName}): v======" ;
+        PS>  $smsg = $sBnr ;
+        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
+        PS>  else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        Demo leveraging splatted start-log(), and either $PSCommandPath or $MyInvocation (support varies by host/psversion) to build the log name.
+        .EXAMPLE
+        PS> write-log -demo -message 'Dummy' ;
+        Demo (using required dummy error-suppressing messasge) of sample outputs/color combos for each Level configured).
+        .EXAMPLE
+        PS>  $smsg = "`n`n===TESTIPAddress: was *validated* as covered by the recursed ipv4 specification:" ;
+        PS>  $smsg += "`n" ;
+        PS>  $smsg += "`n---> This host *should be able to* send email on behalf of the configured SPF domain (at least in terms of SPF checks)" ;
+        PS>  $env:hostindentspaces = 8 ;
+        PS>  $lvl = 'Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success'.split('|') ;
+        PS>  foreach ($l in $lvl){Write-Log -LogContent $smsg -Path $tmpfile -Level $l -useHost -Indent} ;
+        Demo indent function across range of Levels (alt to native -Demo which also supports -indent).
+        .EXAMPLE
+        PS>  write-verbose 'set to baseline' ;
+        PS>  reset-HostIndent ;
+        PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ;
+        PS>  write-verbose 'write an H1 banner'
+        PS>  $sBnr="#*======v  H1 Banner: v======" ;
+        PS>  $smsg = $sBnr ;
+        PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level H1;
+        PS>  write-verbose 'push indent level+1' ;
+        PS>  push-HostIndent ;
+        PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ;
+        PS>  write-verbose 'write an INFO entry with -Indent specified' ;
+        PS>  $smsg = "This is information (indented)" ;
+        PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info -Indent:$true ;
+        PS>  write-verbose 'push indent level+2' ;
+        PS>  push-HostIndent ;
+        PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ;
+        PS>  write-verbose 'write a PROMPT entry with -Indent specified' ;
+        PS>  $smsg = "This is a subset of information (indented)" ;
+        PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level Prompt -Indent:$true ;
+        PS>  write-verbose 'pop indent level out one -1' ;
+        PS>  pop-HostIndent ;
+        PS>  write-verbose 'write a Success entry with -Indent specified' ;
+        PS>  $smsg = "This is a Successful information (indented)" ;
+        PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level Success -Indent:$true ;
+        PS>  write-verbose 'reset to baseline for trailing banner'
+        PS>  reset-HostIndent ;
+        PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ;
+        PS>  write-verbose 'write the trailing H1 banner'
+        PS>  $smsg = "$($sBnr.replace('=v','=^').replace('v=','^='))" ;
+        PS>  Write-Log -LogContent $smsg -Path $logfile -useHost -Level H1;
+        PS>  write-verbose 'clear indent `$env:HostIndentSpaces' ;
+        PS>  clear-HostIndent ;
+        PS>  write-host "`$env:HostIndentSpaces:$($env:HostIndentSpaces)" ;
+            $env:HostIndentSpaces:0
+            16:16:17: #  #*======v  H1 Banner: v======
+            $env:HostIndentSpaces:4
+                16:16:17: INFO:  This is information (indented)
+            $env:HostIndentSpaces:8
+                    16:16:17: PROMPT:  This is a subset of information (indented)
+                16:16:17: SUCCESS:  This is a Successful information (indented)
+            $env:HostIndentSpaces:0
+            16:16:17: #  #*======^  H1 Banner: ^======
+            $env:HostIndentSpaces:
+        Demo broad process for use of verb-HostIndent funcs and write-log with -indent parameter.
+        .EXAMPLE
+        PS>  write-host "`n`n" ;
+        PS>  $smsg = "`n`n==ALL Grouped Status.errorCode :`n$(($EVTS.status.errorCode | group| sort count -des | format-table -auto count,name|out-string).trim())" ;
+        PS>  $colors = (get-colorcombo -random) ;
+        PS>  if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info -Indent @colors -flatten }
+        PS>  else{ write-host @colors  "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        PS>  PS>  write-host "`n`n" ;
+        When using -Indent with group'd or other cmd-multiline output, you will want to:
+        1. use the...
+            $smsg = $(([results]|out-string).trim())"
+            ...structure to pre-clean & convert from [FormatEntryData] to [string]
+            (avoids errors, due to formatteddata *not* having split mehtod)
+        2. Use -flatten to avoid empty _colored_ lines between each entry in the output (and sprinkle write-host "`n`n"'s pre/post for separation).
+        These issues only occur under -Indent use, due to the need to `$Object.split to get each line of indented object properly collored and indented.
+        .EXAMPLE
+        PS> $pltH1=@{foregroundcolor='black';backgroundcolor='darkyellow'};
+        PS> write-host "Running demo of current settings..." @pltH1
+        PS> $combos = "H1; #*======v STATUSMSG: SBNR v======","H2;`n#*------v PROCESSING : sBnrS v------","H3;`n#*~~~~~~v SUB-PROCESSING : sBnr3 v~~~~~~","H4;`n#*``````v DETAIL : sBnr4 v``````","H5;`n#*______v FOCUS : sBnr5 v______","INFO;This is typical output","PROMPT;What is your quest?","SUCCESS;Successful execution!","WARN;THIS DIDN'T GO AS PLANNED","ERROR;UTTER FAILURE!","VERBOSE;internal comment executed"
+        PS> $tmpfile = [System.IO.Path]::GetTempFileName().replace('.tmp','.txt') ;
+        PS> foreach($cmbo in $combos){
+        PS>     $level,$text = $cmbo.split(';') ;
+        PS>     $pltWL=@{
+        PS>         message= $text ;
+        PS>         Level=$Level ;
+        PS>         Path=$tmpfile  ;
+        PS>         useHost=$true;
+        PS>     } ;
+        PS>     if($Indent){$PltWL.add('Indent',$true)} ;
+        PS>     $whsmsg = "write-log w`n$(($pltWL|out-string).trim())`n" ;
+        PS>     write-host $whsmsg ;
+        PS>     write-logNoDep @pltWL ;
+        PS> } ;
+        PS> remove-item -path $tmpfile ;
+        Demo code adapted from the -demo param, for manual passes.
         #>
-        if ($host.Name -eq 'Windows PowerShell ISE Host' -AND $host.version.major -lt 3){
-                write-verbose "PSISE under psV2 has wacky inconsistent colors - only *some* even display, others default to white`nso we choose fundementally wrong colors, to approximate the target colors" ;
-                $pltError=@{foregroundcolor='DarkYellow';backgroundcolor='Red'};
-                $pltWarn=@{foregroundcolor='DarkMagenta';backgroundcolor='DarkCyan'};
-                $pltInfo=@{foregroundcolor='Blue';backgroundcolor='darkGreen'};
-                $pltH1=@{foregroundcolor='black';backgroundcolor='darkyellow'};
-                $pltH2=@{foregroundcolor='darkblue';backgroundcolor='cyan'};
-                $pltH3=@{foregroundcolor='black';backgroundcolor='cyan'};
-                $pltH4=@{foregroundcolor='black';backgroundcolor='DarkMagenta'};
-                $pltH5=@{foregroundcolor='cyan';backgroundcolor='Green'};
-                $pltDebug=@{foregroundcolor='red';backgroundcolor='black'};
-                $pltVerbose=@{foregroundcolor='darkgray';backgroundcolor='darkred'};
-                $pltPrompt=@{foregroundcolor='White';backgroundcolor='DarkBlue'};
-                $pltSuccess=@{foregroundcolor='DarkGray';backgroundcolor='green'};
-        } else {
-            <#
-            if($buseCC){$pltErr=get-colorcombo 60 -verbose:$false} else { $pltErr=@{foregroundcolor='yellow';backgroundcolor='red'};};
-            if($buseCC){$pltWarn=get-colorcombo 52 -verbose:$false} else { $pltWarn=@{foregroundcolor='yellow';backgroundcolor='red'};};
-            if($buseCC){$pltInfo=get-colorcombo 2 -verbose:$false} else { $pltInfo=@{foregroundcolor='yellow';backgroundcolor='red'};};
-            if($buseCC){$pltH1=get-colorcombo 22 -verbose:$false } else { $pltH1=@{foregroundcolor='black';backgroundcolor='darkyellow'};};
-            if($buseCC){$pltH2=get-colorcombo 25 -verbose:$false } else { $pltH2=@{foregroundcolor='black';backgroundcolor='gray'};};
-            if($buseCC){$pltH3=get-colorcombo 30 -verbose:$false } else { $pltH3=@{foregroundcolor='black';backgroundcolor='darkgray'};};
-            if($buseCC){$pltDbg=get-colorcombo 4 -verbose:$false } else { $pltDbg=@{foregroundcolor='red';backgroundcolor='black'};};
-            if($buseCC){$pltVerb=get-colorcombo 1 -verbose:$false} else { $pltVerb=@{foregroundcolor='yellow';backgroundcolor='red'};};
-            if($buseCC){$pltPrmpt=get-colorcombo 15 -verbose:$false} else { $pltPrmpt=@{foregroundcolor='Blue';backgroundcolor='White'};};
-            #>
-            $pltError=@{foregroundcolor='yellow';backgroundcolor='darkred'};
-            $pltWarn=@{foregroundcolor='DarkMagenta';backgroundcolor='yellow'};
-            $pltInfo=@{foregroundcolor='gray';backgroundcolor='darkblue'};
-            $pltH1=@{foregroundcolor='black';backgroundcolor='darkyellow'};
-            $pltH2=@{foregroundcolor='darkblue';backgroundcolor='gray'};
-            $pltH3=@{foregroundcolor='black';backgroundcolor='darkgray'};
-            $pltH4=@{foregroundcolor='gray';backgroundcolor='DarkCyan'};
-            $pltH5=@{foregroundcolor='cyan';backgroundcolor='DarkGreen'};
-            $pltDebug=@{foregroundcolor='red';backgroundcolor='black'};
-            $pltVerbose=@{foregroundcolor='darkgray';backgroundcolor='black'};
-            $pltPrompt=@{foregroundcolor='DarkMagenta';backgroundcolor='darkyellow'};
-            $pltSuccess=@{foregroundcolor='Blue';backgroundcolor='green'};
-        } ; 
-
-        if ($PSCmdlet.MyInvocation.ExpectingInput) {
-            write-verbose "Data received from pipeline input: '$($InputObject)'" ; 
-        } else {
-            #write-verbose "Data received from parameter input: '$($InputObject)'" ; 
-            write-verbose "(non-pipeline - param - input)" ; 
-        } ; 
-    }  ;
-    PROCESS {
-
-        if($Demo){
-                write-host "Running demo of current settings..." @pltH1
-                $combos = "h1m;H1","h2m;H2","h3m;H3","h4m;H4","h5m;H5",
-                    "whm;INFO","whp;PROMPT","whs;SUCCESS","whw;WARN","wem;ERROR","whv;VERBOSE" ;
-                $h1m =" #*======v STATUSMSG: SBNR v======" ;
-                $h2m = "`n#*------v PROCESSING : sBnrS v------" ;
-                $h3m ="`n#*~~~~~~v SUB-PROCESSING : sBnr3 v~~~~~~" ;
-                $h4m="`n#*``````v DETAIL : sBnr4 v``````" ;
-                $h5m="`n#*______v FOCUS : sBnr5 v______" ;
-                $whm = "This is typical output" ;
-                $whp = "What is your quest?" ;
-                $whs = "Successful execution!" ;
-                $whw = "THIS DIDN'T GO AS PLANNED" ;
-                $wem = "UTTER FAILURE!" ;
-                $whv = "internal comment executed" ;
-                $tmpfile = [System.IO.Path]::GetTempFileName().replace('.tmp','.txt') ;
-                foreach($cmbo in $combos){
-                    $txt,$name = $cmbo.split(';') ;
-                    $Level = $name ;
-                    if($Level -eq 'H5'){
-                        write-host "Gotcha!";
-                    } ;
-                    $whplt = (gv "plt$($name)").value ;
-                    $text = (gv $txt).value ;
-                    #$smsg="`$plt$($name):($($whplt.foregroundcolor):$($whplt.backgroundcolor)):`n`n$($text)`n`n" ;
-                    $whsmsg="`$plt$($name):($($whplt.foregroundcolor):$($whplt.backgroundcolor)):`n`n" ;
-                    $pltWL=@{
-                        message= $text ;
-                        Level=$Level ;
-                        Path=$tmpfile  ;
-                        useHost=$true;
-                    } ;
-                    if($Indent){$PltWL.add('Indent',$true)} ;
-                    $whsmsg += "write-log w`n$(($pltWL|out-string).trim())`n" ;
-                    write-host $whsmsg ;
-                    write-log @pltWL ;
-                } ;
-                remove-item -path $tmpfile ;
-        } else {
-            
+        [CmdletBinding()]
+        PARAM (
+                [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true,
+                    HelpMessage = "Message is the content that you wish to add to the log file")]
+                    [ValidateNotNullOrEmpty()]
+                    [Alias("LogContent",'Message')]
+                    [System.Object]$Object,
+                [Parameter(Mandatory = $false,
+                    HelpMessage = "The path to the log file to which you would like to write. By default the function will create the path and file if it does not exist.")]
+                    [Alias('LogPath')]
+                    [string]$Path = 'C:\Logs\PowerShellLog.log',
+                [Parameter(Mandatory = $false,
+                    HelpMessage = "Specify the criticality of the log information being written to the log (defaults Info): (Error|Warn|Info|H1|H2|H3|H4|H5|Debug|Verbose|Prompt|Success)[-level Info]")]
+                    [ValidateSet('Error','Warn','Info','H1','H2','H3','H4','H5','Debug','Verbose','Prompt','Success')]
+                    [string]$Level = "Info",
+                [Parameter(
+                    HelpMessage = "Switch to use write-host rather than write-[verbose|warn|error] [-useHost]")]
+                    [switch] $useHost,
+                [Parameter(
+                    HelpMessage="Specifies the background color. There is no default. The acceptable values for this parameter are:
+            (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)")]
+                    [System.ConsoleColor]$BackgroundColor,
+                [Parameter(
+                    HelpMessage="Specifies the text color. There is no default. The acceptable values for this parameter are:
+        (Black | DarkBlue | DarkGreen | DarkCyan | DarkRed | DarkMagenta | DarkYellow | Gray | DarkGray | Blue | Green | Cyan | Red | Magenta | Yellow | White)")]
+                    [System.ConsoleColor]$ForegroundColor,
+                [Parameter(
+                    HelpMessage="The string representations of the input objects are concatenated to form the output. No spaces or newlines are inserted between
+        the output strings. No newline is added after the last output string.")]
+                    [System.Management.Automation.SwitchParameter]$NoNewline,
+                [Parameter(
+                    HelpMessage = "Switch to use write-HostIndent-type code for console echos(see get-help write-HostIndent)[-Indent]")]
+                    [Alias('in')]
+                    [switch] $Indent,
+                [Parameter(
+                    HelpMessage="Switch to use the `$PID in the `$env:HostIndentSpaces name (Env:HostIndentSpaces`$PID)[-usePID]")]
+                    [switch]$usePID,
+                [Parameter(
+                    HelpMessage = "Switch to strip empty lines when using -Indent (which auto-splits multiline Objects)[-Flatten]")]
+                    #[Alias('flat')]
+                    [switch] $Flatten,
+                [Parameter(
+                    HelpMessage="Specifies a separator string to insert between objects displayed by the host.")]
+                [System.Object]$Separator,
+                [Parameter(
+                    HelpMessage="Character to use for padding (defaults to a space).[-PadChar '-']")]
+                [string]$PadChar = ' ',
+                [Parameter(
+                    HelpMessage="Number of spaces to pad by default (defaults to 4).[-PadIncrment 8]")]
+                [int]$PadIncrment = 4,
+                [Parameter(
+                    HelpMessage = "Switch to suppress console echos (e.g log to file only [-NoEcho]")]
+                    [switch] $NoEcho,
+                [Parameter(Mandatory = $false,
+                    HelpMessage = "Use NoClobber if you do not wish to overwrite an existing file.")]
+                    [switch]$NoClobber,
+                [Parameter(
+                    HelpMessage = "Debugging Flag [-showDebug]")]
+                    [switch] $showDebug,
+                [Parameter(
+                    HelpMessage = "Switch to output a demo display of each Level, and it's configured color scheme (requires specification of a 'dummy' message string to avoid an error).[-Demo]")]
+                    [switch] $demo
+            )  ;
+        BEGIN {
+            #region CONSTANTS-AND-ENVIRO #*======v CONSTANTS-AND-ENVIRO v======
+            # function self-name (equiv to script's: $MyInvocation.MyCommand.Path) ;
+            ${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name ;
+            if(($PSBoundParameters.keys).count -ne 0){
+                $PSParameters = New-Object -TypeName PSObject -Property $PSBoundParameters ;
+                write-verbose "$($CmdletName): `$PSBoundParameters:`n$(($PSBoundParameters|out-string).trim())" ;
+            } ; 
+            $Verbose = ($VerbosePreference -eq 'Continue') ;     
+            # revised verbose detect - Psv7 reportedly doesn't respect:
+            $Verbose = ('-Verbose' -in $MyInvocation.UnboundArguments -or $MyInvocation.BoundParameters.ContainsKey('Verbose'))
+            #$VerbosePreference = "SilentlyContinue" ;
+            #endregion CONSTANTS-AND-ENVIRO #*======^ END CONSTANTS-AND-ENVIRO ^======
+            $pltWH = @{
+                    Object = $null ;
+            } ;
+            if ($PSBoundParameters.ContainsKey('BackgroundColor')) {
+                $pltWH.add('BackgroundColor',$BackgroundColor) ;
+            } ;
+            if ($PSBoundParameters.ContainsKey('ForegroundColor')) {
+                $pltWH.add('ForegroundColor',$ForegroundColor) ;
+            } ;
+            if ($PSBoundParameters.ContainsKey('NoNewline')) {
+                $pltWH.add('NoNewline',$NoNewline) ;
+            } ;
             if($Indent){
-                # move split/flatten into per-object level (was up in BEGIN):
-                # if $object has multiple lines, split it:
-                # have to coerce the system.object to string array, to get access to a .split method (raw object doese't have it)
-                # and you have to recast the type to string array (can't assign a string[] to [system.object] type vari
-                if($Flatten){
-                        if($object.gettype().name -eq 'FormatEntryData'){
-                            # this converts tostring() as the string: Microsoft.PowerShell.Commands.Internal.Format.FormatEntryData
-                            # issue is (group |  ft -a count,name)'s  that aren't put through $((|out-string).trim())
-                            write-verbose "skip split/flatten on these (should be pre-out-string'd before write-logging)" ;
-                        } else {
-                            TRY{
-                                [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine) ; 
-                            } CATCH{
-                                write-verbose "Workaround err: The variable cannot be validated because the value System.String[] is not a valid value for the Object variable." ; 
-                                [string[]]$Object = ($Object|out-string).trim().Split([Environment]::NewLine) ; 
-                            } ; 
-                        } ;
-                } else {
-                    [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine)
+                if ($PSBoundParameters.ContainsKey('Separator')) {
+                    $pltWH.add('Separator',$Separator) ;
                 } ;
+                write-verbose "$($CmdletName): Using `$PadChar:`'$($PadChar)`'" ;
+
+                #if we want to tune this to a $PID-specific variant, use:
+                if($usePID){
+                    $smsg = "-usePID specified: `$Env:HostIndentSpaces will be suffixed with this process' `$PID value!" ;
+                    if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info }
+                    else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+                    $HISName = "Env:HostIndentSpaces$($PID)" ;
+                } else {
+                    $HISName = "Env:HostIndentSpaces" ;
+                } ;
+                if(($smsg = Get-Item -Path "Env:HostIndentSpaces$($PID)" -erroraction SilentlyContinue).value){
+                    write-verbose $smsg ;
+                } ;
+                if (-not ([int]$CurrIndent = (Get-Item -Path $HISName -erroraction SilentlyContinue).Value ) ){
+                    [int]$CurrIndent = 0 ;
+                } ;
+                write-verbose "$($CmdletName): Discovered `$$($HISName):$($CurrIndent)" ;
+            } ;
+            if(get-command get-colorcombo -ErrorAction SilentlyContinue){$buseCC=$true} else {$buseCC=$false} ;
+           
+            if ($host.Name -eq 'Windows PowerShell ISE Host' -AND $host.version.major -lt 3){
+                    write-verbose "PSISE under psV2 has wacky inconsistent colors - only *some* even display, others default to white`nso we choose fundementally wrong colors, to approximate the target colors" ;
+                    $pltError=@{foregroundcolor='DarkYellow';backgroundcolor='Red'};
+                    $pltWarn=@{foregroundcolor='DarkMagenta';backgroundcolor='DarkCyan'};
+                    $pltInfo=@{foregroundcolor='Blue';backgroundcolor='darkGreen'};
+                    $pltH1=@{foregroundcolor='black';backgroundcolor='darkyellow'};
+                    $pltH2=@{foregroundcolor='darkblue';backgroundcolor='cyan'};
+                    $pltH3=@{foregroundcolor='black';backgroundcolor='cyan'};
+                    $pltH4=@{foregroundcolor='black';backgroundcolor='DarkMagenta'};
+                    $pltH5=@{foregroundcolor='cyan';backgroundcolor='Green'};
+                    $pltDebug=@{foregroundcolor='red';backgroundcolor='black'};
+                    $pltVerbose=@{foregroundcolor='darkgray';backgroundcolor='darkred'};
+                    $pltPrompt=@{foregroundcolor='White';backgroundcolor='DarkBlue'};
+                    $pltSuccess=@{foregroundcolor='DarkGray';backgroundcolor='green'};
+            } else {
+                $pltError=@{foregroundcolor='yellow';backgroundcolor='darkred'};
+                $pltWarn=@{foregroundcolor='DarkMagenta';backgroundcolor='yellow'};
+                $pltInfo=@{foregroundcolor='gray';backgroundcolor='darkblue'};
+                $pltH1=@{foregroundcolor='black';backgroundcolor='darkyellow'};
+                $pltH2=@{foregroundcolor='darkblue';backgroundcolor='gray'};
+                $pltH3=@{foregroundcolor='black';backgroundcolor='darkgray'};
+                $pltH4=@{foregroundcolor='gray';backgroundcolor='DarkCyan'};
+                $pltH5=@{foregroundcolor='cyan';backgroundcolor='DarkGreen'};
+                $pltDebug=@{foregroundcolor='red';backgroundcolor='black'};
+                $pltVerbose=@{foregroundcolor='darkgray';backgroundcolor='black'};
+                $pltPrompt=@{foregroundcolor='DarkMagenta';backgroundcolor='darkyellow'};
+                $pltSuccess=@{foregroundcolor='Blue';backgroundcolor='green'};
             } ; 
 
-            # If the file already exists and NoClobber was specified, do not write to the log.
-            if ((Test-Path $Path) -AND $NoClobber) {
-                Write-Error "Log file $Path already exists, and you specified NoClobber. Either delete the file or specify a different name."  ;
-                Return  ;
-            } elseif (!(Test-Path $Path)) {
-                Write-Verbose "Creating $Path."  ;
-                $NewLogFile = New-Item $Path -Force -ItemType File  ;
+            if ($PSCmdlet.MyInvocation.ExpectingInput) {
+                write-verbose "Data received from pipeline input: '$($InputObject)'" ; 
             } else {
-              # Nothing to see here yet.
-            }  ;
-
-            $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"  ;
-            $EchoTime = "$((get-date).ToString('HH:mm:ss')): " ;
-            
-            $pltWH.Object = $EchoTime ; 
-            $pltColors = @{} ; 
-            # Write message to error, warning, or verbose pipeline and specify $LevelText
-            switch ($Level) {
-                'Error' {
-                    $LevelText = 'ERROR: ' ;
-                    $pltColors = $pltError ;
-                    if ($useHost) {} else {if (!$NoEcho) { Write-Error ($smsg + $Object) } } ;
-                }
-                'Warn' {
-                    $LevelText = 'WARNING: ' ;
-                    $pltColors = $pltWarn ;
-                    if ($useHost) {} else {if (!$NoEcho) { Write-Warning ($smsg + $Object) } } ;
-                }
-                'Info' {
-                    $LevelText = 'INFO: ' ;
-                    $pltColors = $pltInfo ;
-                }
-                'H1' {
-                    $LevelText = '# ' ;
-                    $pltColors = $pltH1 ;
-                }
-                'H2' {
-                    $LevelText = '## ' ;
-                    $pltColors = $pltH2 ;
-                }
-                'H3' {
-                    $LevelText = '### ' ;
-                    $pltColors = $pltH3 ;
-                }
-                'H4' {
-                    $LevelText = '#### ' ;
-                    $pltColors = $pltH4 ;
-                }
-                'H5' {
-                    $LevelText = '##### ' ;
-                    $pltColors = $pltH5 ;
-                }
-                'Debug' {
-                    $LevelText = 'DEBUG: ' ;
-                    $pltColors = $pltDebug ;
-                    if ($useHost) {} else {if (!$NoEcho) { Write-Degug $smsg } }  ;
-                }
-                'Verbose' {
-                    $LevelText = 'VERBOSE: ' ;
-                    $pltColors = $pltVerbose ;
-                    if ($useHost) {}else {if (!$NoEcho) { Write-Verbose ($smsg) } } ;
-                }
-                'Prompt' {
-                    $LevelText = 'PROMPT: ' ;
-                    $pltColors = $pltPrompt ;
-                }
-                'Success' {
-                    $LevelText = 'SUCCESS: ' ;
-                    $pltColors = $pltSuccess ;
-                }
-            } ;
-            # build msg string down here, once, v in ea above
-            # always defer to explicit cmdline colors
-            if($pltColors.foregroundcolor){
-                if(-not ($pltWH.keys -contains 'foregroundcolor')){
-                    $pltWH.add('foregroundcolor',$pltColors.foregroundcolor) ;
-                } elseif($pltWH.foregroundcolor -eq $null){
-                    $pltWH.foregroundcolor = $pltColors.foregroundcolor ;
-                } ;
-            } ;
-            if($pltColors.backgroundcolor){
-                if(-not ($pltWH.keys -contains 'backgroundcolor')){
-                    $pltWH.add('backgroundcolor',$pltColors.backgroundcolor) ;
-                } elseif($pltWH.backgroundcolor -eq $null){
-                    $pltWH.backgroundcolor = $pltColors.backgroundcolor ;
-                } ;
-            } ;
- 
-            if ($useHost) {
-                if(-not $Indent){
-                    if($Level -match '(Debug|Verbose)' ){
-                        if(($Object|  measure).count -gt 1){
-                            $pltWH.Object += "$($LevelText) ($(($Object|out-string).trim()))" ;
-                        } else {
-                            #$pltWH.Object += ($LevelText + '(' + $Object + ')') ;
-                            $pltWH.Object += "$($LevelText) ($($Object))" ;
+                #write-verbose "Data received from parameter input: '$($InputObject)'" ; 
+                write-verbose "(non-pipeline - param - input)" ; 
+            } ; 
+        }  ;
+        PROCESS {
+            if($Demo){
+                    write-host "Running demo of current settings..." @pltH1
+                    $combos = "h1m;H1","h2m;H2","h3m;H3","h4m;H4","h5m;H5",
+                        "whm;INFO","whp;PROMPT","whs;SUCCESS","whw;WARN","wem;ERROR","whv;VERBOSE" ;
+                    $h1m =" #*======v STATUSMSG: SBNR v======" ;
+                    $h2m = "`n#*------v PROCESSING : sBnrS v------" ;
+                    $h3m ="`n#*~~~~~~v SUB-PROCESSING : sBnr3 v~~~~~~" ;
+                    $h4m="`n#*``````v DETAIL : sBnr4 v``````" ;
+                    $h5m="`n#*______v FOCUS : sBnr5 v______" ;
+                    $whm = "This is typical output" ;
+                    $whp = "What is your quest?" ;
+                    $whs = "Successful execution!" ;
+                    $whw = "THIS DIDN'T GO AS PLANNED" ;
+                    $wem = "UTTER FAILURE!" ;
+                    $whv = "internal comment executed" ;
+                    $tmpfile = [System.IO.Path]::GetTempFileName().replace('.tmp','.txt') ;
+                    foreach($cmbo in $combos){
+                        $txt,$name = $cmbo.split(';') ;
+                        $Level = $name ;
+                        if($Level -eq 'H5'){
+                            write-host "Gotcha!";
                         } ;
-                    } else {
-                        if(($Object|  measure).count -gt 1){
-                            $pltWH.Object += "$($LevelText) $(($Object|out-string).trim())" ;
-                        } else {
-                            #$pltWH.Object += $LevelText + $Object ;
-                            $pltWH.Object += "$($LevelText) $($Object)" ;
+                        $whplt = (gv "plt$($name)").value ;
+                        $text = (gv $txt).value ;
+                        #$smsg="`$plt$($name):($($whplt.foregroundcolor):$($whplt.backgroundcolor)):`n`n$($text)`n`n" ;
+                        $whsmsg="`$plt$($name):($($whplt.foregroundcolor):$($whplt.backgroundcolor)):`n`n" ;
+                        $pltWL=@{
+                            message= $text ;
+                            Level=$Level ;
+                            Path=$tmpfile  ;
+                            useHost=$true;
                         } ;
+                        if($Indent){$PltWL.add('Indent',$true)} ;
+                        $whsmsg += "write-log w`n$(($pltWL|out-string).trim())`n" ;
+                        write-host $whsmsg ;
+                        write-log @pltWL ;
                     } ;
-                    $smsg = "write-host w`n$(($pltWH|out-string).trim())" ;
-                    write-verbose $smsg ;
-                    #write-host @pltErr $smsg ;
-                    write-host @pltwh ;
-                } else {
-                    foreach ($obj in $object){
-                        $pltWH.Object = $EchoTime ;
-                        if($Level -match '(Debug|Verbose)' ){
-                            if($obj.length -gt 0){
-                                $pltWH.Object += "$($LevelText) ($($obj))" ;
+                    remove-item -path $tmpfile ;
+            } else {
+
+                if($Indent){
+                    # move split/flatten into per-object level (was up in BEGIN):
+                    # if $object has multiple lines, split it:
+                    # have to coerce the system.object to string array, to get access to a .split method (raw object doese't have it)
+                    # and you have to recast the type to string array (can't assign a string[] to [system.object] type vari
+                    if($Flatten){
+                            if($object.gettype().name -eq 'FormatEntryData'){
+                                # this converts tostring() as the string: Microsoft.PowerShell.Commands.Internal.Format.FormatEntryData
+                                # issue is (group |  ft -a count,name)'s  that aren't put through $((|out-string).trim())
+                                write-verbose "skip split/flatten on these (should be pre-out-string'd before write-logging)" ;
                             } else {
-                                $pltWH.Object += "$($LevelText)" ;
+                                TRY{
+                                    [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine) ; 
+                                } CATCH{
+                                    write-verbose "Workaround err: The variable cannot be validated because the value System.String[] is not a valid value for the Object variable." ; 
+                                    [string[]]$Object = ($Object|out-string).trim().Split([Environment]::NewLine) ; 
+                                } ; 
+                            } ;
+                    } else {
+                        [string[]]$Object = [string[]]$Object.ToString().Split([Environment]::NewLine)
+                    } ;
+                } ; 
+
+                # If the file already exists and NoClobber was specified, do not write to the log.
+                if ((Test-Path $Path) -AND $NoClobber) {
+                    Write-Error "Log file $Path already exists, and you specified NoClobber. Either delete the file or specify a different name."  ;
+                    Return  ;
+                } elseif (!(Test-Path $Path)) {
+                    Write-Verbose "Creating $Path."  ;
+                    $NewLogFile = New-Item $Path -Force -ItemType File -whatif:$false -confirm:$false ;
+                } else {
+                  # Nothing to see here yet.
+                }  ;
+
+                $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"  ;
+                $EchoTime = "$((get-date).ToString('HH:mm:ss')): " ;
+
+                $pltWH.Object = $EchoTime ; 
+                $pltColors = @{} ; 
+                # Write message to error, warning, or verbose pipeline and specify $LevelText
+                switch ($Level) {
+                    'Error' {
+                        $LevelText = 'ERROR: ' ;
+                        $pltColors = $pltError ;
+                        if ($useHost) {} else {if (!$NoEcho) { Write-Error ($smsg + $Object) } } ;
+                    }
+                    'Warn' {
+                        $LevelText = 'WARNING: ' ;
+                        $pltColors = $pltWarn ;
+                        if ($useHost) {} else {if (!$NoEcho) { Write-Warning ($smsg + $Object) } } ;
+                    }
+                    'Info' {
+                        $LevelText = 'INFO: ' ;
+                        $pltColors = $pltInfo ;
+                    }
+                    'H1' {
+                        $LevelText = '# ' ;
+                        $pltColors = $pltH1 ;
+                    }
+                    'H2' {
+                        $LevelText = '## ' ;
+                        $pltColors = $pltH2 ;
+                    }
+                    'H3' {
+                        $LevelText = '### ' ;
+                        $pltColors = $pltH3 ;
+                    }
+                    'H4' {
+                        $LevelText = '#### ' ;
+                        $pltColors = $pltH4 ;
+                    }
+                    'H5' {
+                        $LevelText = '##### ' ;
+                        $pltColors = $pltH5 ;
+                    }
+                    'Debug' {
+                        $LevelText = 'DEBUG: ' ;
+                        $pltColors = $pltDebug ;
+                        if ($useHost) {} else {if (!$NoEcho) { Write-Degug $smsg } }  ;
+                    }
+                    'Verbose' {
+                        $LevelText = 'VERBOSE: ' ;
+                        $pltColors = $pltVerbose ;
+                        if ($useHost) {}else {if (!$NoEcho) { Write-Verbose ($smsg) } } ;
+                    }
+                    'Prompt' {
+                        $LevelText = 'PROMPT: ' ;
+                        $pltColors = $pltPrompt ;
+                    }
+                    'Success' {
+                        $LevelText = 'SUCCESS: ' ;
+                        $pltColors = $pltSuccess ;
+                    }
+                } ;
+                # build msg string down here, once, v in ea above
+                # always defer to explicit cmdline colors
+                if($pltColors.foregroundcolor){
+                    if(-not ($pltWH.keys -contains 'foregroundcolor')){
+                        $pltWH.add('foregroundcolor',$pltColors.foregroundcolor) ;
+                    } elseif($pltWH.foregroundcolor -eq $null){
+                        $pltWH.foregroundcolor = $pltColors.foregroundcolor ;
+                    } ;
+                } ;
+                if($pltColors.backgroundcolor){
+                    if(-not ($pltWH.keys -contains 'backgroundcolor')){
+                        $pltWH.add('backgroundcolor',$pltColors.backgroundcolor) ;
+                    } elseif($pltWH.backgroundcolor -eq $null){
+                        $pltWH.backgroundcolor = $pltColors.backgroundcolor ;
+                    } ;
+                } ;
+
+                if ($useHost) {
+                    if(-not $Indent){
+                        if($Level -match '(Debug|Verbose)' ){
+                            if(($Object|  measure).count -gt 1){
+                                $pltWH.Object += "$($LevelText) ($(($Object|out-string).trim()))" ;
+                            } else {
+                                #$pltWH.Object += ($LevelText + '(' + $Object + ')') ;
+                                $pltWH.Object += "$($LevelText) ($($Object))" ;
                             } ;
                         } else {
-                            $pltWH.Object += "$($LevelText) $($obj)" ;
+                            if(($Object|  measure).count -gt 1){
+                                $pltWH.Object += "$($LevelText) $(($Object|out-string).trim())" ;
+                            } else {
+                                #$pltWH.Object += $LevelText + $Object ;
+                                $pltWH.Object += "$($LevelText) $($Object)" ;
+                            } ;
                         } ;
                         $smsg = "write-host w`n$(($pltWH|out-string).trim())" ;
                         write-verbose $smsg ;
-                        Write-Host -NoNewline $($PadChar * $CurrIndent)  ;
+                        #write-host @pltErr $smsg ;
                         write-host @pltwh ;
+                    } else {
+                        foreach ($obj in $object){
+                            $pltWH.Object = $EchoTime ;
+                            if($Level -match '(Debug|Verbose)' ){
+                                if($obj.length -gt 0){
+                                    $pltWH.Object += "$($LevelText) ($($obj))" ;
+                                } else {
+                                    $pltWH.Object += "$($LevelText)" ;
+                                } ;
+                            } else {
+                                $pltWH.Object += "$($LevelText) $($obj)" ;
+                            } ;
+                            $smsg = "write-host w`n$(($pltWH|out-string).trim())" ;
+                            write-verbose $smsg ;
+                            Write-Host -NoNewline $($PadChar * $CurrIndent)  ;
+                            write-host @pltwh ;
+                        } ;
                     } ;
-                } ;
-            }
-            # Write log entry to $Path
-            "$FormattedDate $LevelText : $Object" | Out-File -FilePath $Path -Append -encoding UTF8 ;
-        } ;  # if-E -Demo ; 
-    }  ; # PROC-E
-    End {}  ;
-}
+                }
+                # Write log entry to $Path
+                "$FormattedDate $LevelText : $Object" | Out-File -FilePath $Path -Append -encoding UTF8 -whatif:$false -confirm:$false;
+            } ;  # if-E -Demo ; 
+        }  ; # PROC-E
+        END {}  ;
+    }
 
 #*------^ Write-Log.ps1 ^------
 
@@ -2983,8 +2915,8 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # SIG # Begin signature block
 # MIIELgYJKoZIhvcNAQcCoIIEHzCCBBsCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUQwjcYYygFct+FuUVO8JJG6Pl
-# 4VOgggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUjQTCX9kWchZc/SIy7+F556jT
+# URegggI4MIICNDCCAaGgAwIBAgIQWsnStFUuSIVNR8uhNSlE6TAJBgUrDgMCHQUA
 # MCwxKjAoBgNVBAMTIVBvd2VyU2hlbGwgTG9jYWwgQ2VydGlmaWNhdGUgUm9vdDAe
 # Fw0xNDEyMjkxNzA3MzNaFw0zOTEyMzEyMzU5NTlaMBUxEzARBgNVBAMTClRvZGRT
 # ZWxmSUkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALqRVt7uNweTkZZ+16QG
@@ -2999,9 +2931,9 @@ Export-ModuleMember -Function Archive-Log,Cleanup,get-ArchivePath,get-EventsFilt
 # AWAwggFcAgEBMEAwLDEqMCgGA1UEAxMhUG93ZXJTaGVsbCBMb2NhbCBDZXJ0aWZp
 # Y2F0ZSBSb290AhBaydK0VS5IhU1Hy6E1KUTpMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBRqMnT/
-# U4+CDWojA/8uSXxtvaFNbzANBgkqhkiG9w0BAQEFAASBgCpgb2aZd3/JLsc7WH+1
-# 2bqFoyzA+K4S7zMfKm6e7QkJEkHZ4YLhaA77vYFrU8uc5MkCZj+2hc3h7krkurMN
-# IU209A/N1NpPkL2jDBH2X67rTN/7Uoa8tbBfBJ2aEcSMbVHnXUWCLPUip+YH01tw
-# OrvrENr26mOpHDh2FBnYCh1Z
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTCxRUS
+# d2HxM662JdclexJeuRXUxjANBgkqhkiG9w0BAQEFAASBgIYBroy9lF9Sbp2XzXIn
+# thplreqKXJx8b1JlodRLhsHtskgX2miZBXstQHLdf0SHTEpOyB225dArrkLp88/X
+# 2zA8bgmNt7TYS0nHBmOFvwhQ6+D0lS9DYyOSg4HPI5E5H3fv6Ex+22uMH/iC0PMe
+# Mz/4l/bj4DmH0lHsGXOMJuOz
 # SIG # End signature block
