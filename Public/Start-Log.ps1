@@ -16,6 +16,7 @@
         Copyright   : (c) 2019 Todd Kadrie
         Github      : https://github.com/tostka
         REVISIONS
+        * 9:25 AM 5/22/2025 updated logic for shouldprocess/-whatif-less/whatifpreference support ; added example using latest $rvEnv
         * 4:03 PM 5/15/2025 removed rem's
         * 9:07 AM 4/30/2025 make Tag cleanup conditional on avail of the target vtxt\funcs
         * 11:57 AM 1/17/2023 updated output object to be psv2 compat (OrderedDictionary object under v2)
@@ -71,175 +72,299 @@
         .PARAMETER whatIf
         Whatif Flag [-whatIf]
         .EXAMPLE
-        $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
-        if($PSCommandPath){   $logspec = start-Log -Path $PSCommandPath @pltSL ; 
-        } else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL ; } ; 
-        if($logspec){
-            $logging=$logspec.logging ;
-            $logfile=$logspec.logfile ;
-            $transcript=$logspec.transcript ;
-            if(Test-TranscriptionSupported){
-                $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
-                $startResults = start-transcript -Path $transcript ;
-            } ;
-        } else {throw "Unable to configure logging!" } ;
+        PS> $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ;} ;
+        PS> if($whatif.ispresent){$pltSL.add('whatif',$($whatif))} ; 
+        PS> if($WhatIfPreference.ispresent ){$pltSL.add('whatif',$WhatIfPreferenc)} ; 
+        PS> if($PSCommandPath){   $logspec = start-Log -Path $PSCommandPath @pltSL ; 
+        PS> } else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL ; } ; 
+        PS> if($logspec){
+        PS>     $logging=$logspec.logging ;
+        PS>     $logfile=$logspec.logfile ;
+        PS>     $transcript=$logspec.transcript ;
+        PS>     if(Test-TranscriptionSupported){
+        PS>         $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
+        PS>         $startResults = start-transcript -Path $transcript ;
+        PS>     } ;
+        PS> } else {throw "Unable to configure logging!" } ;
+
         Configure default logging from parent script name
         .EXAMPLE
-        $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) -NoTimeStamp ;
-        if($logspec){
-            $logging=$logspec.logging ;
-            $logfile=$logspec.logfile ;
-            $transcript=$logspec.transcript ;
-            $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
-            $startResults = start-Transcript -path $transcript ; 
-        } else {throw "Unable to configure logging!" } ;
-        
+        PS> $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) -NoTimeStamp ;
+        PS> if($logspec){
+        PS>     $logging=$logspec.logging ;
+        PS>     $logfile=$logspec.logfile ;
+        PS>     $transcript=$logspec.transcript ;
+        PS>     $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ; 
+        PS>     $startResults = start-Transcript -path $transcript ; 
+        PS> } else {throw "Unable to configure logging!" } ;
+                 
         Configure default logging from parent script name, with no Timestamp
         .EXAMPLE
-        ${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name ;
-        if(!(get-variable LogPathDrives -ea 0)){$LogPathDrives = 'd','c' };
-        foreach($budrv in $LogPathDrives){if(test-path -path "$($budrv):\scripts" -ea 0 ){break} } ;
-        if(!(get-variable rgxPSAllUsersScope -ea 0)){
-            $rgxPSAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps(((d|m))*)1|dll)$" ;
-        } ;
-        if(!(get-variable rgxPSCurrUserScope -ea 0)){
-            $rgxPSCurrUserScope="^$([regex]::escape([Environment]::GetFolderPath('MyDocuments')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps((d|m)*)1|dll)$" ;
-        } ;
-        $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
-        $pltSL.Tag = $ModuleName ; 
-        # variant Ticket/TagFirst Tagging:
-        # $pltSL.Tag = $Ticket ;
-        # $pltSL.TagFirst = $true ;
-        if($script:PSCommandPath){
-            if(($script:PSCommandPath -match $rgxPSAllUsersScope) -OR ($script:PSCommandPath -match $rgxPSCurrUserScope)){
-                $bDivertLog = $true ; 
-                switch -regex ($script:PSCommandPath){
-                    $rgxPSAllUsersScope{$smsg = "AllUsers"} 
-                    $rgxPSCurrUserScope{$smsg = "CurrentUser"}
-                } ;
-                $smsg += " context script/module, divert logging into [$budrv]:\scripts" 
-                write-verbose $smsg  ;
-                if($bDivertLog){
-                    if((split-path $script:PSCommandPath -leaf) -ne $cmdletname){
-                        # function in a module/script installed to allusers|cu - defer name to Cmdlet/Function name
-                        $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
-                    } else {
-                        # installed allusers|CU script, use the hosting script name
-                        $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
-                    }
-                } ;
-            } else {
-                $pltSL.Path = $script:PSCommandPath ;
-            } ;
-        } else {
-            if(($MyInvocation.MyCommand.Definition -match $rgxPSAllUsersScope) -OR ($MyInvocation.MyCommand.Definition -match $rgxPSCurrUserScope) ){
-                 $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
-            } elseif(test-path $MyInvocation.MyCommand.Definition) {
-                $pltSL.Path = $MyInvocation.MyCommand.Definition ;
-            } elseif($cmdletname){
-                $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
-            } else {
-                $smsg = "UNABLE TO RESOLVE A FUNCTIONAL `$CMDLETNAME, FROM WHICH TO BUILD A START-LOG.PATH!" ; 
-                if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Warn } #Error|Warn|Debug 
-                else{ write-WARNING "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-                BREAK ;
-            } ; 
-        } ;
-        write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
-        $logspec = start-Log @pltSL ;
-        $error.clear() ;
-        TRY {
-            if($logspec){
-                $logging=$logspec.logging ;
-                $logfile=$logspec.logfile ;
-                $transcript=$logspec.transcript ;
-                $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
-                $startResults = start-Transcript -path $transcript ;
-            } else {throw "Unable to configure logging!" } ;
-        } CATCH [System.Management.Automation.PSNotSupportedException]{
-            if($host.name -eq 'Windows PowerShell ISE Host'){
-                $smsg = "This version of $($host.name):$($host.version) does *not* support native (start-)transcription" ; 
-            } else { 
-                $smsg = "This host does *not* support native (start-)transcription" ; 
-            } ; 
-            write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
-        } CATCH {
-            $ErrTrapd=$Error[0] ;
-            $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
-            write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
-        } ;
-        
+        PS> ${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name ;
+        PS> if(!(get-variable LogPathDrives -ea 0)){$LogPathDrives = 'd','c' };
+        PS> foreach($budrv in $LogPathDrives){if(test-path -path "$($budrv):\scripts" -ea 0 ){break} } ;
+        PS> if(!(get-variable rgxPSAllUsersScope -ea 0)){
+        PS>     $rgxPSAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps(((d|m))*)1|dll)$" ;
+        PS> } ;
+        PS> if(!(get-variable rgxPSCurrUserScope -ea 0)){
+        PS>     $rgxPSCurrUserScope="^$([regex]::escape([Environment]::GetFolderPath('MyDocuments')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps((d|m)*)1|dll)$" ;
+        PS> } ;
+        PS> $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ;} ;
+        PS> if($whatif.ispresent){$pltSL.add('whatif',$($whatif))} ; 
+        PS> if($WhatIfPreference.ispresent ){$pltSL.add('whatif',$WhatIfPreferenc)} ; 
+        PS> $pltSL.Tag = $ModuleName ; 
+        PS> # variant Ticket/TagFirst Tagging:
+        PS> # $pltSL.Tag = $Ticket ;
+        PS> # $pltSL.TagFirst = $true ;
+        PS> if($script:PSCommandPath){
+        PS>     if(($script:PSCommandPath -match $rgxPSAllUsersScope) -OR ($script:PSCommandPath -match $rgxPSCurrUserScope)){
+        PS>         $bDivertLog = $true ; 
+        PS>         switch -regex ($script:PSCommandPath){
+        PS>             $rgxPSAllUsersScope{$smsg = "AllUsers"} 
+        PS>             $rgxPSCurrUserScope{$smsg = "CurrentUser"}
+        PS>         } ;
+        PS>         $smsg += " context script/module, divert logging into [$budrv]:\scripts" 
+        PS>         write-verbose $smsg  ;
+        PS>         if($bDivertLog){
+        PS>             if((split-path $script:PSCommandPath -leaf) -ne $cmdletname){
+        PS>                 # function in a module/script installed to allusers|cu - defer name to Cmdlet/Function name
+        PS>                 $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
+        PS>             } else {
+        PS>                 # installed allusers|CU script, use the hosting script name
+        PS>                 $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
+        PS>             }
+        PS>         } ;
+        PS>     } else {
+        PS>         $pltSL.Path = $script:PSCommandPath ;
+        PS>     } ;
+        PS> } else {
+        PS>     if(($MyInvocation.MyCommand.Definition -match $rgxPSAllUsersScope) -OR ($MyInvocation.MyCommand.Definition -match $rgxPSCurrUserScope) ){
+        PS>          $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
+        PS>     } elseif(test-path $MyInvocation.MyCommand.Definition) {
+        PS>         $pltSL.Path = $MyInvocation.MyCommand.Definition ;
+        PS>     } elseif($cmdletname){
+        PS>         $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
+        PS>     } else {
+        PS>         $smsg = "UNABLE TO RESOLVE A FUNCTIONAL `$CMDLETNAME, FROM WHICH TO BUILD A START-LOG.PATH!" ; 
+        PS>         if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Warn } #Error|Warn|Debug 
+        PS>         else{ write-WARNING "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        PS>         BREAK ;
+        PS>     } ; 
+        PS> } ;
+        PS> write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
+        PS> $logspec = start-Log @pltSL ;
+        PS> $error.clear() ;
+        PS> TRY {
+        PS>     if($logspec){
+        PS>         $logging=$logspec.logging ;
+        PS>         $logfile=$logspec.logfile ;
+        PS>         $transcript=$logspec.transcript ;
+        PS>         $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
+        PS>         $startResults = start-Transcript -path $transcript ;
+        PS>     } else {throw "Unable to configure logging!" } ;
+        PS> } CATCH [System.Management.Automation.PSNotSupportedException]{
+        PS>     if($host.name -eq 'Windows PowerShell ISE Host'){
+        PS>         $smsg = "This version of $($host.name):$($host.version) does *not* support native (start-)transcription" ; 
+        PS>     } else { 
+        PS>         $smsg = "This host does *not* support native (start-)transcription" ; 
+        PS>     } ; 
+        PS>     write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
+        PS> } CATCH {
+        PS>     $ErrTrapd=$Error[0] ;
+        PS>     $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
+        PS>     write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
+        PS> } ;
+        PS>         
         Single log for script/function example that accomodates detect/redirect from AllUsers scope'd installed code, and hunts a series of drive letters to find an alternate logging dir (defers to profile variables)
         .EXAMPLE
-        $iProcd=0 ; $ttl = ($UPNs | Measure-Object).count ; $tickNum = ($tickets | Measure-Object).count
-        if ($ttl -ne $tickNum ) {
-            write-host -foregroundcolor RED "$((get-date).ToString('HH:mm:ss')):ERROR!:You have specified $($ttl) UPNs but only $($tickNum) tickets.`nPlease specified a matching number of both objects." ;
-            Break ;
-        } ;
-        foreach($UPN in $UPNs){
-            $iProcd++ ;
-            if(!(get-variable LogPathDrives -ea 0)){$LogPathDrives = 'd','c' };
-            foreach($budrv in $LogPathDrives){if(test-path -path "$($budrv):\scripts" -ea 0 ){break} } ;
-            if(!(get-variable rgxPSAllUsersScope -ea 0)){
-                $rgxPSAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps(((d|m))*)1|dll)$" ;
-            } ;
-            $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
-            if($tickets[$iProcd-1]){$pltSL.Tag = "$($tickets[$iProcd-1])-$($UPN)"} ;
-            if($script:PSCommandPath){
-                if($script:PSCommandPath -match $rgxPSAllUsersScope){
-                    write-verbose "AllUsers context script/module, divert logging into [$budrv]:\scripts" ;
-                    if((split-path $script:PSCommandPath -leaf) -ne $cmdletname){
-                        # function in a module/script installed to allusers 
-                        $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
-                    } else { 
-                        # installed allusers script
-                        $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
-                    }
-                }else {
-                    $pltSL.Path = $script:PSCommandPath ;
-                } ;
-            } else {
-                if($MyInvocation.MyCommand.Definition -match $rgxPSAllUsersScope){
-                     $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
-                } else {
-                    $pltSL.Path = $MyInvocation.MyCommand.Definition ;
-                } ;
-            } ;
-            write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
-            $logspec = start-Log @pltSL ;
-            $error.clear() ;
-            TRY {
-                if($logspec){
-                    $logging=$logspec.logging ;
-                    $logfile=$logspec.logfile ;
-                    $transcript=$logspec.transcript ;
-                    $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
-                    $startResults = start-Transcript -path $transcript ;
-                } else {throw "Unable to configure logging!" } ;
-            } CATCH [System.Management.Automation.PSNotSupportedException]{
-                if($host.name -eq 'Windows PowerShell ISE Host'){
-                    $smsg = "This version of $($host.name):$($host.version) does *not* support native (start-)transcription" ; 
-                } else { 
-                    $smsg = "This host does *not* support native (start-)transcription" ; 
-                } ; 
-                write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
-            } CATCH {
-                $ErrTrapd=$Error[0] ;
-                $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
-                if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
-                else{ write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
-            } ;
-         }  # loop-E $UPN
+        PS> $iProcd=0 ; $ttl = ($UPNs | Measure-Object).count ; $tickNum = ($tickets | Measure-Object).count
+        PS> if ($ttl -ne $tickNum ) {
+        PS>     write-host -foregroundcolor RED "$((get-date).ToString('HH:mm:ss')):ERROR!:You have specified $($ttl) UPNs but only $($tickNum) tickets.`nPlease specified a matching number of both objects." ;
+        PS>     Break ;
+        PS> } ;
+        PS> foreach($UPN in $UPNs){
+        PS>     $iProcd++ ;
+        PS>     if(!(get-variable LogPathDrives -ea 0)){$LogPathDrives = 'd','c' };
+        PS>     foreach($budrv in $LogPathDrives){if(test-path -path "$($budrv):\scripts" -ea 0 ){break} } ;
+        PS>     if(!(get-variable rgxPSAllUsersScope -ea 0)){
+        PS>         $rgxPSAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps(((d|m))*)1|dll)$" ;
+        PS>     } ;
+        PS>     $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
+        PS>     if($tickets[$iProcd-1]){$pltSL.Tag = "$($tickets[$iProcd-1])-$($UPN)"} ;
+        PS>     if($script:PSCommandPath){
+        PS>         if($script:PSCommandPath -match $rgxPSAllUsersScope){
+        PS>             write-verbose "AllUsers context script/module, divert logging into [$budrv]:\scripts" ;
+        PS>             if((split-path $script:PSCommandPath -leaf) -ne $cmdletname){
+        PS>                 # function in a module/script installed to allusers 
+        PS>                 $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($cmdletname).ps1") ;
+        PS>             } else { 
+        PS>                 # installed allusers script
+        PS>                 $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
+        PS>             }
+        PS>         }else {
+        PS>             $pltSL.Path = $script:PSCommandPath ;
+        PS>         } ;
+        PS>     } else {
+        PS>         if($MyInvocation.MyCommand.Definition -match $rgxPSAllUsersScope){
+        PS>              $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $script:PSCommandPath -leaf)) ;
+        PS>         } else {
+        PS>             $pltSL.Path = $MyInvocation.MyCommand.Definition ;
+        PS>         } ;
+        PS>     } ;
+        PS>     write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
+        PS>     $logspec = start-Log @pltSL ;
+        PS>     $error.clear() ;
+        PS>     TRY {
+        PS>         if($logspec){
+        PS>             $logging=$logspec.logging ;
+        PS>             $logfile=$logspec.logfile ;
+        PS>             $transcript=$logspec.transcript ;
+        PS>             $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
+        PS>             $startResults = start-Transcript -path $transcript ;
+        PS>         } else {throw "Unable to configure logging!" } ;
+        PS>     } CATCH [System.Management.Automation.PSNotSupportedException]{
+        PS>         if($host.name -eq 'Windows PowerShell ISE Host'){
+        PS>             $smsg = "This version of $($host.name):$($host.version) does *not* support native (start-)transcription" ; 
+        PS>         } else { 
+        PS>             $smsg = "This host does *not* support native (start-)transcription" ; 
+        PS>         } ; 
+        PS>         write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" ;
+        PS>     } CATCH {
+        PS>         $ErrTrapd=$Error[0] ;
+        PS>         $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
+        PS>         if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
+        PS>         else{ write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        PS>     } ;
+        PS>  }  # loop-E $UPN
          
          Looping per-pass Logging (uses $UPN & $Ticket array, in this example). 
         .EXAMPLE
-        $pltSL=@{ NoTimeStamp=$false ; Tag = $null ; showdebug=$($showdebug) ; whatif=$($whatif) ; Verbose=$($VerbosePreference -eq 'Continue') ; } ;
-        if($forceall){$pltSL.Tag = "-ForceAll" }
-        else {$pltSL.Tag = "-LASTPASS" } ;
-        write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
-        $logspec = start-Log -Path c:\scripts\test-script.txt @pltSL ;
-        
+        PS> $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ;} ;
+        PS> if($whatif.ispresent){$pltSL.add('whatif',$($whatif))} ; 
+        PS> if($WhatIfPreference.ispresent ){$pltSL.add('whatif',$WhatIfPreferenc)} ; 
+        PS> if($forceall){$pltSL.Tag = "-ForceAll" }
+        PS> else {$pltSL.Tag = "-LASTPASS" } ;
+        PS> write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
+        PS> $logspec = start-Log -Path c:\scripts\test-script.txt @pltSL ;
+
         Path is normally to the executing .ps1, but *does not have to be*. Anything with a valid path can be specified, including a .txt file. The above generates logging/transcript paths off of specifying a non-existant text file path.
+        .EXAMPLE
+        PS> $Verbose = [boolean]($VerbosePreference -eq 'Continue') ; 
+        PS> $rPSCmdlet = $PSCmdlet ; 
+        PS> $rPSScriptRoot = $PSScriptRoot ; 
+        PS> $rPSCommandPath = $PSCommandPath ; 
+        PS> $rMyInvocation = $MyInvocation ; 
+        PS> if(-not (get-variable LogPathDrives -ea 0)){$LogPathDrives = 'd','c' };
+        PS> foreach($budrv in $LogPathDrives){if(test-path -path "$($budrv):\scripts" -ea 0 ){break} } ;
+        PS> if(-not (get-variable rgxPSAllUsersScope -ea 0)){
+        PS>     $rgxPSAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps(((d|m))*)1|dll)$" ;
+        PS> } ;
+        PS> if(-not (get-variable rgxPSCurrUserScope -ea 0)){
+        PS>     $rgxPSCurrUserScope="^$([regex]::escape([Environment]::GetFolderPath('MyDocuments')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps((d|m)*)1|dll)$" ;
+        PS> } ;
+        PS> $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
+        PS> # if using [CmdletBinding(SupportsShouldProcess)] + -WhatIf:$($WhatIfPreference):
+        PS> #$pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($WhatIfPreference) ;} ;
+        PS> #$pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag="$($ticket)-$($TenOrg)-LASTPASS-" ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($WhatIfPreference) ;} ;
+        PS> #$pltSL.Tag = $ModuleName ; 
+        PS> #$pltSL.Tag = "$($ticket)-$($usr)" ; 
+        PS> #$pltSL.Tag = $((@($ticket,$usr) |?{$_}) -join '-')
+        PS> if($ticket){$pltSL.Tag = $ticket} ;
+        PS> #$transcript = ".\logs\$($Ticket)-$($DomainName)-$(split-path $rMyInvocation.InvocationName -leaf)-$(get-date -format 'yyyyMMdd-HHmmtt')-trans-log.txt" ; 
+        PS> $pltSL.Tag += "-$($DomainName)"
+        PS> if($rvEnv.isScript){
+        PS>     write-host "`$script:PSCommandPath:$($script:PSCommandPath)" ;
+        PS>     write-host "`$PSCommandPath:$($PSCommandPath)" ;
+        PS>     if($rvEnv.PSCommandPathproxy){ $prxPath = $rvEnv.PSCommandPathproxy }
+        PS>     elseif($script:PSCommandPath){$prxPath = $script:PSCommandPath}
+        PS>     elseif($rPSCommandPath){$prxPath = $rPSCommandPath} ; 
+        PS> } ; 
+        PS> if($rvEnv.isFunc){
+        PS>     if($rvEnv.FuncDir -AND $rvEnv.FuncName){
+        PS>            $prxPath = join-path -path $rvEnv.FuncDir -ChildPath $rvEnv.FuncName ; 
+        PS>     } ; 
+        PS> } ; 
+        PS> if(-not $rvEnv.isFunc){
+        PS>     # under funcs, this is the scriptblock of the func, not a path
+        PS>     if($rvEnv.MyInvocationproxy.MyCommand.Definition){$prxPath2 = $rvEnv.MyInvocationproxy.MyCommand.Definition }
+        PS>     elseif($rvEnv.MyInvocationproxy.MyCommand.Definition){$prxPath2 = $rvEnv.MyInvocationproxy.MyCommand.Definition } ; 
+        PS> } ; 
+        PS> if($prxPath){
+        PS>     if(($prxPath -match $rgxPSAllUsersScope) -OR ($prxPath -match $rgxPSCurrUserScope)){
+        PS>         $bDivertLog = $true ; 
+        PS>         switch -regex ($prxPath){
+        PS>             $rgxPSAllUsersScope{$smsg = "AllUsers"} 
+        PS>             $rgxPSCurrUserScope{$smsg = "CurrentUser"}
+        PS>         } ;
+        PS>         $smsg += " context script/module, divert logging into [$budrv]:\scripts" 
+        PS>         write-verbose $smsg  ;
+        PS>         if($bDivertLog){
+        PS>             if((split-path $prxPath -leaf) -ne $rvEnv.CmdletName){
+        PS>                 # function in a module/script installed to allusers|cu - defer name to Cmdlet/Function name
+        PS>                 $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($rvEnv.CmdletName).ps1") ;
+        PS>             } else {
+        PS>                 # installed allusers|CU script, use the hosting script name
+        PS>                 $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $prxPath -leaf)) ;
+        PS>             }
+        PS>         } ;
+        PS>     } else {
+        PS>         $pltSL.Path = $prxPath ;
+        PS>     } ;
+        PS> }elseif($prxPath2){
+        PS>     if(($prxPath2 -match $rgxPSAllUsersScope) -OR ($prxPath2 -match $rgxPSCurrUserScope) ){
+        PS>             $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath (split-path $prxPath2 -leaf)) ;
+        PS>     } elseif(test-path $prxPath2) {
+        PS>         $pltSL.Path = $prxPath2 ;
+        PS>     } elseif($rvEnv.CmdletName){
+        PS>         $pltSL.Path = (join-path -Path "$($budrv):\scripts" -ChildPath "$($rvEnv.CmdletName).ps1") ;
+        PS>     } else {
+        PS>         $smsg = "UNABLE TO RESOLVE A FUNCTIONAL `$rvEnv.CmdletName, FROM WHICH TO BUILD A START-LOG.PATH!" ; 
+        PS>         if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Warn } #Error|Warn|Debug 
+        PS>         else{ write-WARNING "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        PS>         BREAK ;
+        PS>     } ; 
+        PS> } else{
+        PS>     $smsg = "UNABLE TO RESOLVE A FUNCTIONAL `$rvEnv.CmdletName, FROM WHICH TO BUILD A START-LOG.PATH!" ; 
+        PS>     if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Warn } #Error|Warn|Debug 
+        PS>     else{ write-WARNING "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        PS>     BREAK ;
+        PS> }  ;
+        PS> write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
+        PS> $logspec = start-Log @pltSL ;
+        PS> $error.clear() ;
+        PS> TRY {
+        PS>     if($logspec){
+        PS>         $logging=$logspec.logging ;
+        PS>         $logfile=$logspec.logfile ;
+        PS>         $transcript=$logspec.transcript ;
+        PS>         $stopResults = try {Stop-transcript -ErrorAction stop} catch {} ;
+        PS>         if($stopResults){
+        PS>             $smsg = "Stop-transcript:$($stopResults)" ; 
+        PS>             if($verbose){if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level VERBOSE } 
+        PS>             else{ write-verbose "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ; } ; 
+        PS>         } ; 
+        PS>         $startResults = start-Transcript -path $transcript -whatif:$false -confirm:$false;
+        PS>         if($startResults){
+        PS>             $smsg = "start-transcript:$($startResults)" ; 
+        PS>             if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } 
+        PS>             else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        PS>         } ; 
+        PS>     } else {throw "Unable to configure logging!" } ;
+        PS> } CATCH [System.Management.Automation.PSNotSupportedException]{
+        PS>     if($host.name -eq 'Windows PowerShell ISE Host'){
+        PS>         $smsg = "This version of $($host.name):$($host.version) does *not* support native (start-)transcription" ; 
+        PS>     } else { 
+        PS>         $smsg = "This host does *not* support native (start-)transcription" ; 
+        PS>     } ; 
+        PS>     if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level WARN } #Error|Warn|Debug 
+        PS>     else{ write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        PS> } CATCH {
+        PS>     $ErrTrapd=$Error[0] ;
+        PS>     $smsg = "Failed processing $($ErrTrapd.Exception.ItemName). `nError Message: $($ErrTrapd.Exception.Message)`nError Details: $($ErrTrapd)" ;
+        PS>     if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level Info } #Error|Warn|Debug
+        PS>     else{ write-warning "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ;
+        PS> } ;
+        Current resolve-Environment version        
         .LINK
         https://github.com/tostka/verb-logging
         #>
@@ -247,19 +372,17 @@
         [CmdletBinding()]
         PARAM(
             [Parameter(Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,HelpMessage="Path to target script (defaults to `$PSCommandPath) [-Path .\path-to\script.ps1]")]
-            # rem out validation, for module installed in AllUsers etc, we don't want to have to spec a real existing file. No bene to testing
-            #[ValidateScript({Test-Path (split-path $_)})] 
-            $Path,
+                $Path,
             [Parameter(HelpMessage="Tag string to be used with -Path filename spec, to construct log file name [-tag 'ticket-123456]")]
-            [string]$Tag,
+                [string]$Tag,
             [Parameter(HelpMessage="Flag that suppresses the trailing timestamp value from the generated filenames[-NoTimestamp]")]
-            [switch] $NoTimeStamp,
+                [switch] $NoTimeStamp,
             [Parameter(HelpMessage="Flag that leads the returned filename with the Tag parameter value[-TagFirst]")]
-            [switch] $TagFirst,
+                [switch] $TagFirst,
             [Parameter(HelpMessage="Debugging Flag [-showDebug]")]
-            [switch] $showDebug,
+                [switch] $showDebug,
             [Parameter(HelpMessage="Whatif Flag  [-whatIf]")]
-            [switch] $whatIf=$true
+                [switch] $whatIf=$true
         ) ;
         $Verbose = ($VerbosePreference -eq 'Continue') ; 
         $transcript = join-path -path (Split-Path -parent $Path) -ChildPath "logs" ;
@@ -286,7 +409,8 @@
         $transcript += "-trans-log.txt"  ;
         # add log file variant as target of Write-Log:
         $logfile = $transcript.replace("-Transcript", "-LOG").replace("-trans-log", "-log")
-        if ($whatif) {
+        # revise for -whatif-less shouldprocess: leverage $whatifpreference (ispresent == $true)
+        if(((get-variable whatif -ea 0) -AND ($whatif.IsPresent)) -OR ($whatifpreference.IsPresent)){
             $logfile = $logfile.replace("-BATCH", "-BATCH-WHATIF") ;
             $transcript = $transcript.replace("-BATCH", "-BATCH-WHATIF") ;
         }
