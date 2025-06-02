@@ -16,6 +16,7 @@
         Copyright   : (c) 2019 Todd Kadrie
         Github      : https://github.com/tostka
         REVISIONS
+        * 3:19 PM 5/30/2025 switch -whatif:$true -> no default also revise calls to use: whatif:$($whatifpreference); pulled forced -verbose from trailing w-v
         * 9:25 AM 5/22/2025 updated logic for shouldprocess/-whatif-less/whatifpreference support ; added example using latest $rvEnv
         * 4:03 PM 5/15/2025 removed rem's
         * 9:07 AM 4/30/2025 make Tag cleanup conditional on avail of the target vtxt\funcs
@@ -52,7 +53,7 @@
         $reqMods += "Write-Log;Start-Log".split(";") ;
         $reqMods = $reqMods | Select-Object -Unique ;
         if ( !(check-ReqMods $reqMods) ) { write-error "$((get-date).ToString("yyyyMMdd HH:mm:ss")):Missing function. EXITING." ; throw "FAILURE" ; }  ;
-        $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) -showdebug:$($showdebug) -whatif:$($whatif) ;
+        $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) -showdebug:$($showdebug) -whatif:$($whatifpreference) ;
         if($logspec){
             $logging=$logspec.logging ;
             $logfile=$logspec.logfile ;
@@ -70,11 +71,11 @@
         .PARAMETER ShowDebug
         Switch to display Debugging messages [-ShowDebug]
         .PARAMETER whatIf
-        Whatif Flag [-whatIf]
+        Whatif Flag (pass in the `$whatifpreference) [-whatIf]
         .EXAMPLE
         PS> $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ;} ;
-        PS> if($whatif.ispresent){$pltSL.add('whatif',$($whatif))} ; 
-        PS> if($WhatIfPreference.ispresent ){$pltSL.add('whatif',$WhatIfPreferenc)} ; 
+        PS> if($whatif.ispresent){$pltSL.add('whatif',$($whatif))}
+        PS> elseif($WhatIfPreference.ispresent ){$pltSL.add('whatif',$WhatIfPreferenc)} ;    
         PS> if($PSCommandPath){   $logspec = start-Log -Path $PSCommandPath @pltSL ; 
         PS> } else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL ; } ; 
         PS> if($logspec){
@@ -110,8 +111,8 @@
         PS>     $rgxPSCurrUserScope="^$([regex]::escape([Environment]::GetFolderPath('MyDocuments')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps((d|m)*)1|dll)$" ;
         PS> } ;
         PS> $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ;} ;
-        PS> if($whatif.ispresent){$pltSL.add('whatif',$($whatif))} ; 
-        PS> if($WhatIfPreference.ispresent ){$pltSL.add('whatif',$WhatIfPreferenc)} ; 
+        PS> if($whatif.ispresent){$pltSL.add('whatif',$($whatif))}
+        PS> elseif($WhatIfPreference.ispresent ){$pltSL.add('whatif',$WhatIfPreferenc)} ;    
         PS> $pltSL.Tag = $ModuleName ; 
         PS> # variant Ticket/TagFirst Tagging:
         PS> # $pltSL.Tag = $Ticket ;
@@ -189,7 +190,7 @@
         PS>     if(!(get-variable rgxPSAllUsersScope -ea 0)){
         PS>         $rgxPSAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps(((d|m))*)1|dll)$" ;
         PS>     } ;
-        PS>     $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
+        PS>     $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatifpreference) ;} ;
         PS>     if($tickets[$iProcd-1]){$pltSL.Tag = "$($tickets[$iProcd-1])-$($UPN)"} ;
         PS>     if($script:PSCommandPath){
         PS>         if($script:PSCommandPath -match $rgxPSAllUsersScope){
@@ -240,8 +241,8 @@
          Looping per-pass Logging (uses $UPN & $Ticket array, in this example). 
         .EXAMPLE
         PS> $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ;} ;
-        PS> if($whatif.ispresent){$pltSL.add('whatif',$($whatif))} ; 
-        PS> if($WhatIfPreference.ispresent ){$pltSL.add('whatif',$WhatIfPreferenc)} ; 
+        PS> if($whatif.ispresent){$pltSL.add('whatif',$($whatif))}
+        PS> elseif($WhatIfPreference.ispresent ){$pltSL.add('whatif',$WhatIfPreferenc)} ;    
         PS> if($forceall){$pltSL.Tag = "-ForceAll" }
         PS> else {$pltSL.Tag = "-LASTPASS" } ;
         PS> write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
@@ -262,7 +263,7 @@
         PS> if(-not (get-variable rgxPSCurrUserScope -ea 0)){
         PS>     $rgxPSCurrUserScope="^$([regex]::escape([Environment]::GetFolderPath('MyDocuments')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps((d|m)*)1|dll)$" ;
         PS> } ;
-        PS> $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
+        PS> $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatifpreference) ;} ;
         PS> # if using [CmdletBinding(SupportsShouldProcess)] + -WhatIf:$($WhatIfPreference):
         PS> #$pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($WhatIfPreference) ;} ;
         PS> #$pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag="$($ticket)-$($TenOrg)-LASTPASS-" ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($WhatIfPreference) ;} ;
@@ -381,8 +382,8 @@
                 [switch] $TagFirst,
             [Parameter(HelpMessage="Debugging Flag [-showDebug]")]
                 [switch] $showDebug,
-            [Parameter(HelpMessage="Whatif Flag  [-whatIf]")]
-                [switch] $whatIf=$true
+            [Parameter(HelpMessage="Whatif Flag (pass in the `$whatifpreference) [-whatIf]")]
+                [switch] $whatIf
         ) ;
         $Verbose = ($VerbosePreference -eq 'Continue') ; 
         $transcript = join-path -path (Split-Path -parent $Path) -ChildPath "logs" ;
@@ -433,7 +434,7 @@
         $hshRet.add('transcript',$transcript) ;
         if($showdebug -OR $verbose){
             # retaining historical $showDebug support, even tho' not generally used now.
-            write-verbose -verbose:$true "$(($hshRet|out-string).trim())" ;  ;
+            write-verbose "$(($hshRet|out-string).trim())" ;  ;
         } ;
         Write-Output $hshRet ;
     }

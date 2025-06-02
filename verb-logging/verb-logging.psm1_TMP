@@ -5,7 +5,7 @@
   .SYNOPSIS
   verb-logging - Logging-related generic functions
   .NOTES
-  Version     : 2.0.2.0
+  Version     : 2.0.3.0
   Author      : Todd Kadrie
   Website     :	https://www.toddomation.com
   Twitter     :	@tostka
@@ -32,7 +32,7 @@
   * 8:57 PM 11/25/2018 Write-Log:shifted copy to verb-transcript, added defer to scope $script versions
   * 8:13 AM 10/2/2018 Cleanup():make it defer to existing script-copy, ren'd $bdebug -> $showdebug
   * 2:37 PM 9/19/2018 fixed a filename invocation bug in Start-IseTranscript ; added CleanUp() example (with archivevelog disabled), formalized notes block, w demo load
-  * 11:29 AM 12.0.2017 initial version
+  * 11:29 AM 12.0.3017 initial version
   .DESCRIPTION
   verb-logging - Logging-related generic functions
   .LINK
@@ -971,7 +971,7 @@ function get-lastevent {
 
         WARNING: No matching events
             if Logon/Security log: see [windows event log - Microsoft Teams filling Security Log with seProfileSingleProcessPrivilege - Server Fault](https://serverfault.com/questions/1115846/microsoft-teams-filling-security-log-with-seprofilesingleprocessprivilege)
-        Teams chromium/Process Name: C:\Program Files (x86)\Microsoft\EdgeWebView\Application\132.0.2957.140\msedgewebview2.exe
+        Teams chromium/Process Name: C:\Program Files (x86)\Microsoft\EdgeWebView\Application\132.0.3957.140\msedgewebview2.exe
         spamming SecLog with 4673 events, saturating rollover of logs
         leaving *zero* events to poll, shortly after successful logon!
         (20mb rollover spec on Security log)
@@ -982,7 +982,7 @@ function get-lastevent {
 
         WARNING: No matching events
             if Logon/Security log: see [windows event log - Microsoft Teams filling Security Log with seProfileSingleProcessPrivilege - Server Fault](https://serverfault.com/questions/1115846/microsoft-teams-filling-security-log-with-seprofilesingleprocessprivilege)
-        Teams chromium/Process Name: C:\Program Files (x86)\Microsoft\EdgeWebView\Application\132.0.2957.140\msedgewebview2.exe
+        Teams chromium/Process Name: C:\Program Files (x86)\Microsoft\EdgeWebView\Application\132.0.3957.140\msedgewebview2.exe
         spamming SecLog with 4673 events, saturating rollover of logs
         leaving *zero* events to poll, shortly after successful logon!
         (20mb rollover spec on Security log)
@@ -1215,7 +1215,7 @@ function get-lastevent {
     } else {
         $smsg = "No matching events" ; 
         $smsg += "`n if Logon/Security log: see [windows event log - Microsoft Teams filling Security Log with seProfileSingleProcessPrivilege - Server Fault](https://serverfault.com/questions/1115846/microsoft-teams-filling-security-log-with-seprofilesingleprocessprivilege)" ; 
-        $smsg += "`nTeams chromium/Process Name: C:\Program Files (x86)\Microsoft\EdgeWebView\Application\132.0.2957.140\msedgewebview2.exe"
+        $smsg += "`nTeams chromium/Process Name: C:\Program Files (x86)\Microsoft\EdgeWebView\Application\132.0.3957.140\msedgewebview2.exe"
         $smsg += "`nspamming SecLog with 4673 events, saturating rollover of logs" ; 
         $smsg += "`nleaving *zero* events to poll, shortly after successful logon!" ; 
         $smsg += "`n(20mb rollover spec on Security log)" ; 
@@ -1619,6 +1619,7 @@ function Start-Log {
         Copyright   : (c) 2019 Todd Kadrie
         Github      : https://github.com/tostka
         REVISIONS
+        * 3:19 PM 5/30/2025 switch -whatif:$true -> no default also revise calls to use: whatif:$($whatifpreference); pulled forced -verbose from trailing w-v
         * 9:25 AM 5/22/2025 updated logic for shouldprocess/-whatif-less/whatifpreference support ; added example using latest $rvEnv
         * 4:03 PM 5/15/2025 removed rem's
         * 9:07 AM 4/30/2025 make Tag cleanup conditional on avail of the target vtxt\funcs
@@ -1655,7 +1656,7 @@ function Start-Log {
         $reqMods += "Write-Log;Start-Log".split(";") ;
         $reqMods = $reqMods | Select-Object -Unique ;
         if ( !(check-ReqMods $reqMods) ) { write-error "$((get-date).ToString("yyyyMMdd HH:mm:ss")):Missing function. EXITING." ; throw "FAILURE" ; }  ;
-        $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) -showdebug:$($showdebug) -whatif:$($whatif) ;
+        $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) -showdebug:$($showdebug) -whatif:$($whatifpreference) ;
         if($logspec){
             $logging=$logspec.logging ;
             $logfile=$logspec.logfile ;
@@ -1673,11 +1674,11 @@ function Start-Log {
         .PARAMETER ShowDebug
         Switch to display Debugging messages [-ShowDebug]
         .PARAMETER whatIf
-        Whatif Flag [-whatIf]
+        Whatif Flag (pass in the `$whatifpreference) [-whatIf]
         .EXAMPLE
         PS> $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ;} ;
-        PS> if($whatif.ispresent){$pltSL.add('whatif',$($whatif))} ; 
-        PS> if($WhatIfPreference.ispresent ){$pltSL.add('whatif',$WhatIfPreferenc)} ; 
+        PS> if($whatif.ispresent){$pltSL.add('whatif',$($whatif))}
+        PS> elseif($WhatIfPreference.ispresent ){$pltSL.add('whatif',$WhatIfPreferenc)} ;    
         PS> if($PSCommandPath){   $logspec = start-Log -Path $PSCommandPath @pltSL ; 
         PS> } else { $logspec = start-Log -Path ($MyInvocation.MyCommand.Definition) @pltSL ; } ; 
         PS> if($logspec){
@@ -1713,8 +1714,8 @@ function Start-Log {
         PS>     $rgxPSCurrUserScope="^$([regex]::escape([Environment]::GetFolderPath('MyDocuments')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps((d|m)*)1|dll)$" ;
         PS> } ;
         PS> $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ;} ;
-        PS> if($whatif.ispresent){$pltSL.add('whatif',$($whatif))} ; 
-        PS> if($WhatIfPreference.ispresent ){$pltSL.add('whatif',$WhatIfPreferenc)} ; 
+        PS> if($whatif.ispresent){$pltSL.add('whatif',$($whatif))}
+        PS> elseif($WhatIfPreference.ispresent ){$pltSL.add('whatif',$WhatIfPreferenc)} ;    
         PS> $pltSL.Tag = $ModuleName ; 
         PS> # variant Ticket/TagFirst Tagging:
         PS> # $pltSL.Tag = $Ticket ;
@@ -1792,7 +1793,7 @@ function Start-Log {
         PS>     if(!(get-variable rgxPSAllUsersScope -ea 0)){
         PS>         $rgxPSAllUsersScope="^$([regex]::escape([environment]::getfolderpath('ProgramFiles')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps(((d|m))*)1|dll)$" ;
         PS>     } ;
-        PS>     $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
+        PS>     $pltSL=@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;TagFirst=$null; showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatifpreference) ;} ;
         PS>     if($tickets[$iProcd-1]){$pltSL.Tag = "$($tickets[$iProcd-1])-$($UPN)"} ;
         PS>     if($script:PSCommandPath){
         PS>         if($script:PSCommandPath -match $rgxPSAllUsersScope){
@@ -1843,8 +1844,8 @@ function Start-Log {
          Looping per-pass Logging (uses $UPN & $Ticket array, in this example). 
         .EXAMPLE
         PS> $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ;} ;
-        PS> if($whatif.ispresent){$pltSL.add('whatif',$($whatif))} ; 
-        PS> if($WhatIfPreference.ispresent ){$pltSL.add('whatif',$WhatIfPreferenc)} ; 
+        PS> if($whatif.ispresent){$pltSL.add('whatif',$($whatif))}
+        PS> elseif($WhatIfPreference.ispresent ){$pltSL.add('whatif',$WhatIfPreferenc)} ;    
         PS> if($forceall){$pltSL.Tag = "-ForceAll" }
         PS> else {$pltSL.Tag = "-LASTPASS" } ;
         PS> write-verbose "start-Log w`n$(($pltSL|out-string).trim())" ; 
@@ -1865,7 +1866,7 @@ function Start-Log {
         PS> if(-not (get-variable rgxPSCurrUserScope -ea 0)){
         PS>     $rgxPSCurrUserScope="^$([regex]::escape([Environment]::GetFolderPath('MyDocuments')))\\((Windows)*)PowerShell\\(Scripts|Modules)\\.*\.(ps((d|m)*)1|dll)$" ;
         PS> } ;
-        PS> $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatif) ;} ;
+        PS> $pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($whatifpreference) ;} ;
         PS> # if using [CmdletBinding(SupportsShouldProcess)] + -WhatIf:$($WhatIfPreference):
         PS> #$pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag=$null ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($WhatIfPreference) ;} ;
         PS> #$pltSL=[ordered]@{Path=$null ;NoTimeStamp=$false ;Tag="$($ticket)-$($TenOrg)-LASTPASS-" ;showdebug=$($showdebug) ; Verbose=$($VerbosePreference -eq 'Continue') ; whatif=$($WhatIfPreference) ;} ;
@@ -1984,8 +1985,8 @@ function Start-Log {
                 [switch] $TagFirst,
             [Parameter(HelpMessage="Debugging Flag [-showDebug]")]
                 [switch] $showDebug,
-            [Parameter(HelpMessage="Whatif Flag  [-whatIf]")]
-                [switch] $whatIf=$true
+            [Parameter(HelpMessage="Whatif Flag (pass in the `$whatifpreference) [-whatIf]")]
+                [switch] $whatIf
         ) ;
         $Verbose = ($VerbosePreference -eq 'Continue') ; 
         $transcript = join-path -path (Split-Path -parent $Path) -ChildPath "logs" ;
@@ -2036,7 +2037,7 @@ function Start-Log {
         $hshRet.add('transcript',$transcript) ;
         if($showdebug -OR $verbose){
             # retaining historical $showDebug support, even tho' not generally used now.
-            write-verbose -verbose:$true "$(($hshRet|out-string).trim())" ;  ;
+            write-verbose "$(($hshRet|out-string).trim())" ;  ;
         } ;
         Write-Output $hshRet ;
     }
