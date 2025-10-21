@@ -21,6 +21,11 @@
             AddedWebsite:	https://www.powershellgallery.com/packages/MrAADAdministration/1.0/Content/Write-Log.ps1
             AddedTwitter:	@wasserja
             REVISIONS
+            * 3:12 PM 9/16/2025 add: seamless support for Write-MyVerbose|Write-MyOutput|Write-MyWarning|Write-MyError: where they gcm, divert into those functions, otherwise normal material applies
+                Unfortunately write-myOutput lacks -indent support, so we just drop the indents with a wv notice it's dropped, and do the usual write-MyOutput. 
+                Also note, I'm expecting the stock 821 write-myOutput has been replaced with my updated write-myOutput(), 
+                to suppresse default write-output of the message behavior in the original into the pipeline, blowing the buffer, corrupting function returns. 
+                Instead my tweaked write-myOutput() does a normal write-host of the message within the write-myOutput. 
             * 12:27 PM 5/12/2025 SupportsShouldProcess support: added overrid - -whatif:$false -confirm:$false - to new-item & out-file cmds (otherwise, SSP skips logging outputs)
             * 1:42 PM 11/8/2024 CBH expl fixes
             * 10:59 AM 2/17/2023 #529:added workaround for rando 'The variable cannot be validated because the value System.String[] is not a valid value for the Object variable.' err (try catch and strip to text w diff method) suddently seeing NUL char interleave on outputs (C:\usr\work\ps\scripts\logs\monitor-ExecPol-LOG-BATCH-EXEC-log.txt, utf-16/bigendianunicode?), forcing out-file -encoding UTF8
@@ -547,16 +552,23 @@
                     $pltWH.Object = $EchoTime ; 
                     $pltColors = @{} ; 
                     # Write message to error, warning, or verbose pipeline and specify $LevelText
+                    # add seamless support for Write-MyVerbose|Write-MyOutput|Write-MyWarning|Write-MyError
                     switch ($Level) {
                         'Error' {
                             $LevelText = 'ERROR: ' ;
                             $pltColors = $pltError ;
-                            if ($useHost) {} else {if (!$NoEcho) { Write-Error ($smsg + $Object) } } ;
+                            #if ($useHost) {} else {if (-not $NoEcho) { Write-Error ($smsg + $Object) } } ;                            
+                            if(get-command Write-MyError -ea 0){
+                                Write-MyError $Object 
+                            } elseif ($useHost) {} else {if (-not $NoEcho) { Write-Error ($smsg + $Object) } } ;                    
                         }
                         'Warn' {
                             $LevelText = 'WARNING: ' ;
                             $pltColors = $pltWarn ;
-                            if ($useHost) {} else {if (!$NoEcho) { Write-Warning ($smsg + $Object) } } ;
+                            #if ($useHost) {} else {if (-not $NoEcho) { Write-Warning ($smsg + $Object) } } ;
+                            if(get-command Write-MyWarning -ea 0){
+                                Write-MyWarning $Object 
+                            } elseif ($useHost) {} else {if (-not $NoEcho) { Write-Warning ($smsg + $Object) } } ;
                         }
                         'Info' {
                             $LevelText = 'INFO: ' ;
@@ -585,12 +597,16 @@
                         'Debug' {
                             $LevelText = 'DEBUG: ' ;
                             $pltColors = $pltDebug ;
-                            if ($useHost) {} else {if (!$NoEcho) { Write-Degug $smsg } }  ;
+                            #if ($useHost) {} else {if (-not $NoEcho) { Write-Degug $smsg } }  ;
+                            if(get-command Write-MyWarning -ea 0){} elseif ($useHost) {} else {if (-not $NoEcho) { Write-Degug $smsg } }  ;
                         }
                         'Verbose' {
                             $LevelText = 'VERBOSE: ' ;
                             $pltColors = $pltVerbose ;
-                            if ($useHost) {}else {if (!$NoEcho) { Write-Verbose ($smsg) } } ;
+                            #if ($useHost) {}else {if (-not $NoEcho) { Write-Verbose ($smsg) } } ;
+                            if(get-command Write-MyVerbose -ea 0){
+                                Write-MyVerbose $Object 
+                            } elseif ($useHost) {}else {if (-not $NoEcho) { Write-Verbose ($smsg) } } ;
                         }
                         'Prompt' {
                             $LevelText = 'PROMPT: ' ;
@@ -638,7 +654,11 @@
                             $smsg = "write-host w`n$(($pltWH|out-string).trim())" ;
                             write-verbose $smsg ;
                             #write-host @pltErr $smsg ;
-                            write-host @pltwh ;
+                            #write-host @pltwh ;
+                            if(get-command Write-MyOutput -ea 0){
+                                Write-MyOutput $pltWH.Object  
+                            } else { write-host @pltwh } ;
+
                         } else {
                             foreach ($obj in $object){
                                 $pltWH.Object = $EchoTime ;
@@ -653,13 +673,24 @@
                                 } ;
                                 $smsg = "write-host w`n$(($pltWH|out-string).trim())" ;
                                 write-verbose $smsg ;
-                                Write-Host -NoNewline $($PadChar * $CurrIndent)  ;
-                                write-host @pltwh ;
+                                #Write-Host -NoNewline $($PadChar * $CurrIndent)  ;
+                                #write-host @pltwh ;
+                                if(get-command Write-MyOutput -ea 0){
+                                    write-verbose "(-indent specified with write-myOutput avail: suppressing indent support)" ; 
+                                    Write-MyOutput $pltWH.Object  
+                                } else { 
+                                    Write-Host -NoNewline $($PadChar * $CurrIndent)  ;
+                                    write-host @pltwh ;
+                                } ;
                             } ;
                         } ;
                     }
-                    # Write log entry to $Path
-                    "$FormattedDate $LevelText : $Object" | Out-File -FilePath $Path -Append -encoding UTF8 -whatif:$false -confirm:$false;
+                    # Write log entry to $Path                    
+                    #"$FormattedDate $LevelText : $Object" | Out-File -FilePath $Path -Append -encoding UTF8 -whatif:$false -confirm:$false;
+                    # add support to divert into write-my* (which have their own logging output)
+                    if(get-command Write-MyOutput -ea 0){}elseif(get-command Write-MyWarning -ea 0){}elseif(get-command Write-MyError -ea 0){}elseif(get-command Write-MyVerbose -ea 0){}else{
+                        "$FormattedDate $LevelText : $Object" | Out-File -FilePath $Path -Append -encoding UTF8 -whatif:$false -confirm:$false;
+                    } ; 
                 } ;  # if-E -Demo ; 
             }  ; # PROC-E
             END {}  ;
